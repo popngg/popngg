@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+bootJar {
+    enabled = true
+}
+
+jar {
+    enabled = false
+}
+
+dependencies {
+    implementation project(':popngg-domain')
+    implementation project(':popngg-infra')
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

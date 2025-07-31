@@ -1,0 +1,5 @@
+rootProject.name = 'popngg'
+
+include 'popngg-api'
+include 'popngg-domain'
+include 'popngg-infra'
