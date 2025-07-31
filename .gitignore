@@ -10,27 +10,7 @@ build/
 *.iml
 *.ipr
 *.log
-
-# Compiled class file
-*.class
-
-# Log file
-*.log
-
-# Package Files
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# virtual machine crash logs
-hs_err_pid*
-
-# Maven
-target/
+*.log.*
 
 # VS Code
 .vscode/
@@ -53,16 +33,12 @@ application-*.yml
 
 # Logs
 logs/
-*.log
 
 # Temp files
 *.tmp
 *.bak
 *.swp
 *~
-
-# Build output
-out/
 
 # Spring Boot Actuator
 actuator/
@@ -80,69 +56,20 @@ test-results/
 # Dependency directories
 node_modules/
 
-# IDE specific files
-.idea/
-*.iml
-*.ipr
-*.iws
-*.log.*
+# Java
+*.class
 
-# Build output
-build/
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
-# Gradle files
-.gradle/
+# Virtual machine crash logs
+hs_err_pid*
 
-# Local development environment files
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# Logs
-logs/
-*.log
-
-# Temp files
-*.tmp
-*.bak
-*.swp
-*~
-
-# Build output
-out/
-
-# Spring Boot Actuator
-actuator/
-
-# Spring Boot DevTools
-.spring-devtools/
-
-# Local development environment
-.env
-.env.local
-
-# Test reports
-test-results/
-
-# Dependency directories
-node_modules/
-
-# IDE specific files
-.idea/
-*.iml
-*.ipr
-*.iws
-*.log.*
-
-# Build output
-build/
-
-# Gradle files
-.gradle/
-
-# Local development environment files
-.idea/
-*.iml
-*.ipr
-*.iws
+# Maven
+target/
