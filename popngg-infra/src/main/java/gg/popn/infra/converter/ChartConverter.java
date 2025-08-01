@@ -1,30 +1,31 @@
 package gg.popn.infra.converter;
 
+import gg.popn.domain.chart.model.*;
 import gg.popn.domain.common.model.Chart;
 import gg.popn.infra.db.entity.ChartEntity;
 
 public class ChartConverter {
     public static Chart toDomain(ChartEntity chartEntity) {
         return Chart.builder()
-                .songHash(chartEntity.getSongHash())
-                .genreName(chartEntity.getGenreName())
-                .songName(chartEntity.getSongName())
-                .version(chartEntity.getVersion())
-                .difficulty(chartEntity.getDifficulty())
-                .level(chartEntity.getLevel())
-                .isUpper(chartEntity.getIsUpper())
+                .songHash(SongHash.of(chartEntity.getSongHash()))
+                .genreName(GenreName.of(chartEntity.getGenreName()))
+                .songName(SongName.of(chartEntity.getSongName()))
+                .version(Version.of(chartEntity.getVersion()))
+                .difficulty(Difficulty.of(chartEntity.getDifficulty()))
+                .level(Level.of(chartEntity.getLevel()))
+                .isUpper(IsUpper.of(chartEntity.getIsUpper()))
                 .build();
     }
 
     public static ChartEntity toEntity(Chart chart) {
         return ChartEntity.builder()
-                .songHash(chart.getSongHash())
-                .genreName(chart.getGenreName())
-                .songName(chart.getSongName())
-                .version(chart.getVersion())
-                .difficulty(chart.getDifficulty())
-                .level(chart.getLevel())
-                .isUpper(chart.getIsUpper())
+                .songHash(chart.getSongHash().getValue())
+                .genreName(chart.getGenreName().getValue())
+                .songName(chart.getSongName().getValue())
+                .version(chart.getVersion().getValue())
+                .difficulty(chart.getDifficulty().getValue())
+                .level(chart.getLevel().getValue())
+                .isUpper(chart.getIsUpper().getValue())
                 .build();
     }
 }
