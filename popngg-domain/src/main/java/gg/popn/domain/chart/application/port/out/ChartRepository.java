@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface ChartRepository {
     List<Chart> getChartsByLevel(Integer level);
+
+    Chart getChartBySongHashAndDifficulty(String songHash, Integer difficulty);
 }

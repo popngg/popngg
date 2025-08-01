@@ -1,5 +1,6 @@
 package gg.popn.infra.db.repository;
 
+import gg.popn.domain.common.exception.ChartNotFoundException;
 import gg.popn.domain.common.model.Chart;
 import gg.popn.domain.chart.application.port.out.ChartRepository;
 import gg.popn.infra.converter.ChartConverter;
@@ -21,5 +22,15 @@ public class ChartRepositoryImpl implements ChartRepository {
                 .filter(chartEntity -> !chartEntity.getIsDeleted().equals(1))
                 .map(ChartConverter::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Chart getChartBySongHashAndDifficulty(String songHash, Integer difficulty) {
+        return chartJpaRepository.findAllBySongHashAndDifficulty(songHash, difficulty)
+                .stream()
+                .filter(chartEntity -> !chartEntity.getIsDeleted().equals(1))
+                .findFirst()
+                .map(ChartConverter::toDomain)
+                .orElseThrow(ChartNotFoundException::new);
     }
 }
