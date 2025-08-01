@@ -6,6 +6,8 @@ public enum ResponseMessage implements Message {
     SUCCESS("Success", "The request is successful."),
     BAD_REQUEST("BadRequest", "The request is invalid."),
     INTERNAL_SERVER_ERROR("InternalServerError", "An internal server error has occurred."),
+
+    CHART_NOT_FOUND("ChartNotFound", "The chart is not found."),
     ;
 
     @Getter

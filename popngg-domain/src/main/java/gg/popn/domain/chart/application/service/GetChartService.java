@@ -1,5 +1,6 @@
 package gg.popn.domain.chart.application.service;
 
+import gg.popn.domain.chart.application.dto.ChartDto;
 import gg.popn.domain.chart.application.dto.GetChartResponse;
 import gg.popn.domain.chart.application.service.validator.ChartLevelValidator;
 import gg.popn.domain.common.model.Chart;
@@ -22,5 +23,12 @@ public class GetChartService implements GetChartUseCase {
 
         List<Chart> charts = chartRepository.getChartsByLevel(level);
         return GetChartResponse.from(charts);
+    }
+
+    @Override
+    public ChartDto getChartBySongHashAndDifficulty(String songHash, Integer difficulty) {
+        return ChartDto.from(
+                chartRepository.getChartBySongHashAndDifficulty(songHash, difficulty)
+        );
     }
 }

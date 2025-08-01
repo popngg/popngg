@@ -1,6 +1,7 @@
 package gg.popn.controller.chart;
 
 import gg.popn.controller.model.response.SuccessResponse;
+import gg.popn.domain.chart.application.dto.ChartDto;
 import gg.popn.domain.chart.application.dto.GetChartResponse;
 import gg.popn.domain.chart.application.port.in.GetChartUseCase;
 import gg.popn.domain.common.ResponseCode;
@@ -24,6 +25,15 @@ public class ChartController {
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(getChartUseCase.getChartsByLevel(level))
+                .build();
+    }
+
+    @GetMapping("/{songHash}/{difficulty}")
+    public SuccessResponse<ChartDto> getChartBySongHashAndDifficulty(@PathVariable String songHash, @PathVariable Integer difficulty) {
+        return SuccessResponse.<ChartDto>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(getChartUseCase.getChartBySongHashAndDifficulty(songHash, difficulty))
                 .build();
     }
 }

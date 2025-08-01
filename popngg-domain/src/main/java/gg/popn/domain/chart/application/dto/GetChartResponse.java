@@ -9,11 +9,13 @@ import java.util.List;
 @Builder
 @Value
 public class GetChartResponse {
-    List<Chart> charts;
+    List<ChartDto> charts;
 
     public static GetChartResponse from(List<Chart> charts) {
         return GetChartResponse.builder()
-                .charts(charts)
+                .charts(charts.stream()
+                        .map(ChartDto::from)
+                        .toList())
                 .build();
     }
 }
