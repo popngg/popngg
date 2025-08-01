@@ -1,9 +1,6 @@
 package gg.popn.domain.chart.application.dto;
 
-import gg.popn.domain.chart.model.Difficulty;
-import gg.popn.domain.chart.model.IsUpper;
-import gg.popn.domain.chart.model.Level;
-import gg.popn.domain.chart.model.Version;
+import gg.popn.domain.chart.model.*;
 import gg.popn.domain.common.model.Chart;
 import lombok.Builder;
 import lombok.Value;
@@ -11,9 +8,9 @@ import lombok.Value;
 @Builder
 @Value
 public class ChartDto {
-    String songHash;
-    String genreName;
-    String songName;
+    SongHash songHash;
+    GenreName genreName;
+    SongName songName;
     Version version;
     Difficulty difficulty;
     Level level;
