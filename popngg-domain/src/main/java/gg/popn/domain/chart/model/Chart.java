@@ -1,6 +1,6 @@
-package gg.popn.domain.common.model;
+package gg.popn.domain.chart.model;
 
-import gg.popn.domain.chart.model.*;
+import gg.popn.domain.chart.model.field.*;
 import lombok.Builder;
 import lombok.Value;
 

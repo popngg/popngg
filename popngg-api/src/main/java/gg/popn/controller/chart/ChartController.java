@@ -1,6 +1,6 @@
 package gg.popn.controller.chart;
 
-import gg.popn.controller.model.response.SuccessResponse;
+import gg.popn.model.response.SuccessResponse;
 import gg.popn.domain.chart.application.dto.ChartDto;
 import gg.popn.domain.chart.application.dto.GroupedChartDto;
 import gg.popn.domain.chart.application.dto.request.GetChartRequest;

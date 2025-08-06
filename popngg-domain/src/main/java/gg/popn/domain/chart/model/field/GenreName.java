@@ -1,4 +1,4 @@
-package gg.popn.domain.chart.model;
+package gg.popn.domain.chart.model.field;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Builder;

@@ -1,7 +1,7 @@
 package gg.popn.domain.chart.application.dto.response;
 
 import gg.popn.domain.chart.application.dto.GroupedChartDto;
-import gg.popn.domain.common.model.GroupedChart;
+import gg.popn.domain.chart.model.GroupedChart;
 import lombok.Builder;
 import lombok.Value;
 

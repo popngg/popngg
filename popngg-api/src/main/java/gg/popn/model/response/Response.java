@@ -1,4 +1,4 @@
-package gg.popn.controller.model.response;
+package gg.popn.model.response;
 
 import gg.popn.domain.common.Code;
 import gg.popn.domain.common.Message;
