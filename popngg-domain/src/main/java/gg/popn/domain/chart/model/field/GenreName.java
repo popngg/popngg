@@ -1,5 +1,6 @@
 package gg.popn.domain.chart.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Builder;
 import lombok.Value;
@@ -10,6 +11,7 @@ public class GenreName {
 
     String genreName;
 
+    @JsonCreator
     public static GenreName of(String genreName) {
         if (genreName == null) {
             return null;

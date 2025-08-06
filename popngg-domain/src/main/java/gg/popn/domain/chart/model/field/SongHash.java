@@ -1,5 +1,6 @@
 package gg.popn.domain.chart.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Builder;
 import lombok.Value;
@@ -14,6 +15,7 @@ public class SongHash {
 
     String songHash;
 
+    @JsonCreator
     public static SongHash of(String songHash) {
         if (songHash == null) {
             return null;

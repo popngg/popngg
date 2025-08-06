@@ -5,7 +5,10 @@ import gg.popn.domain.common.ResponseMessage;
 import gg.popn.domain.user.application.dto.response.UserProfileDto;
 import gg.popn.domain.user.application.dto.response.UserRankingsDto;
 import gg.popn.domain.user.application.dto.request.ModifyUserRequest;
+import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.model.response.SuccessResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +24,10 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     @GetMapping("/profile/{poptomoId}")
-    SuccessResponse<UserProfileDto> getUser(@PathVariable String poptomoId,
-                                            @AuthenticationPrincipal User user) {
+    SuccessResponse<UserProfileDto> getUser(
+            @Parameter(description = "poptomoId of the user", schema = @Schema(type = "string", example = "1234-5678-9012"))
+            @PathVariable PoptomoId poptomoId,
+            @AuthenticationPrincipal User user) {
         return SuccessResponse.<UserProfileDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
@@ -31,9 +36,11 @@ public class UserController {
     }
 
     @PatchMapping("/profile/{poptomoId}")
-    SuccessResponse<UserProfileDto> updateUser(@PathVariable String poptomoId,
-                                               @RequestBody ModifyUserRequest request,
-                                               @AuthenticationPrincipal User user) {
+    SuccessResponse<UserProfileDto> updateUser(
+            @Parameter(description = "poptomoId of the user", schema = @Schema(type = "string", example = "1234-5678-9012"))
+            @PathVariable PoptomoId poptomoId,
+            @RequestBody ModifyUserRequest request,
+            @AuthenticationPrincipal User user) {
         return SuccessResponse.<UserProfileDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)

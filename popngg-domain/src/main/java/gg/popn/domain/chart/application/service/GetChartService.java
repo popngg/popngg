@@ -14,10 +14,10 @@ public class GetChartService implements GetChartUseCase {
     private final ChartRepository chartRepository;
 
     @Override
-    public ChartDto getChartBySongHashAndDifficulty(String songHash, Integer difficulty) {
+    public ChartDto getChartBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty) {
 
         return ChartDto.from(
-                chartRepository.getChartBySongHashAndDifficulty(SongHash.of(songHash), Difficulty.of(difficulty))
+                chartRepository.getChartBySongHashAndDifficulty(songHash, difficulty)
         );
     }
 }

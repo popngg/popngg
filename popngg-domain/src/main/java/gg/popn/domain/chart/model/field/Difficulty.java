@@ -1,5 +1,6 @@
 package gg.popn.domain.chart.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import gg.popn.domain.common.exception.InvalidArgumentException;
 import gg.popn.domain.common.validator.Validatable;
@@ -12,6 +13,7 @@ public class Difficulty implements Validatable {
 
     Integer difficulty;
 
+    @JsonCreator
     public static Difficulty of(Integer difficulty) {
         if (difficulty == null) {
             return null;

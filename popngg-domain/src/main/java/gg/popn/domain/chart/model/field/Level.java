@@ -1,5 +1,6 @@
 package gg.popn.domain.chart.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import gg.popn.domain.common.exception.InvalidArgumentException;
 import gg.popn.domain.common.validator.Validatable;
@@ -12,6 +13,7 @@ public class Level implements Validatable {
 
     Integer level;
 
+    @JsonCreator
     public static Level of(Integer level) {
         if (level == null) {
             return null;

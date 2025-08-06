@@ -1,5 +1,6 @@
 package gg.popn.domain.user.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import gg.popn.domain.common.exception.InvalidArgumentException;
 import gg.popn.domain.common.validator.Validatable;
@@ -17,6 +18,7 @@ public class Username implements Validatable {
 
     String username;
 
+    @JsonCreator
     public static Username of(String username) {
         if (username == null) {
             return null;

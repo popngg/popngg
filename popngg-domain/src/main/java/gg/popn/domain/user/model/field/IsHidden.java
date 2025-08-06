@@ -1,5 +1,6 @@
 package gg.popn.domain.user.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import gg.popn.domain.common.exception.InvalidArgumentException;
 import gg.popn.domain.common.validator.Validatable;
@@ -12,6 +13,7 @@ public class IsHidden implements Validatable {
 
     Integer isHidden;
 
+    @JsonCreator
     public static IsHidden of(Integer isHidden) {
         if (isHidden == null) {
             return null;
