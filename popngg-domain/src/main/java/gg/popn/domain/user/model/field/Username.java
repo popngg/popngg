@@ -1,4 +1,3 @@
-
 package gg.popn.domain.user.model.field;
 
 import com.fasterxml.jackson.annotation.JsonValue;
