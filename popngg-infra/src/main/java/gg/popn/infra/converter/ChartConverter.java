@@ -2,7 +2,10 @@ package gg.popn.infra.converter;
 
 import gg.popn.domain.chart.model.*;
 import gg.popn.domain.common.model.Chart;
+import gg.popn.domain.common.model.GroupedChart;
 import gg.popn.infra.db.entity.ChartEntity;
+
+import java.util.List;
 
 public class ChartConverter {
     public static Chart toDomain(ChartEntity chartEntity) {
@@ -27,5 +30,9 @@ public class ChartConverter {
                 .level(chart.getLevel().getValue())
                 .isUpper(chart.getIsUpper().getValue())
                 .build();
+    }
+
+    public static List<GroupedChart> toGroupedChart(List<Chart> charts) {
+        return null; // TODO: implement
     }
 }

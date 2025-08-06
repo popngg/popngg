@@ -1,31 +1,18 @@
 package gg.popn.domain.chart.application.service;
 
 import gg.popn.domain.chart.application.dto.ChartDto;
-import gg.popn.domain.chart.application.dto.GetChartResponse;
 import gg.popn.domain.chart.application.service.validator.ChartValidator;
 import gg.popn.domain.chart.model.Difficulty;
-import gg.popn.domain.chart.model.Level;
-import gg.popn.domain.common.model.Chart;
 import gg.popn.domain.chart.application.port.in.GetChartUseCase;
 import gg.popn.domain.chart.application.port.out.ChartRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class GetChartService implements GetChartUseCase {
     private final ChartValidator chartValidator;
     private final ChartRepository chartRepository;
-
-    @Override
-    public GetChartResponse getChartsByLevel(Integer level) {
-        chartValidator.validate(Level.of(level));
-
-        List<Chart> charts = chartRepository.getChartsByLevel(level);
-        return GetChartResponse.from(charts);
-    }
 
     @Override
     public ChartDto getChartBySongHashAndDifficulty(String songHash, Integer difficulty) {

@@ -2,7 +2,9 @@ package gg.popn.controller.chart;
 
 import gg.popn.controller.model.response.SuccessResponse;
 import gg.popn.domain.chart.application.dto.ChartDto;
-import gg.popn.domain.chart.application.dto.GetChartResponse;
+import gg.popn.domain.chart.application.dto.GroupedChartDto;
+import gg.popn.domain.chart.application.dto.request.GetChartRequest;
+import gg.popn.domain.chart.application.dto.response.GroupedChartsDto;
 import gg.popn.domain.chart.application.port.in.GetChartUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
@@ -19,12 +21,21 @@ import org.springframework.web.bind.annotation.*;
 public class ChartController {
     private final GetChartUseCase getChartUseCase;
 
-    @GetMapping("/level/{level}")
-    public SuccessResponse<GetChartResponse> getChartsByLevel(@PathVariable Integer level) {
-        return SuccessResponse.<GetChartResponse>builder()
+    @PostMapping
+    public SuccessResponse<GroupedChartsDto> getCharts(@RequestBody GetChartRequest request) {
+        return SuccessResponse.<GroupedChartsDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(getChartUseCase.getChartsByLevel(level))
+                .data(null) // TODO: implement
+                .build();
+    }
+
+    @GetMapping("/{songHash}")
+    public SuccessResponse<GroupedChartDto> getChartBySongHash(@PathVariable String songHash) {
+        return SuccessResponse.<GroupedChartDto>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(null) // TODO: implement
                 .build();
     }
 
@@ -34,6 +45,15 @@ public class ChartController {
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(getChartUseCase.getChartBySongHashAndDifficulty(songHash, difficulty))
+                .build();
+    }
+
+    @GetMapping("/recent")
+    public SuccessResponse<GroupedChartsDto> getRecentCharts() {
+        return SuccessResponse.<GroupedChartsDto>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(null) // TODO: implement
                 .build();
     }
 }

@@ -16,15 +16,6 @@ public class ChartRepositoryImpl implements ChartRepository {
     private final ChartJpaRepository chartJpaRepository;
 
     @Override
-    public List<Chart> getChartsByLevel(Integer level) {
-        return chartJpaRepository.findAllByLevel(level)
-                .stream()
-                .filter(chartEntity -> !chartEntity.getIsDeleted().equals(1))
-                .map(ChartConverter::toDomain)
-                .toList();
-    }
-
-    @Override
     public Chart getChartBySongHashAndDifficulty(String songHash, Integer difficulty) {
         return chartJpaRepository.findAllBySongHashAndDifficulty(songHash, difficulty)
                 .stream()
