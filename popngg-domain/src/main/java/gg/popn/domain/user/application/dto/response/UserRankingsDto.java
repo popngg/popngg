@@ -1,4 +1,3 @@
-
 package gg.popn.domain.user.application.dto.response;
 
 import gg.popn.domain.user.application.dto.UserRankingDto;
