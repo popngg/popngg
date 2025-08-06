@@ -19,9 +19,9 @@ public class UserRole implements Validatable {
             return null;
         }
 
-        return UserRole.builder()
+        return Validatable.createAndValidate(() -> UserRole.builder()
                 .role(role)
-                .build();
+                .build());
     }
 
     @JsonValue

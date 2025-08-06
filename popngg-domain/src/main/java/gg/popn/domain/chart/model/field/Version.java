@@ -18,10 +18,10 @@ public class Version implements Validatable {
             return null;
         }
 
-        return Version.builder()
+        return Validatable.createAndValidate(() -> Version.builder()
                 .version(version)
                 .versionName(getVersionName(version))
-                .build();
+                .build());
     }
 
     @JsonValue

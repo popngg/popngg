@@ -21,9 +21,9 @@ public class PoptomoId implements Validatable {
             return null;
         }
 
-        return PoptomoId.builder()
+        return Validatable.createAndValidate(() -> PoptomoId.builder()
                 .poptomoId(poptomoId)
-                .build();
+                .build());
     }
 
     @JsonValue

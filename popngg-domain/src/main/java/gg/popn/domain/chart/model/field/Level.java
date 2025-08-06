@@ -17,9 +17,9 @@ public class Level implements Validatable {
             return null;
         }
 
-        return Level.builder()
+        return Validatable.createAndValidate(() -> Level.builder()
                 .level(level)
-                .build();
+                .build());
     }
 
     @JsonValue

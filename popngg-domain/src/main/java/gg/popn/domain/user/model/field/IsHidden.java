@@ -17,9 +17,9 @@ public class IsHidden implements Validatable {
             return null;
         }
 
-        return IsHidden.builder()
+        return Validatable.createAndValidate(() -> IsHidden.builder()
                 .isHidden(isHidden)
-                .build();
+                .build());
     }
 
     @JsonValue
