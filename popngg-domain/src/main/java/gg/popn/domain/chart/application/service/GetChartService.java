@@ -2,7 +2,7 @@ package gg.popn.domain.chart.application.service;
 
 import gg.popn.domain.chart.application.dto.ChartDto;
 import gg.popn.domain.chart.application.service.validator.ChartValidator;
-import gg.popn.domain.chart.model.Difficulty;
+import gg.popn.domain.chart.model.field.Difficulty;
 import gg.popn.domain.chart.application.port.in.GetChartUseCase;
 import gg.popn.domain.chart.application.port.out.ChartRepository;
 import lombok.RequiredArgsConstructor;

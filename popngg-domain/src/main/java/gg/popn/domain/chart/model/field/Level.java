@@ -1,4 +1,4 @@
-package gg.popn.domain.chart.model;
+package gg.popn.domain.chart.model.field;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import gg.popn.domain.common.exception.InvalidArgumentException;
@@ -27,6 +27,7 @@ public class Level implements Validatable {
         return level;
     }
 
+    @Override
     public void validate() {
         if (level == null) {
             throw new InvalidArgumentException("level", "It should not be empty.");

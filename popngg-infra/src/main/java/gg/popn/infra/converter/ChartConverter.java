@@ -1,8 +1,8 @@
 package gg.popn.infra.converter;
 
-import gg.popn.domain.chart.model.*;
-import gg.popn.domain.common.model.Chart;
-import gg.popn.domain.common.model.GroupedChart;
+import gg.popn.domain.chart.model.Chart;
+import gg.popn.domain.chart.model.GroupedChart;
+import gg.popn.domain.chart.model.field.*;
 import gg.popn.infra.db.entity.ChartEntity;
 
 import java.util.List;

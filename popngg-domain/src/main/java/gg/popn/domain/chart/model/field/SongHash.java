@@ -1,8 +1,6 @@
-package gg.popn.domain.chart.model;
+package gg.popn.domain.chart.model.field;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import gg.popn.domain.common.exception.InvalidArgumentException;
-import gg.popn.domain.common.validator.Validatable;
 import lombok.Builder;
 import lombok.Value;
 import org.springframework.util.DigestUtils;

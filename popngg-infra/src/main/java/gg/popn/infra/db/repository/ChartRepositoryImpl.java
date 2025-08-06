@@ -1,14 +1,12 @@
 package gg.popn.infra.db.repository;
 
 import gg.popn.domain.common.exception.ChartNotFoundException;
-import gg.popn.domain.common.model.Chart;
+import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.application.port.out.ChartRepository;
 import gg.popn.infra.converter.ChartConverter;
 import gg.popn.infra.db.jpa.ChartJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
