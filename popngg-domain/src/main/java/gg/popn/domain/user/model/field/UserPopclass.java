@@ -17,9 +17,9 @@ public class UserPopclass implements Validatable {
             return null;
         }
 
-        return UserPopclass.builder()
+        return Validatable.createAndValidate(() -> UserPopclass.builder()
                 .popclass(popclass)
-                .build();
+                .build());
     }
 
     @JsonValue

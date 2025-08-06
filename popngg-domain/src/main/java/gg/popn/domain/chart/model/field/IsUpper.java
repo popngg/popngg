@@ -17,9 +17,9 @@ public class IsUpper implements Validatable {
             return null;
         }
 
-        return IsUpper.builder()
+        return Validatable.createAndValidate(() -> IsUpper.builder()
                 .isUpper(isUpper)
-                .build();
+                .build());
     }
 
     @JsonValue

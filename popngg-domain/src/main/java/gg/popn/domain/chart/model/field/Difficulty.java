@@ -17,9 +17,9 @@ public class Difficulty implements Validatable {
             return null;
         }
 
-        return Difficulty.builder()
+        return Validatable.createAndValidate(() -> Difficulty.builder()
                 .difficulty(difficulty)
-                .build();
+                .build());
     }
 
     @JsonValue

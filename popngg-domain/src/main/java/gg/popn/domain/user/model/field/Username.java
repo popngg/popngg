@@ -22,9 +22,9 @@ public class Username implements Validatable {
             return null;
         }
 
-        return Username.builder()
+        return Validatable.createAndValidate(() -> Username.builder()
                 .username(username)
-                .build();
+                .build());
     }
 
     @JsonValue
