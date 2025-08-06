@@ -1,5 +1,7 @@
 package gg.popn.controller.chart;
 
+import gg.popn.domain.chart.model.field.Difficulty;
+import gg.popn.domain.chart.model.field.SongHash;
 import gg.popn.model.response.SuccessResponse;
 import gg.popn.domain.chart.application.dto.ChartDto;
 import gg.popn.domain.chart.application.dto.GroupedChartDto;
@@ -8,6 +10,8 @@ import gg.popn.domain.chart.application.dto.response.GroupedChartsDto;
 import gg.popn.domain.chart.application.port.in.GetChartUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +35,9 @@ public class ChartController {
     }
 
     @GetMapping("/{songHash}")
-    public SuccessResponse<GroupedChartDto> getChartBySongHash(@PathVariable String songHash) {
+    public SuccessResponse<GroupedChartDto> getChartBySongHash(
+            @Parameter(description = "songHash of the chart", schema = @Schema(type = "string", example = "2302440c63cbe103703f3de51ac205da"))
+            @PathVariable SongHash songHash) {
         return SuccessResponse.<GroupedChartDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
@@ -40,7 +46,11 @@ public class ChartController {
     }
 
     @GetMapping("/{songHash}/{difficulty}")
-    public SuccessResponse<ChartDto> getChartBySongHashAndDifficulty(@PathVariable String songHash, @PathVariable Integer difficulty) {
+    public SuccessResponse<ChartDto> getChartBySongHashAndDifficulty(
+            @Parameter(description = "songHash of the chart", schema = @Schema(type = "string", example = "2302440c63cbe103703f3de51ac205da"))
+            @PathVariable SongHash songHash,
+            @Parameter(description = "Difficulty of the chart (1~4)", schema = @Schema(type = "integer", example = "4"))
+            @PathVariable Difficulty difficulty) {
         return SuccessResponse.<ChartDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)

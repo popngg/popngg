@@ -1,19 +1,24 @@
 package gg.popn.domain.user.model.field;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import gg.popn.domain.common.exception.InvalidArgumentException;
 import gg.popn.domain.common.validator.Validatable;
 import lombok.Builder;
 import lombok.Value;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Builder
 @Value
 public class UserRole implements Validatable {
 
+    private static final List<String> validRoles = Arrays.asList("USER", "ADMIN");
+
     String role;
 
+    @JsonCreator
     public static UserRole of(String role) {
         if (role == null) {
             return null;
@@ -32,17 +37,11 @@ public class UserRole implements Validatable {
     @Override
     public void validate() {
         if (role == null) {
-            throw new InvalidArgumentException("username", "It should not be empty.");
+            throw new InvalidArgumentException("role", "It should not be empty.");
         }
 
         if (!validRoles.contains(role)) {
             throw new InvalidArgumentException("role", "It should be USER or ADMIN.");
         }
     }
-
-    private static final List<String> validRoles =
-        List.of(
-                "USER",
-                "ADMIN"
-        );
 }

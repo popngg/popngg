@@ -5,7 +5,7 @@ import gg.popn.domain.chart.model.field.SongHash;
 import gg.popn.domain.common.exception.ChartNotFoundException;
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.application.port.out.ChartRepository;
-import gg.popn.infra.converter.ChartConverter;
+import gg.popn.infra.db.mapper.ChartMapper;
 import gg.popn.infra.db.jpa.ChartJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -21,7 +21,7 @@ public class ChartRepositoryImpl implements ChartRepository {
                 .stream()
                 .filter(chartEntity -> !chartEntity.getIsDeleted().equals(1))
                 .findFirst()
-                .map(ChartConverter::toDomain)
+                .map(ChartMapper::toDomain)
                 .orElseThrow(ChartNotFoundException::new);
     }
 }

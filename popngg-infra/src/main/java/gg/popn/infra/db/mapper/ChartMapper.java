@@ -1,4 +1,4 @@
-package gg.popn.infra.converter;
+package gg.popn.infra.db.mapper;
 
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.model.GroupedChart;
@@ -7,7 +7,7 @@ import gg.popn.infra.db.entity.ChartEntity;
 
 import java.util.List;
 
-public class ChartConverter {
+public class ChartMapper {
     public static Chart toDomain(ChartEntity chartEntity) {
         return Chart.builder()
                 .songHash(SongHash.of(chartEntity.getSongHash()))
