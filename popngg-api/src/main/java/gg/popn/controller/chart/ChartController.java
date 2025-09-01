@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class ChartController {
     private final GetChartUseCase getChartUseCase;
 
-    @PostMapping
+    @PostMapping("/all")
     public SuccessResponse<GroupedChartsDto> getCharts(@RequestBody GetChartRequest request) {
         return SuccessResponse.<GroupedChartsDto>builder()
                 .code(ResponseCode.SUCCESS)
