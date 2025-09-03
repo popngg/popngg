@@ -2,6 +2,8 @@ package gg.popn.controller.user;
 
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
+import gg.popn.domain.user.application.dto.request.LoginRequestDto;
+import gg.popn.domain.user.application.dto.request.UpdatePasswordRequestDto;
 import gg.popn.domain.user.application.dto.response.UserProfileDto;
 import gg.popn.domain.user.application.dto.response.UserRankingsDto;
 import gg.popn.domain.user.application.dto.request.ModifyUserRequest;
@@ -23,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "User", description = "User operations")
 public class UserController {
 
-    @GetMapping("/profile/{poptomoId}")
+    @GetMapping("/{poptomoId}")
     SuccessResponse<UserProfileDto> getUser(
             @Parameter(description = "poptomoId of the user", schema = @Schema(type = "string", example = "1234-5678-9012"))
             @PathVariable PoptomoId poptomoId,
@@ -35,7 +37,7 @@ public class UserController {
                 .build();
     }
 
-    @PatchMapping("/profile/{poptomoId}")
+    @PatchMapping("/{poptomoId}")
     SuccessResponse<UserProfileDto> updateUser(
             @Parameter(description = "poptomoId of the user", schema = @Schema(type = "string", example = "1234-5678-9012"))
             @PathVariable PoptomoId poptomoId,
@@ -48,9 +50,20 @@ public class UserController {
                 .build();
     }
 
-    @PostMapping("/ranking")
+    @GetMapping("/ranking")
     SuccessResponse<UserRankingsDto> getUserRankings(@AuthenticationPrincipal User user) {
         return SuccessResponse.<UserRankingsDto>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(null) // TODO: implement
+                .build();
+    }
+
+    @PatchMapping("/password")
+    SuccessResponse<Void> updatePassword(
+            @RequestBody UpdatePasswordRequestDto request,
+            @AuthenticationPrincipal User user) {
+        return SuccessResponse.<Void>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(null) // TODO: implement

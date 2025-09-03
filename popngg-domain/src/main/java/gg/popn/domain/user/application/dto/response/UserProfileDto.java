@@ -18,7 +18,7 @@ public class UserProfileDto {
     String maxClearLevel;
     String maxFullComboLevel;
     String maxPerfectLevel;
-    Integer playedCharts;
+    Integer playedChartCount;
 
     UserProfileDto of(UserProfile userProfile) {
         return UserProfileDto.builder()
@@ -32,7 +32,7 @@ public class UserProfileDto {
                 .maxClearLevel(userProfile.getMaxClearLevel())
                 .maxFullComboLevel(userProfile.getMaxFullComboLevel())
                 .maxPerfectLevel(userProfile.getMaxPerfectLevel())
-                .playedCharts(userProfile.getPlayedCharts())
+                .playedChartCount(userProfile.getPlayedChartCount())
                 .build();
     }
 }
