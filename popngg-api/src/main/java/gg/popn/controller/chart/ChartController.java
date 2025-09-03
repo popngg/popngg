@@ -1,5 +1,6 @@
 package gg.popn.controller.chart;
 
+import gg.popn.domain.chart.application.dto.request.PostChartRequest;
 import gg.popn.domain.chart.model.field.Difficulty;
 import gg.popn.domain.chart.model.field.SongHash;
 import gg.popn.model.response.SuccessResponse;
@@ -15,6 +16,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -25,8 +28,8 @@ import org.springframework.web.bind.annotation.*;
 public class ChartController {
     private final GetChartUseCase getChartUseCase;
 
-    @PostMapping("/all")
-    public SuccessResponse<GroupedChartsDto> getCharts(@RequestBody GetChartRequest request) {
+    @GetMapping("/all")
+    public SuccessResponse<GroupedChartsDto> getCharts() {
         return SuccessResponse.<GroupedChartsDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
@@ -61,6 +64,16 @@ public class ChartController {
     @GetMapping("/recent")
     public SuccessResponse<GroupedChartsDto> getRecentCharts() {
         return SuccessResponse.<GroupedChartsDto>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(null) // TODO: implement
+                .build();
+    }
+
+
+    @PostMapping("")
+    public SuccessResponse<Void> addChart(@RequestBody PostChartRequest request,@AuthenticationPrincipal User user) {
+        return SuccessResponse.<Void>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(null) // TODO: implement
