@@ -2,8 +2,7 @@ package gg.popn.controller.user;
 
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
-import gg.popn.domain.user.application.dto.request.LoginRequestDto;
-import gg.popn.domain.user.application.dto.request.UpdatePasswordRequestDto;
+import gg.popn.domain.user.application.dto.request.UpdatePasswordRequest;
 import gg.popn.domain.user.application.dto.response.UserProfileDto;
 import gg.popn.domain.user.application.dto.response.UserRankingsDto;
 import gg.popn.domain.user.application.dto.request.ModifyUserRequest;
@@ -61,7 +60,7 @@ public class UserController {
 
     @PatchMapping("/password")
     SuccessResponse<Void> updatePassword(
-            @RequestBody UpdatePasswordRequestDto request,
+            @RequestBody UpdatePasswordRequest request,
             @AuthenticationPrincipal User user) {
         return SuccessResponse.<Void>builder()
                 .code(ResponseCode.SUCCESS)

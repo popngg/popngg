@@ -5,7 +5,7 @@ import lombok.Value;
 
 @Builder
 @Value
-public class LoginResponseDto {
+public class LoginDto {
     String poptomoId;
     String token;
 

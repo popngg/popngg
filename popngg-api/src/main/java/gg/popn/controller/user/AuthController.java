@@ -2,8 +2,8 @@ package gg.popn.controller.user;
 
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
-import gg.popn.domain.user.application.dto.request.LoginRequestDto;
-import gg.popn.domain.user.application.dto.response.LoginResponseDto;
+import gg.popn.domain.user.application.dto.request.LoginRequest;
+import gg.popn.domain.user.application.dto.response.LoginDto;
 import gg.popn.model.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +22,8 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    SuccessResponse<LoginResponseDto> login(@RequestBody LoginRequestDto request) {
-        return SuccessResponse.<LoginResponseDto>builder()
+    SuccessResponse<LoginDto> login(@RequestBody LoginRequest request) {
+        return SuccessResponse.<LoginDto>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(null) // TODO: implement

@@ -1,6 +1,5 @@
 package gg.popn.domain.user.application.dto.response;
 
-import gg.popn.domain.user.model.UserProfile;
 import lombok.Builder;
 import lombok.Value;
 
@@ -20,7 +19,7 @@ public class UserProfileDto {
     String maxPerfectLevel;
     Integer playedChartCount;
 
-    UserProfileDto of(UserProfile userProfile) {
+    UserProfileDto of(gg.popn.domain.user.model.UserProfile userProfile) {
         return UserProfileDto.builder()
                 .username(userProfile.getUsername().getValue())
                 .poptomoId(userProfile.getPoptomoId().getValue())
