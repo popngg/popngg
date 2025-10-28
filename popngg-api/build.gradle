@@ -13,6 +13,7 @@ jar {
 }
 
 dependencies {
+    implementation project(':popngg-application')
     implementation project(':popngg-domain')
     implementation project(':popngg-infra')
 
