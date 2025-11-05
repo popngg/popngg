@@ -29,6 +29,11 @@ public class Username implements Validatable {
                 .build());
     }
 
+    public static Username from(String username) {
+        if (username == null) return null;
+        return Username.builder().username(username).build();
+    }
+
     @JsonValue
     public String getValue() {
         return username;

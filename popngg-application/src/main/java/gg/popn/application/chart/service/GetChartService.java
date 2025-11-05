@@ -3,7 +3,6 @@ package gg.popn.application.chart.service;
 import gg.popn.application.chart.dto.ChartDto;
 import gg.popn.application.chart.dto.response.GroupedChartsDto;
 import gg.popn.application.chart.port.in.GetChartUseCase;
-import gg.popn.application.chart.port.out.ChartRepository;
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.model.GroupedChart;
 import gg.popn.domain.chart.model.field.Difficulty;

@@ -2,7 +2,6 @@ package gg.popn.application.chart.service;
 
 import gg.popn.application.chart.port.in.CreateChartUseCase;
 import gg.popn.application.chart.port.in.command.CreateChartCommand;
-import gg.popn.application.chart.port.out.ChartRepository;
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.model.field.*;
 import lombok.RequiredArgsConstructor;

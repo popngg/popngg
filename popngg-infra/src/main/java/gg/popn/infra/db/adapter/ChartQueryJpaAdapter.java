@@ -1,12 +1,11 @@
-package gg.popn.infra.db.repository;
+package gg.popn.infra.db.adapter;
 
-import gg.popn.application.chart.port.out.ChartRepository;
+import gg.popn.application.chart.port.out.ChartQueryPort;
 import gg.popn.domain.chart.model.field.Difficulty;
 import gg.popn.domain.chart.model.field.SongHash;
 
 import gg.popn.domain.common.exception.ChartNotFoundException;
 import gg.popn.domain.chart.model.Chart;
-import gg.popn.infra.db.entity.ChartEntity;
 import gg.popn.infra.db.mapper.ChartMapper;
 import gg.popn.infra.db.jpa.ChartJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
-public class ChartRepositoryImpl implements ChartRepository {
+public class ChartQueryJpaAdapter implements ChartQueryPort {
     private final ChartJpaRepository chartJpaRepository;
 
     @Override
@@ -49,9 +48,4 @@ public class ChartRepositoryImpl implements ChartRepository {
 
     }
 
-    @Override
-    public void save(Chart chart) {
-        ChartEntity chartEntity = ChartMapper.toEntity(chart);
-        chartJpaRepository.save(chartEntity);
-    }
 }
