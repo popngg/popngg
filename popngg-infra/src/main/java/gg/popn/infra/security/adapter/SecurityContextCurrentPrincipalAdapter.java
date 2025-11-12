@@ -1,7 +1,7 @@
 package gg.popn.infra.security.adapter;
 
-import gg.popn.application.auth.model.AuthPrincipal;
 import gg.popn.application.auth.port.out.CurrentPrincipalPort;
+import gg.popn.domain.user.model.AuthPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 

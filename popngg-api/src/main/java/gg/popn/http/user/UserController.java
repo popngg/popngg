@@ -2,10 +2,10 @@ package gg.popn.http.user;
 
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
-import gg.popn.application.user.dto.request.UpdatePasswordRequest;
+import gg.popn.http.user.request.UpdatePasswordRequest;
 import gg.popn.application.user.dto.response.UserProfileDto;
 import gg.popn.application.user.dto.response.UserRankingsDto;
-import gg.popn.application.user.dto.request.ModifyUserRequest;
+import gg.popn.http.user.request.ModifyUserRequest;
 import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.http.common.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.Parameter;

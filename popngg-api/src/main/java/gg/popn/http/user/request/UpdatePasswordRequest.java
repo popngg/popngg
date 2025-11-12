@@ -1,4 +1,4 @@
-package gg.popn.application.user.dto.request;
+package gg.popn.http.user.request;
 
 
 import gg.popn.domain.user.model.field.Password;

@@ -3,6 +3,7 @@ package gg.popn.application.chart.service;
 import gg.popn.application.chart.dto.ChartDto;
 import gg.popn.application.chart.dto.response.GroupedChartsDto;
 import gg.popn.application.chart.port.in.GetChartUseCase;
+import gg.popn.application.chart.port.out.ChartQueryPort;
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.model.GroupedChart;
 import gg.popn.domain.chart.model.field.Difficulty;
@@ -19,19 +20,19 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class GetChartService implements GetChartUseCase {
-    private final ChartRepository chartRepository;
+    private final ChartQueryPort chartQuery;
 
     @Override
     public ChartDto getChartBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty) {
 
         return ChartDto.from(
-                chartRepository.getChartBySongHashAndDifficulty(songHash, difficulty)
+                chartQuery.getChartBySongHashAndDifficulty(songHash, difficulty)
         );
     }
 
     @Override
     public GroupedChartsDto getAllCharts() {
-        List<Chart> charts = chartRepository.getAllCharts();
+        List<Chart> charts = chartQuery.getAllCharts();
         Map<SongHash, List<Chart>> groupedBySongHash = charts.stream()
                 .collect(Collectors.groupingBy(Chart::getSongHash));
 

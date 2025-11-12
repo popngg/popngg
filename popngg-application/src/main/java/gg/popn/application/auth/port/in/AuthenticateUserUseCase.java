@@ -1,11 +1,12 @@
 package gg.popn.application.auth.port.in;
 
-import gg.popn.application.auth.model.AuthPrincipal;
-import gg.popn.domain.user.model.field.Password;
-import gg.popn.domain.user.model.field.Username;
+import gg.popn.application.auth.port.in.command.LoginCommand;
+import gg.popn.application.auth.port.in.result.AuthResult;
+
 
 public interface  AuthenticateUserUseCase {
-    AuthResult login(Username username, Password password);
 
-    record AuthResult(String accessToken, AuthPrincipal principal) {}
+    AuthResult login(LoginCommand cmd);
+
+    AuthResult loginWithoutHash(LoginCommand cmd);
 }

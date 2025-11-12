@@ -1,7 +1,7 @@
 package gg.popn.application.auth.service;
 
-import gg.popn.application.auth.model.AuthPrincipal;
 import gg.popn.application.auth.port.out.CurrentPrincipalPort;
+import gg.popn.domain.user.model.AuthPrincipal;
 import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.domain.user.model.field.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +19,14 @@ public class AccessManager {
 
     public void requireRole(UserRole requiredRole) {
         var p = requireAuthenticated();
-        if (!p.role().equals(requiredRole)) throw new AccessDeniedException("FORBIDDEN");
+        if (!p.getUserRole().equals(requiredRole)) throw new AccessDeniedException("FORBIDDEN");
     }
 
     /** 자신(PoptomoId 동일) 또는 ADMIN만 허용 */
     public void requireSelfOrAdmin(PoptomoId owner) {
         var p = requireAuthenticated();
-        boolean isSelf = p.poptomoId().equals(owner);
-        boolean isAdmin = p.role().equals(UserRole.from("ADMIN"));
+        boolean isSelf = p.getPoptomoId().equals(owner);
+        boolean isAdmin = p.getUserRole().equals(UserRole.from("ADMIN"));
         if (!(isSelf || isAdmin)) throw new AccessDeniedException("FORBIDDEN");
     }
 }

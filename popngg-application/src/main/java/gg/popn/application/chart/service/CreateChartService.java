@@ -2,6 +2,8 @@ package gg.popn.application.chart.service;
 
 import gg.popn.application.chart.port.in.CreateChartUseCase;
 import gg.popn.application.chart.port.in.command.CreateChartCommand;
+import gg.popn.application.chart.port.out.ChartCommandPort;
+import gg.popn.application.chart.port.out.ChartQueryPort;
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.model.field.*;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +14,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CreateChartService implements CreateChartUseCase {
-    private final ChartRepository chartRepository;
+    private final ChartQueryPort chartQuery;
+    private final ChartCommandPort chartCommand;
 
 
     @Override
@@ -32,7 +35,7 @@ public class CreateChartService implements CreateChartUseCase {
                             .build();
             Level level = levels.get(idx);
             if (level.getValue() == 0) continue;
-            List<Chart> dupCheck = chartRepository.getChartsBySongHashAndDifficulty(hash, difficulty);
+            List<Chart> dupCheck = chartQuery.getChartsBySongHashAndDifficulty(hash, difficulty);
             if (!dupCheck.isEmpty()) {
                 throw new Exception("Song hash and difficulty is duplicated : " +
                         dupCheck.get(0).toString() + ". " +
@@ -49,7 +52,7 @@ public class CreateChartService implements CreateChartUseCase {
                     .songHash(hash)
                     .build();
 
-            chartRepository.save(chart);
+            chartCommand.save(chart);
             cnt++;
         }
 

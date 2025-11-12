@@ -2,7 +2,7 @@ package gg.popn.http.user;
 
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
-import gg.popn.application.user.dto.request.LoginRequest;
+import gg.popn.http.user.request.LoginRequest;
 import gg.popn.application.user.dto.response.LoginDto;
 import gg.popn.http.common.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
