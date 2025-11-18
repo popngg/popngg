@@ -21,7 +21,7 @@ public class ChartQueryJpaAdapter implements ChartQueryPort {
     private final ChartJpaRepository chartJpaRepository;
 
     @Override
-    public Chart getChartBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty) {
+    public Chart findBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty) {
         return chartJpaRepository.findAllBySongHashAndDifficulty(songHash.getValue(), difficulty.getDifficulty())
                 .stream()
                 .filter(chartEntity -> !chartEntity.getIsDeleted().equals(1))
@@ -31,7 +31,7 @@ public class ChartQueryJpaAdapter implements ChartQueryPort {
     }
 
     @Override
-    public List<Chart> getAllCharts() {
+    public List<Chart> findAllCharts() {
         return chartJpaRepository.findAll().stream()
                 .filter(chartEntity -> !chartEntity.getIsDeleted().equals(1))
                 .map(ChartMapper::toDomain)
@@ -39,7 +39,7 @@ public class ChartQueryJpaAdapter implements ChartQueryPort {
     }
 
     @Override
-    public List<Chart> getChartsBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty ){
+    public List<Chart> findListBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty ){
         return chartJpaRepository.findAllBySongHashAndDifficulty(songHash.getValue(), difficulty.getDifficulty())
                 .stream()
                 .filter(chartEntity -> Objects.equals(chartEntity.getIsDeleted(), 1))

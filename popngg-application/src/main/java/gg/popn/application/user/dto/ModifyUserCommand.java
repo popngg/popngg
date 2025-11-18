@@ -1,4 +1,4 @@
-package gg.popn.application.user.port.in.command;
+package gg.popn.application.user.dto;
 
 import gg.popn.domain.user.model.field.IsHidden;
 import gg.popn.domain.user.model.field.Password;

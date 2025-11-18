@@ -1,12 +1,10 @@
 package gg.popn.application.chart.service;
 
-import gg.popn.application.chart.dto.ChartDto;
-import gg.popn.application.chart.dto.response.GroupedChartsDto;
-import gg.popn.application.chart.port.in.GetChartUseCase;
+import gg.popn.application.chart.dto.result.GroupedChartListResult;
+import gg.popn.application.chart.port.in.FindGroupedChartListUseCase;
 import gg.popn.application.chart.port.out.ChartQueryPort;
 import gg.popn.domain.chart.model.Chart;
 import gg.popn.domain.chart.model.GroupedChart;
-import gg.popn.domain.chart.model.field.Difficulty;
 
 import gg.popn.domain.chart.model.field.SongHash;
 import lombok.RequiredArgsConstructor;
@@ -19,20 +17,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class GetChartService implements GetChartUseCase {
+public class FindGroupedChartService implements FindGroupedChartListUseCase {
     private final ChartQueryPort chartQuery;
 
-    @Override
-    public ChartDto getChartBySongHashAndDifficulty(SongHash songHash, Difficulty difficulty) {
 
-        return ChartDto.from(
-                chartQuery.getChartBySongHashAndDifficulty(songHash, difficulty)
-        );
-    }
 
     @Override
-    public GroupedChartsDto getAllCharts() {
-        List<Chart> charts = chartQuery.getAllCharts();
+    public GroupedChartListResult execute() {
+        List<Chart> charts = chartQuery.findAllCharts();
         Map<SongHash, List<Chart>> groupedBySongHash = charts.stream()
                 .collect(Collectors.groupingBy(Chart::getSongHash));
 
@@ -58,6 +50,6 @@ public class GetChartService implements GetChartUseCase {
             groupedCharts.add(builder.build());
         }
 
-        return GroupedChartsDto.from(groupedCharts);
+        return GroupedChartListResult.from(groupedCharts);
     }
 }

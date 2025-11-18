@@ -1,4 +1,4 @@
-package gg.popn.application.user.port.out.data;
+package gg.popn.application.user.dto;
 
 import gg.popn.domain.user.model.User;
 

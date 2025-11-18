@@ -1,7 +1,7 @@
 package gg.popn.application.user.port.out;
 
 
-import gg.popn.application.user.port.out.data.UserWithHashedPassword;
+import gg.popn.application.user.dto.UserWithHashedPassword;
 import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.domain.user.model.field.Username;
 

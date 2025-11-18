@@ -1,7 +1,7 @@
 package gg.popn.application.chart.service;
 
 import gg.popn.application.chart.port.in.CreateChartUseCase;
-import gg.popn.application.chart.port.in.command.CreateChartCommand;
+import gg.popn.application.chart.dto.command.CreateChartCommand;
 import gg.popn.application.chart.port.out.ChartCommandPort;
 import gg.popn.application.chart.port.out.ChartQueryPort;
 import gg.popn.domain.chart.model.Chart;
@@ -19,7 +19,7 @@ public class CreateChartService implements CreateChartUseCase {
 
 
     @Override
-    public Integer createChart(CreateChartCommand command) throws Exception {
+    public Integer execute(CreateChartCommand command) throws Exception {
         int cnt = 0;
 
         GenreName genreName = command.genreName();
@@ -35,7 +35,7 @@ public class CreateChartService implements CreateChartUseCase {
                             .build();
             Level level = levels.get(idx);
             if (level.getValue() == 0) continue;
-            List<Chart> dupCheck = chartQuery.getChartsBySongHashAndDifficulty(hash, difficulty);
+            List<Chart> dupCheck = chartQuery.findListBySongHashAndDifficulty(hash, difficulty);
             if (!dupCheck.isEmpty()) {
                 throw new Exception("Song hash and difficulty is duplicated : " +
                         dupCheck.get(0).toString() + ". " +

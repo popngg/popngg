@@ -1,4 +1,4 @@
-package gg.popn.application.auth.port.in.command;
+package gg.popn.application.auth.dto.command;
 
 import gg.popn.domain.user.model.field.Password;
 import gg.popn.domain.user.model.field.PoptomoId;

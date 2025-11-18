@@ -1,7 +1,7 @@
 package gg.popn.infra.db.adapter;
 
 import gg.popn.application.user.port.out.LoadUserPort;
-import gg.popn.application.user.port.out.data.UserWithHashedPassword;
+import gg.popn.application.user.dto.UserWithHashedPassword;
 import gg.popn.domain.user.model.User;
 import gg.popn.domain.user.model.field.*;
 import gg.popn.infra.db.entity.UserEntity;

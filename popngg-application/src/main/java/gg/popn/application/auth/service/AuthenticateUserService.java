@@ -1,10 +1,10 @@
 package gg.popn.application.auth.service;
 
 import gg.popn.application.auth.port.in.AuthenticateUserUseCase;
-import gg.popn.application.auth.port.in.command.LoginCommand;
-import gg.popn.application.auth.port.in.result.AuthResult;
+import gg.popn.application.auth.dto.command.LoginCommand;
+import gg.popn.application.auth.dto.response.AuthResult;
 import gg.popn.application.auth.port.out.PasswordHasherPort;
-import gg.popn.application.auth.port.out.TokenIssuerPort;
+import gg.popn.application.auth.port.out.TokenPort;
 import gg.popn.application.user.port.out.LoadUserPort;
 
 import gg.popn.domain.user.model.AuthPrincipal;
@@ -19,7 +19,7 @@ import java.time.Duration;
 public class AuthenticateUserService implements AuthenticateUserUseCase {
     private final LoadUserPort loadUserPort;
     private final PasswordHasherPort passwordHasher;
-    private final TokenIssuerPort tokenIssuer;
+    private final TokenPort tokenIssuer;
 
     @Override
     public AuthResult login(LoginCommand cmd) {
@@ -47,7 +47,7 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
         var u = loadUserPort.loadByPoptomoId(cmd.poptomoId())
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
-        // 2) 패스워드 검증 (VO에서 원문 꺼내서 비교)
+
         if (!u.passwordHash().equals(cmd.password().getValue())) {
             throw new BadCredentialsException("Bad credentials");
         }

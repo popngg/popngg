@@ -1,8 +1,8 @@
 package gg.popn.application.chart.port.in;
 
 
-import gg.popn.application.chart.port.in.command.CreateChartCommand;
+import gg.popn.application.chart.dto.command.CreateChartCommand;
 
 public interface CreateChartUseCase {
-    Integer createChart(CreateChartCommand cmd) throws Exception;
+    Integer execute(CreateChartCommand cmd) throws Exception;
 }
