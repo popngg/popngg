@@ -2,10 +2,9 @@ package gg.popn.http.chart.mapper;
 
 import gg.popn.application.chart.dto.command.CreateChartCommand;
 import gg.popn.application.chart.dto.command.FindChartCommand;
-import gg.popn.application.chart.dto.result.ChartResult;
+import gg.popn.application.chart.dto.command.FindGroupedChartCommand;
 import gg.popn.domain.chart.model.field.*;
 import gg.popn.http.chart.request.CreateChartRequest;
-import gg.popn.http.chart.response.ChartResponse;
 
 public final class ChartAssembler {
     private ChartAssembler() {}
@@ -26,6 +25,12 @@ public final class ChartAssembler {
         return FindChartCommand.builder()
                 .songHash(SongHash.of(songHash))
                 .difficulty(Difficulty.of(difficulty))
+                .build();
+    }
+
+    public static FindGroupedChartCommand toFindGroupCommand(String songHash) {
+        return FindGroupedChartCommand.builder()
+                .songHash(SongHash.of(songHash))
                 .build();
     }
 

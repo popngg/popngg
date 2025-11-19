@@ -2,17 +2,15 @@ package gg.popn.http.chart;
 
 import gg.popn.application.chart.dto.command.CreateChartCommand;
 import gg.popn.application.chart.dto.command.FindChartCommand;
-import gg.popn.application.chart.port.in.FindChartUseCase;
+import gg.popn.application.chart.dto.command.FindGroupedChartCommand;
+import gg.popn.application.chart.port.in.*;
 import gg.popn.http.chart.mapper.ChartAssembler;
 import gg.popn.http.chart.request.CreateChartRequest;
-import gg.popn.application.chart.port.in.CreateChartUseCase;
-import gg.popn.domain.chart.model.field.SongHash;
 import gg.popn.http.chart.response.ChartResponse;
+import gg.popn.http.chart.response.CreateChartResponse;
 import gg.popn.http.chart.response.GroupedChartListResponse;
+import gg.popn.http.chart.response.GroupedChartResponse;
 import gg.popn.http.common.response.SuccessResponse;
-import gg.popn.application.chart.dto.result.GroupedChartResult;
-import gg.popn.application.chart.dto.result.GroupedChartListResult;
-import gg.popn.application.chart.port.in.FindGroupedChartListUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,8 +28,10 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Chart", description = "Chart operations")
 public class ChartController {
     private final FindGroupedChartListUseCase findGroupedChartListUseCase;
+    private final FindGroupedChartListRecentUseCase findGroupedChartListRecentUseCase;
     private final FindChartUseCase findChartUseCase;
     private final CreateChartUseCase createChartUseCase;
+    private final FindGroupedChartUseCase findGroupedChartUseCase;
 
     @GetMapping("/all")
     public SuccessResponse<GroupedChartListResponse> getCharts() {
@@ -45,13 +45,16 @@ public class ChartController {
     }
 
     @GetMapping("/{songHash}")
-    public SuccessResponse<GroupedChartResult> findGroupedChart(
+    public SuccessResponse<GroupedChartResponse> findGroupedChart(
             @Parameter(description = "songHash of the chart", schema = @Schema(type = "string", example = "2302440c63cbe103703f3de51ac205da"))
-            @PathVariable SongHash songHash) {
-        return SuccessResponse.<GroupedChartResult>builder()
+            @PathVariable String songHash) {
+        FindGroupedChartCommand cmd = ChartAssembler.toFindGroupCommand(songHash);
+        GroupedChartResponse response = GroupedChartResponse.from(findGroupedChartUseCase.execute(cmd));
+
+        return SuccessResponse.<GroupedChartResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
+                .data(response)
                 .build();
     }
 
@@ -73,23 +76,27 @@ public class ChartController {
     }
 
     @GetMapping("/recent")
-    public SuccessResponse<GroupedChartListResult> findRecentCharts() {
-        return SuccessResponse.<GroupedChartListResult>builder()
+    public SuccessResponse<GroupedChartListResponse> findRecentCharts() {
+
+        GroupedChartListResponse response = GroupedChartListResponse.from(findGroupedChartListRecentUseCase.execute());
+
+        return SuccessResponse.<GroupedChartListResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
+                .data(response)
                 .build();
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping("")
-    public SuccessResponse<Integer> addChart(@RequestBody CreateChartRequest request) throws Exception {
+    public SuccessResponse<CreateChartResponse> addChart(@RequestBody CreateChartRequest request) throws Exception {
         CreateChartCommand cmd = ChartAssembler.toCreateCommand(request);
+        CreateChartResponse response = CreateChartResponse.from(createChartUseCase.execute(cmd));
 
-        return SuccessResponse.<Integer>builder()
+        return SuccessResponse.<CreateChartResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(createChartUseCase.execute(cmd))
+                .data(response)
                 .build();
     }
 }

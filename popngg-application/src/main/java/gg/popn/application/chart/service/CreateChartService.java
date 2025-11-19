@@ -1,5 +1,6 @@
 package gg.popn.application.chart.service;
 
+import gg.popn.application.chart.dto.result.CreateChartResult;
 import gg.popn.application.chart.port.in.CreateChartUseCase;
 import gg.popn.application.chart.dto.command.CreateChartCommand;
 import gg.popn.application.chart.port.out.ChartCommandPort;
@@ -9,6 +10,7 @@ import gg.popn.domain.chart.model.field.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -19,7 +21,7 @@ public class CreateChartService implements CreateChartUseCase {
 
 
     @Override
-    public Integer execute(CreateChartCommand command) throws Exception {
+    public CreateChartResult execute(CreateChartCommand command) throws Exception {
         int cnt = 0;
 
         GenreName genreName = command.genreName();
@@ -28,6 +30,8 @@ public class CreateChartService implements CreateChartUseCase {
         IsUpper isUpper = command.isUpper();
         List<Level> levels = command.levels();
         SongHash hash = SongHash.from(genreName, songName, version, isUpper);
+
+        List<Level> createdLevels = new ArrayList<>();
 
         for (int idx = 0; idx < 4; idx++) {
             Difficulty difficulty = Difficulty.builder()
@@ -53,9 +57,10 @@ public class CreateChartService implements CreateChartUseCase {
                     .build();
 
             chartCommand.save(chart);
+            createdLevels.add(level);
             cnt++;
         }
 
-        return cnt;
+        return new CreateChartResult(hash, createdLevels, cnt);
     }
 }
