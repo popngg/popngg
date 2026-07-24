@@ -3,7 +3,13 @@ package gg.popn.infra.db.adapter;
 import gg.popn.application.song.dto.query.FindSongsQuery;
 import gg.popn.application.song.dto.result.GroupedSongView;
 import gg.popn.application.song.dto.result.SongChartView;
+import gg.popn.application.song.dto.result.ChartDetailView;
+import gg.popn.application.song.dto.result.ChartMetadataView;
+import gg.popn.application.song.dto.result.DifficultyView;
+import gg.popn.application.song.dto.result.SongDetailView;
+import gg.popn.application.song.dto.result.SongMetadataView;
 import gg.popn.application.song.port.out.SongCatalogQueryPort;
+import gg.popn.domain.game.policy.DifficultyPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -13,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -121,6 +128,71 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                         song.artistName(), song.version(), song.jacketUrl(),
                         List.copyOf(chartsBySong.getOrDefault(song.songId(), List.of()))))
                 .toList();
+    }
+
+    @Override
+    public Optional<SongDetailView> findSongDetail(long songId) {
+        List<SongMetadataView> songs = jdbcTemplate.query("""
+                        SELECT song_id, song_hash, genre_name, song_name, artist_name, version, jacket_url
+                        FROM songs
+                        WHERE song_id = :songId
+                        """,
+                new MapSqlParameterSource("songId", songId),
+                (rs, rowNum) -> songMetadata(rs));
+        if (songs.isEmpty()) {
+            return Optional.empty();
+        }
+        List<ChartMetadataView> charts = jdbcTemplate.query("""
+                        SELECT chart_id, difficulty_code, level, chart_version, is_upper,
+                               has_strict_gauge, has_strict_judgement, is_deleted
+                        FROM charts
+                        WHERE song_id = :songId
+                        ORDER BY difficulty_code, is_upper
+                        """,
+                new MapSqlParameterSource("songId", songId),
+                (rs, rowNum) -> chartMetadata(rs));
+        return Optional.of(new SongDetailView(songs.getFirst(), charts));
+    }
+
+    @Override
+    public Optional<ChartDetailView> findChartDetail(long chartId) {
+        List<ChartDetailView> details = jdbcTemplate.query("""
+                        SELECT s.song_id, s.song_hash, s.genre_name, s.song_name, s.artist_name,
+                               s.version, s.jacket_url, c.chart_id, c.difficulty_code, c.level,
+                               c.chart_version, c.is_upper, c.has_strict_gauge,
+                               c.has_strict_judgement, c.is_deleted
+                        FROM charts c
+                        JOIN songs s ON s.song_id = c.song_id
+                        WHERE c.chart_id = :chartId
+                        """,
+                new MapSqlParameterSource("chartId", chartId),
+                (rs, rowNum) -> new ChartDetailView(songMetadata(rs), chartMetadata(rs)));
+        return details.stream().findFirst();
+    }
+
+    private SongMetadataView songMetadata(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new SongMetadataView(
+                rs.getLong("song_id"),
+                rs.getString("song_hash"),
+                rs.getString("genre_name"),
+                rs.getString("song_name"),
+                rs.getString("artist_name"),
+                rs.getInt("version"),
+                rs.getString("jacket_url"));
+    }
+
+    private ChartMetadataView chartMetadata(java.sql.ResultSet rs) throws java.sql.SQLException {
+        DifficultyPolicy difficulty = DifficultyPolicy.fromCode(rs.getInt("difficulty_code"));
+        return new ChartMetadataView(
+                rs.getLong("chart_id"),
+                new DifficultyView(difficulty.getCode(), difficulty.getLabel(),
+                        difficulty.getShortLabel(), difficulty.getSortOrder()),
+                rs.getInt("level"),
+                rs.getInt("chart_version"),
+                rs.getBoolean("is_upper"),
+                rs.getBoolean("has_strict_gauge"),
+                rs.getBoolean("has_strict_judgement"),
+                rs.getBoolean("is_deleted"));
     }
 
     private MapSqlParameterSource parameters(FindSongsQuery query) {
