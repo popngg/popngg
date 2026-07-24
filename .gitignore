@@ -21,6 +21,7 @@ build/
 # Application properties with sensitive data
 application-*.yml
 !application-local.yml
+!application-docker.yml
 
 # Local configuration files
 *.properties.local

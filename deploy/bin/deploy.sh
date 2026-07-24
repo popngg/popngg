@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+lock_dir=${DEPLOY_LOCK_DIR:-"$repo_root/.deploy.lock"}
+if ! mkdir "$lock_dir" 2>/dev/null; then
+  echo "another deployment is already running" >&2
+  exit 75
+fi
+trap 'rmdir "$lock_dir"' EXIT
+
+: "${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}"
+: "${IMAGE_TAG:?IMAGE_TAG is required}"
+[[ "$IMAGE_TAG" != latest ]] || {
+  echo "latest is not an allowed deployment tag" >&2
+  exit 64
+}
+
+compose=(docker compose -f "$repo_root/deploy/compose.yml")
+"${compose[@]}" up --no-deps --wait mysql
+"${compose[@]}" run --rm migration
+"${compose[@]}" up -d --no-deps --wait api
+"$repo_root/deploy/bin/smoke-test.sh"
+echo "deployment image=$IMAGE_REPOSITORY:$IMAGE_TAG status=healthy"
