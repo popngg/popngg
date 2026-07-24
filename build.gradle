@@ -1,7 +1,7 @@
 buildscript {
     ext {
-        springBootVersion = '3.2.4'
-        springDependencyManagementVersion = '1.1.3'
+        springBootVersion = '3.5.16'
+        springDependencyManagementVersion = '1.1.7'
     }
     repositories {
         mavenCentral()
@@ -33,8 +33,11 @@ subprojects {
         }
     }
     
-    sourceCompatibility = '17'
-    targetCompatibility = '17'
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
     
     configurations {
         compileOnly {

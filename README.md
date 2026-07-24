@@ -17,9 +17,9 @@ popngg/
 
 ### Prerequisites
 
-- Java 17 or higher
+- JDK 21
 - Docker and Docker Compose
-- Gradle 8.0 or higher
+- Gradle 8.13 (use the committed wrapper)
 
 ### Development Setup
 
@@ -41,7 +41,7 @@ popngg/
 
 ## Technology Stack
 
-- **Backend**: Spring Boot 3.x, Java 17
+- **Backend**: Spring Boot 3.5.16 / Spring Framework 6.2.x, Java 21
 - **Build Tool**: Gradle
 - **Database**: MySQL 8.0
 - **Containerization**: Docker, Docker Compose
