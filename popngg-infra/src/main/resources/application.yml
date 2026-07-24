@@ -8,3 +8,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+popngg:
+  game:
+    current-version: ${GAME_CURRENT_VERSION:29}

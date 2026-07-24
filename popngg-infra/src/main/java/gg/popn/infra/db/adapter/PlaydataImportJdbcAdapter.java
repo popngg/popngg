@@ -3,7 +3,8 @@ package gg.popn.infra.db.adapter;
 import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
-import lombok.RequiredArgsConstructor;
+import gg.popn.application.playdata.service.PlaydataUpsertPolicy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -18,9 +19,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
     private final JdbcTemplate jdbc;
+    private final PlaydataUpsertPolicy upsertPolicy;
+    private final int currentVersion;
+
+    public PlaydataImportJdbcAdapter(JdbcTemplate jdbc, PlaydataUpsertPolicy upsertPolicy,
+                                     @Value("${popngg.game.current-version:29}") int currentVersion) {
+        this.jdbc = jdbc;
+        this.upsertPolicy = upsertPolicy;
+        this.currentVersion = currentVersion;
+    }
 
     @Override
     @Transactional
@@ -30,6 +39,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
         long renewLogId = startLog(command, userId);
         var unmatched = new ArrayList<ImportPlaydataResult.UnmatchedRow>();
         int matched = 0;
+        int updated = 0;
         try {
             for (int index = 0; index < command.rows().size(); index++) {
                 Match match = match(command.rows().get(index));
@@ -37,17 +47,87 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
                     unmatched.add(new ImportPlaydataResult.UnmatchedRow(index, match.reason()));
                 } else {
                     matched++;
+                    if (upsert(userId, match.chartId(), command.rows().get(index), renewLogId)) {
+                        updated++;
+                    }
                 }
             }
             String status = unmatched.isEmpty() ? "SUCCESS" : matched == 0 ? "FAILED" : "PARTIAL_SUCCESS";
-            finishLog(renewLogId, status, matched, 0,
+            finishLog(renewLogId, status, matched, updated,
                     unmatched.isEmpty() ? null : summarize(unmatched));
             return new ImportPlaydataResult(renewLogId, command.rows().size(), matched,
-                    0, 0, unmatched.size(), List.copyOf(unmatched));
+                    updated, 0, unmatched.size(), List.copyOf(unmatched));
         } catch (RuntimeException exception) {
             finishLog(renewLogId, "FAILED", matched, 0, exception.getClass().getSimpleName());
             throw exception;
         }
+    }
+
+    private boolean upsert(long userId, long chartId, ImportPlaydataCommand.Row row,
+                           long renewLogId) {
+        PlaydataUpsertPolicy.State existing = loadState(userId, chartId);
+        var observed = new PlaydataUpsertPolicy.Observation(
+                row.score(), row.rankCode(), row.medalCode());
+        var transition = existing == null || existing.currentVersion() == currentVersion
+                ? null : loadTransition(existing.currentVersion(), currentVersion);
+        var decision = upsertPolicy.decide(existing, observed, currentVersion, transition);
+        if (!decision.changed()) return false;
+        if (existing == null) {
+            insertState(userId, chartId, renewLogId, decision.state());
+        } else {
+            updateState(userId, chartId, renewLogId, decision.state());
+        }
+        return true;
+    }
+
+    private PlaydataUpsertPolicy.State loadState(long userId, long chartId) {
+        List<PlaydataUpsertPolicy.State> states = jdbc.query("""
+                SELECT current_version, version_score, version_rank_code,
+                       all_time_score, all_time_score_version, all_time_rank_code, medal_code
+                  FROM playdata WHERE user_id = ? AND chart_id = ?
+                """, (rs, rowNum) -> new PlaydataUpsertPolicy.State(
+                rs.getInt("current_version"), rs.getInt("version_score"),
+                (Integer) rs.getObject("version_rank_code"), rs.getInt("all_time_score"),
+                rs.getInt("all_time_score_version"), (Integer) rs.getObject("all_time_rank_code"),
+                rs.getInt("medal_code")), userId, chartId);
+        if (states.size() > 1) throw new IllegalStateException("Duplicate playdata current state.");
+        return states.isEmpty() ? null : states.getFirst();
+    }
+
+    private PlaydataUpsertPolicy.TransitionPolicy loadTransition(int fromVersion, int toVersion) {
+        List<String> policies = jdbc.query("""
+                SELECT score_policy FROM game_version_transitions
+                 WHERE from_version = ? AND to_version = ? AND status = 'APPROVED'
+                """, (rs, rowNum) -> rs.getString(1), fromVersion, toVersion);
+        if (policies.size() != 1) return null;
+        return PlaydataUpsertPolicy.TransitionPolicy.fromDatabase(policies.getFirst());
+    }
+
+    private void insertState(long userId, long chartId, long renewLogId,
+                             PlaydataUpsertPolicy.State state) {
+        Timestamp now = Timestamp.from(Instant.now());
+        jdbc.update("""
+                INSERT INTO playdata
+                    (user_id, chart_id, current_version, version_score, version_rank_code,
+                     all_time_score, all_time_score_version, all_time_rank_code, medal_code,
+                     popclass, is_display_popclass_target, last_renew_log_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, FALSE, ?, ?, ?)
+                """, userId, chartId, state.currentVersion(), state.versionScore(),
+                state.versionRankCode(), state.allTimeScore(), state.allTimeScoreVersion(),
+                state.allTimeRankCode(), state.medalCode(), renewLogId, now, now);
+    }
+
+    private void updateState(long userId, long chartId, long renewLogId,
+                             PlaydataUpsertPolicy.State state) {
+        jdbc.update("""
+                UPDATE playdata
+                   SET current_version = ?, version_score = ?, version_rank_code = ?,
+                       all_time_score = ?, all_time_score_version = ?, all_time_rank_code = ?,
+                       medal_code = ?, last_renew_log_id = ?, updated_at = ?
+                 WHERE user_id = ? AND chart_id = ?
+                """, state.currentVersion(), state.versionScore(), state.versionRankCode(),
+                state.allTimeScore(), state.allTimeScoreVersion(), state.allTimeRankCode(),
+                state.medalCode(), renewLogId, Timestamp.from(Instant.now()), userId, chartId);
     }
 
     private long findUserId(String poptomoId) {
