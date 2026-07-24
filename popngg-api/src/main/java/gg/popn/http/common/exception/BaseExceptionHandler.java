@@ -2,6 +2,7 @@ package gg.popn.http.common.exception;
 
 import gg.popn.domain.common.exception.BaseException;
 import gg.popn.application.user.exception.UserProfileNotFoundException;
+import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,15 @@ public class BaseExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(Map.of("code", "FORBIDDEN", "message", "Profile update is not allowed."));
+    }
+
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidPasswordResetToken() {
+        return ResponseEntity
+                .badRequest()
+                .body(Map.of(
+                        "code", "INVALID_PASSWORD_RESET_TOKEN",
+                        "message", "The password reset token is invalid or expired."));
     }
 
     @ExceptionHandler(AuthenticationException.class)
