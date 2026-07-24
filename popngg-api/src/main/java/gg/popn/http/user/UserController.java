@@ -1,71 +1,76 @@
 package gg.popn.http.user;
 
+import gg.popn.application.user.dto.command.UpdateUserProfileCommand;
+import gg.popn.application.user.dto.query.UserProfileQuery;
+import gg.popn.application.user.dto.query.UserRankingQuery;
+import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
-import gg.popn.http.user.request.UpdatePasswordRequest;
-import gg.popn.application.user.dto.response.UserProfileDto;
-import gg.popn.application.user.dto.response.UserRankingsDto;
-import gg.popn.http.user.request.ModifyUserRequest;
-import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.http.common.response.SuccessResponse;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import gg.popn.http.user.request.UpdateUserProfileRequest;
+import gg.popn.http.user.response.UserProfileResponse;
+import gg.popn.http.user.response.UserRankingResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
+@Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v2/user")
-@Tag(name = "User", description = "User operations")
+@RequestMapping("/api/v1/users")
 public class UserController {
+    private final UserProfileUseCase userProfile;
 
     @GetMapping("/{poptomoId}")
-    SuccessResponse<UserProfileDto> getUser(
-            @Parameter(description = "poptomoId of the user", schema = @Schema(type = "string", example = "1234-5678-9012"))
-            @PathVariable PoptomoId poptomoId,
-            @AuthenticationPrincipal User user) {
-        return SuccessResponse.<UserProfileDto>builder()
-                .code(ResponseCode.SUCCESS)
-                .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
-                .build();
+    SuccessResponse<UserProfileResponse> getUser(
+            @PathVariable
+            @Pattern(regexp = "^\\d{4}-\\d{4}-\\d{4}$")
+            String poptomoId) {
+        return success(UserProfileResponse.from(
+                userProfile.get(new UserProfileQuery(poptomoId))));
     }
 
     @PatchMapping("/{poptomoId}")
-    SuccessResponse<UserProfileDto> updateUser(
-            @Parameter(description = "poptomoId of the user", schema = @Schema(type = "string", example = "1234-5678-9012"))
-            @PathVariable PoptomoId poptomoId,
-            @RequestBody ModifyUserRequest request,
-            @AuthenticationPrincipal User user) {
-        return SuccessResponse.<UserProfileDto>builder()
-                .code(ResponseCode.SUCCESS)
-                .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
-                .build();
+    SuccessResponse<UserProfileResponse> updateUser(
+            @PathVariable
+            @Pattern(regexp = "^\\d{4}-\\d{4}-\\d{4}$")
+            String poptomoId,
+            @Valid @RequestBody UpdateUserProfileRequest request) {
+        var result = userProfile.update(new UpdateUserProfileCommand(
+                poptomoId,
+                request.userName(),
+                request.characterName(),
+                request.comment(),
+                request.profileImageUrl(),
+                request.hidden()));
+        return success(UserProfileResponse.from(result));
     }
 
-    @GetMapping("/ranking")
-    SuccessResponse<UserRankingsDto> getUserRankings(@AuthenticationPrincipal User user) {
-        return SuccessResponse.<UserRankingsDto>builder()
-                .code(ResponseCode.SUCCESS)
-                .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
-                .build();
+    @GetMapping("/rankings")
+    SuccessResponse<UserRankingResponse> getUserRankings(
+            @RequestParam(defaultValue = "displayPopclass") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var result = userProfile.rankings(new UserRankingQuery(
+                UserRankingQuery.Sort.fromApiValue(sort),
+                page,
+                size));
+        return success(UserRankingResponse.from(result));
     }
 
-    @PatchMapping("/password")
-    SuccessResponse<Void> updatePassword(
-            @RequestBody UpdatePasswordRequest request,
-            @AuthenticationPrincipal User user) {
-        return SuccessResponse.<Void>builder()
+    private static <T> SuccessResponse<T> success(T data) {
+        return SuccessResponse.<T>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
+                .data(data)
                 .build();
     }
 }
