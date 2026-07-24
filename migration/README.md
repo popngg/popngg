@@ -7,6 +7,41 @@ POPNGG-20의 대량 데이터 변환 초안입니다. Flyway는 대상 MVP 스�
 원본 dump와 복원 DB는 읽기 전용 입력입니다. dump를 저장소 안으로 복사하거나
 Git/Jira/PR에 첨부하지 않습니다.
 
+## 외부 dump end-to-end rehearsal
+
+POPNGG-24의 긴급 로컬 리허설은 외부 dump restore, 격리 대상 스키마 생성, 데이터
+transform과 검증을 한 명령으로 실행할 수 있습니다.
+
+```bash
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
+./migration/bin/run-migration.sh \
+  --dump /absolute/path/to/legacy-dump.sql \
+  --legacy-db popngg_legacy_rehearsal \
+  --target-db popngg_mvp_rehearsal \
+  --reset
+```
+
+runner는 dump가 Git worktree 밖의 절대 경로인지 확인합니다. `--reset`은 이름이
+검증된 두 rehearsal DB만 삭제하고 다시 만들며, production cutover에서는 사용하지
+않습니다. 출력은 session 상태, table row count, 실패 사유별 count와 검증 실패
+건수로 제한합니다.
+
+이 end-to-end runner의 `01_mvp_schema.sql`은 실제 dump와 transform을 격리
+검증하기 위한 schema snapshot입니다. 운영 schema lifecycle은
+`popngg-infra/src/main/resources/db/migration/V*.sql`의 Flyway baseline만
+사용하고, 운영 대량 transform은 아래 `migrate-legacy.sh`처럼 별도 job으로
+실행합니다. schema snapshot이 Flyway baseline과 달라지면 리허설을 중단하고
+동시에 갱신해야 합니다.
+
+end-to-end 산출물은 target DB에만 남습니다.
+
+- `migration_user_map`
+- `migration_song_map`
+- `migration_chart_map`
+- `migration_playdata_map`
+- `migration_failures`
+- `migration_verification_results`
+
 ## 실행
 
 MySQL 8의 legacy/target DB를 준비한 뒤 실행합니다.
