@@ -3,16 +3,23 @@ package gg.popn.http.song;
 import gg.popn.application.song.dto.query.FindSongsQuery;
 import gg.popn.application.song.port.in.FindSongsUseCase;
 import gg.popn.application.song.port.in.FindSongDetailUseCase;
+import gg.popn.application.song.port.in.CreateSongUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
 import gg.popn.http.common.response.SuccessResponse;
 import gg.popn.http.song.response.SongPageResponse;
 import gg.popn.http.song.response.SongDetailResponse;
+import gg.popn.http.song.response.CreateSongResponse;
+import gg.popn.http.song.request.CreateSongRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -21,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SongController {
     private final FindSongsUseCase findSongsUseCase;
     private final FindSongDetailUseCase findSongDetailUseCase;
+    private final CreateSongUseCase createSongUseCase;
 
     @GetMapping
     public SuccessResponse<SongPageResponse> findSongs(
@@ -50,6 +58,16 @@ public class SongController {
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(SongDetailResponse.from(findSongDetailUseCase.findSong(songId)))
+                .build();
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public SuccessResponse<CreateSongResponse> createSong(@Valid @RequestBody CreateSongRequest request) {
+        return SuccessResponse.<CreateSongResponse>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(CreateSongResponse.from(createSongUseCase.execute(request.toCommand())))
                 .build();
     }
 }
