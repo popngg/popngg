@@ -8,6 +8,7 @@ import gg.popn.application.song.dto.result.SongMetadataView;
 import gg.popn.application.song.port.in.FindChartDetailUseCase;
 import gg.popn.application.song.port.in.FindSongDetailUseCase;
 import gg.popn.application.song.port.in.FindSongsUseCase;
+import gg.popn.application.song.port.in.CreateSongUseCase;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -27,7 +28,8 @@ class CatalogDetailControllerTest {
     void mapsSongDetailResponse() {
         FindSongDetailUseCase detailUseCase = mock(FindSongDetailUseCase.class);
         when(detailUseCase.findSong(1)).thenReturn(new SongDetailView(song, List.of(chart)));
-        SongController controller = new SongController(mock(FindSongsUseCase.class), detailUseCase);
+        SongController controller = new SongController(
+                mock(FindSongsUseCase.class), detailUseCase, mock(CreateSongUseCase.class));
 
         var response = controller.findSong(1).getData();
 
