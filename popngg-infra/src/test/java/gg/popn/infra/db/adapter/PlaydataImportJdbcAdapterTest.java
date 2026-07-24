@@ -3,6 +3,7 @@ package gg.popn.infra.db.adapter;
 import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.service.PlaydataUpsertPolicy;
+import gg.popn.application.playdata.service.PlaydataHistoryPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -56,11 +57,21 @@ class PlaydataImportJdbcAdapterTest {
                 CREATE TABLE game_version_transitions(transition_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                   from_version INT, to_version INT, score_policy VARCHAR(20), status VARCHAR(20))
                 """);
+        jdbc.execute("""
+                CREATE TABLE playdata_history(history_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                  user_id BIGINT, chart_id BIGINT, game_version INT,
+                  previous_version_score INT, version_score INT,
+                  previous_all_time_score INT, all_time_score INT,
+                  previous_rank_code INT, rank_code INT,
+                  previous_medal_code INT, medal_code INT, popclass INT,
+                  event_type VARCHAR(32), renew_log_id BIGINT, created_at TIMESTAMP)
+                """);
         jdbc.update("INSERT INTO users VALUES (1, '0000-0000-0000')");
         jdbc.update("INSERT INTO user_profiles VALUES (1, 'old', '', 0, 0, 0, 0, CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO songs VALUES (10, 'hash', 'song', 'genre')");
         jdbc.update("INSERT INTO charts VALUES (100, 10, 3, FALSE, FALSE)");
-        adapter = new PlaydataImportJdbcAdapter(jdbc, new PlaydataUpsertPolicy(), 29);
+        adapter = new PlaydataImportJdbcAdapter(
+                jdbc, new PlaydataUpsertPolicy(), new PlaydataHistoryPolicy(), 29);
     }
 
     @Test
@@ -80,6 +91,9 @@ class PlaydataImportJdbcAdapterTest {
         assertThat(result.updatedCount()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM playdata", Integer.class))
                 .isEqualTo(1);
+        assertThat(result.historyCount()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT event_type FROM playdata_history", String.class))
+                .isEqualTo("REGISTER");
         assertThat(jdbc.queryForObject("SELECT status FROM renew_logs", String.class))
                 .isEqualTo("SUCCESS");
         assertThat(jdbc.queryForObject("SELECT normal_credit FROM user_profiles", Integer.class))
@@ -116,6 +130,7 @@ class PlaydataImportJdbcAdapterTest {
         assertThat(result.matchedCount()).isEqualTo(1);
         assertThat(result.skippedCount()).isEqualTo(1);
         assertThat(result.updatedCount()).isEqualTo(1);
+        assertThat(result.historyCount()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM renew_logs", String.class))
                 .isEqualTo("PARTIAL_SUCCESS");
     }
@@ -127,6 +142,7 @@ class PlaydataImportJdbcAdapterTest {
         var result = adapter.execute(command(rowWithValues(100L, 95_000, 3, 5)));
 
         assertThat(result.updatedCount()).isEqualTo(1);
+        assertThat(result.historyCount()).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM playdata", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForMap("""
                 SELECT current_version, version_score, version_rank_code,
@@ -150,6 +166,7 @@ class PlaydataImportJdbcAdapterTest {
         var result = adapter.execute(command(rowWithValues(100L, 90_000, 1, 6)));
 
         assertThat(result.updatedCount()).isEqualTo(1);
+        assertThat(result.historyCount()).isEqualTo(1);
         assertThat(jdbc.queryForMap("""
                 SELECT version_score, version_rank_code, all_time_score,
                        all_time_rank_code, medal_code FROM playdata
@@ -165,7 +182,11 @@ class PlaydataImportJdbcAdapterTest {
         var row = rowWithValues(100L, 90_000, 2, 3);
         adapter.execute(command(row));
 
-        assertThat(adapter.execute(command(row)).updatedCount()).isZero();
+        var result = adapter.execute(command(row));
+        assertThat(result.updatedCount()).isZero();
+        assertThat(result.historyCount()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM playdata_history", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test
@@ -190,6 +211,11 @@ class PlaydataImportJdbcAdapterTest {
         var result = adapter.execute(command(rowWithValues(100L, 90_000, 4, 5)));
 
         assertThat(result.updatedCount()).isEqualTo(1);
+        assertThat(result.historyCount()).isEqualTo(3);
+        assertThat(jdbc.query("""
+                SELECT event_type FROM playdata_history ORDER BY history_id
+                """, (rs, rowNum) -> rs.getString(1))).containsExactly(
+                "VERSION_INITIALIZED", "RANK_CHANGED", "MEDAL_CHANGED");
         assertThat(jdbc.queryForMap("""
                 SELECT current_version, version_score, all_time_score,
                        all_time_score_version, medal_code FROM playdata

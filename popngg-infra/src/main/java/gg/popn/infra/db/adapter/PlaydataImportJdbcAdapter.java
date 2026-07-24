@@ -4,6 +4,7 @@ import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
 import gg.popn.application.playdata.service.PlaydataUpsertPolicy;
+import gg.popn.application.playdata.service.PlaydataHistoryPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -22,12 +23,15 @@ import java.util.List;
 public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
     private final JdbcTemplate jdbc;
     private final PlaydataUpsertPolicy upsertPolicy;
+    private final PlaydataHistoryPolicy historyPolicy;
     private final int currentVersion;
 
     public PlaydataImportJdbcAdapter(JdbcTemplate jdbc, PlaydataUpsertPolicy upsertPolicy,
+                                     PlaydataHistoryPolicy historyPolicy,
                                      @Value("${popngg.game.current-version:29}") int currentVersion) {
         this.jdbc = jdbc;
         this.upsertPolicy = upsertPolicy;
+        this.historyPolicy = historyPolicy;
         this.currentVersion = currentVersion;
     }
 
@@ -40,6 +44,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
         var unmatched = new ArrayList<ImportPlaydataResult.UnmatchedRow>();
         int matched = 0;
         int updated = 0;
+        int histories = 0;
         try {
             for (int index = 0; index < command.rows().size(); index++) {
                 Match match = match(command.rows().get(index));
@@ -47,37 +52,42 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
                     unmatched.add(new ImportPlaydataResult.UnmatchedRow(index, match.reason()));
                 } else {
                     matched++;
-                    if (upsert(userId, match.chartId(), command.rows().get(index), renewLogId)) {
+                    UpsertOutcome outcome = upsert(
+                            userId, match.chartId(), command.rows().get(index), renewLogId);
+                    if (outcome.updated()) {
                         updated++;
                     }
+                    histories += outcome.historyCount();
                 }
             }
             String status = unmatched.isEmpty() ? "SUCCESS" : matched == 0 ? "FAILED" : "PARTIAL_SUCCESS";
             finishLog(renewLogId, status, matched, updated,
                     unmatched.isEmpty() ? null : summarize(unmatched));
             return new ImportPlaydataResult(renewLogId, command.rows().size(), matched,
-                    updated, 0, unmatched.size(), List.copyOf(unmatched));
+                    updated, histories, unmatched.size(), List.copyOf(unmatched));
         } catch (RuntimeException exception) {
             finishLog(renewLogId, "FAILED", matched, 0, exception.getClass().getSimpleName());
             throw exception;
         }
     }
 
-    private boolean upsert(long userId, long chartId, ImportPlaydataCommand.Row row,
-                           long renewLogId) {
+    private UpsertOutcome upsert(long userId, long chartId, ImportPlaydataCommand.Row row,
+                                 long renewLogId) {
         PlaydataUpsertPolicy.State existing = loadState(userId, chartId);
         var observed = new PlaydataUpsertPolicy.Observation(
                 row.score(), row.rankCode(), row.medalCode());
         var transition = existing == null || existing.currentVersion() == currentVersion
                 ? null : loadTransition(existing.currentVersion(), currentVersion);
         var decision = upsertPolicy.decide(existing, observed, currentVersion, transition);
-        if (!decision.changed()) return false;
+        if (!decision.changed()) return new UpsertOutcome(false, 0);
         if (existing == null) {
             insertState(userId, chartId, renewLogId, decision.state());
         } else {
             updateState(userId, chartId, renewLogId, decision.state());
         }
-        return true;
+        var events = historyPolicy.events(existing, decision.state(), transition);
+        appendHistory(userId, chartId, renewLogId, existing, decision.state(), events);
+        return new UpsertOutcome(true, events.size());
     }
 
     private PlaydataUpsertPolicy.State loadState(long userId, long chartId) {
@@ -128,6 +138,29 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
                 """, state.currentVersion(), state.versionScore(), state.versionRankCode(),
                 state.allTimeScore(), state.allTimeScoreVersion(), state.allTimeRankCode(),
                 state.medalCode(), renewLogId, Timestamp.from(Instant.now()), userId, chartId);
+    }
+
+    private void appendHistory(long userId, long chartId, long renewLogId,
+                               PlaydataUpsertPolicy.State previous,
+                               PlaydataUpsertPolicy.State current,
+                               List<PlaydataHistoryPolicy.EventType> events) {
+        for (var event : events) {
+            jdbc.update("""
+                    INSERT INTO playdata_history
+                        (user_id, chart_id, game_version,
+                         previous_version_score, version_score,
+                         previous_all_time_score, all_time_score,
+                         previous_rank_code, rank_code,
+                         previous_medal_code, medal_code,
+                         popclass, event_type, renew_log_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
+                    """, userId, chartId, current.currentVersion(),
+                    previous == null ? null : previous.versionScore(), current.versionScore(),
+                    previous == null ? null : previous.allTimeScore(), current.allTimeScore(),
+                    previous == null ? null : previous.versionRankCode(), current.versionRankCode(),
+                    previous == null ? null : previous.medalCode(), current.medalCode(),
+                    event.name(), renewLogId, Timestamp.from(Instant.now()));
+        }
     }
 
     private long findUserId(String poptomoId) {
@@ -222,5 +255,8 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
     }
 
     private record Match(Long chartId, String reason) {
+    }
+
+    private record UpsertOutcome(boolean updated, int historyCount) {
     }
 }
