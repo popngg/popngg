@@ -45,3 +45,36 @@ ID는 거부되므로 부분 성공 데이터를 덮어쓰지 않습니다.
 - rank/medal은 원천 값을 그대로 보존
 - `legacy_popclass` 보존, 신규 credit 4종은 0
 - 중복 `(user_id, chart_id)`은 score가 높은 한 건만 적재하고 나머지는 실패 보고
+
+## 검증과 cutover 중단 기준
+
+변환 후 별도 검증 job을 실행하면 민감한 원본 값 없이 check 이름과 건수만 담긴
+TSV dry-run 리포트를 만들 수 있습니다.
+
+```bash
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
+./migration/bin/verify-migration.sh \
+  --legacy-db popngg_legacy \
+  --target-db popngg_mvp \
+  --session-id rehearsal-20260724 \
+  --report build/reports/migration-verification.tsv
+```
+
+다음 검증 중 하나라도 실패하면 runner가 종료 코드 2를 반환하며 cutover를
+중단해야 합니다.
+
+- users, user_profiles, songs, charts, playdata row count
+- users/user_profiles, charts/songs, playdata/users/charts orphan
+- `(user_id, chart_id)` unique와 old/new mapping 완전성
+- legacy popclass 보존 및 all-time score 기반 potential popclass 재계산 결과
+- display/potential popclass 범위
+- 신규 High☆Cheers credit 4종의 0 초기화
+- songHash 중복과 하나의 old hash가 여러 new song으로 갈라지는 alias
+- jacket 원본 참조가 신규 song 참조로 보존되었는지 여부
+
+검증 SQL은 계정 식별자, 비밀번호, 이메일, 토큰, 원본 row를 출력하지 않습니다.
+Docker MySQL 8에서 실패 감지와 정상 통과를 함께 확인하려면 다음을 실행합니다.
+
+```bash
+./migration/test/verify-migration.sh
+```
