@@ -5,9 +5,14 @@ import gg.popn.domain.common.ResponseMessage;
 import gg.popn.domain.user.model.field.Password;
 import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.http.user.request.LoginRequest;
+import gg.popn.http.user.request.PasswordResetConfirmRequest;
+import gg.popn.http.user.request.PasswordResetRequest;
 import gg.popn.http.user.response.LoginResponse;
 import gg.popn.application.auth.dto.command.LoginCommand;
 import gg.popn.application.auth.port.in.AuthenticateUserUseCase;
+import gg.popn.application.auth.dto.command.ConfirmPasswordResetCommand;
+import gg.popn.application.auth.dto.command.RequestPasswordResetCommand;
+import gg.popn.application.auth.port.in.PasswordResetUseCase;
 import gg.popn.http.common.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Auth", description = "User operations")
 public class AuthController {
     private final AuthenticateUserUseCase authenticateUser;
+    private final PasswordResetUseCase passwordReset;
 
     @PostMapping("/login")
     SuccessResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -35,6 +41,28 @@ public class AuthController {
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(LoginResponse.from(result))
+                .build();
+    }
+
+    @PostMapping("/password-reset/request")
+    SuccessResponse<Void> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request) {
+        passwordReset.request(new RequestPasswordResetCommand(request.email()));
+        return SuccessResponse.<Void>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .build();
+    }
+
+    @PostMapping("/password-reset/confirm")
+    SuccessResponse<Void> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request) {
+        passwordReset.confirm(new ConfirmPasswordResetCommand(
+                request.token(),
+                request.newPassword()));
+        return SuccessResponse.<Void>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
                 .build();
     }
 
