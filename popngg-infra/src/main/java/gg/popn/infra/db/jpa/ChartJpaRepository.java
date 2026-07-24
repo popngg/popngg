@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ChartJpaRepository extends JpaRepository<ChartEntity, Long> {
     List<ChartEntity> findAllBySongHashAndDifficulty(String songHash, Integer difficulty);
+    List<ChartEntity> findAllBySongHash(String songHash);
 }

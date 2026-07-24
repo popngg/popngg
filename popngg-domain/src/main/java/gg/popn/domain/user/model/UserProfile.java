@@ -18,5 +18,5 @@ public class UserProfile {
     String maxClearLevel;
     String maxFullComboLevel;
     String maxPerfectLevel;
-    Integer playedCharts;
+    Integer playedChartCount;
 }

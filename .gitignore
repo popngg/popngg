@@ -2,7 +2,7 @@
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
-!**/build/
+**/build/
 
 # IntelliJ IDEA
 .idea/
@@ -73,3 +73,7 @@ hs_err_pid*
 
 # Maven
 target/
+
+# SSH keys
+*.pem
+*.pub

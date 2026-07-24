@@ -29,6 +29,12 @@ public class UserRole implements Validatable {
                 .build());
     }
 
+    public static UserRole from(String role) {
+        return Validatable.createAndValidate(() -> UserRole.builder()
+                .role(role)
+                .build());
+    }
+
     @JsonValue
     public String getValue() {
         return role;

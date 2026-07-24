@@ -21,7 +21,7 @@ public class SongHash {
             return null;
         }
 
-        return SongHash.builder()
+        return   SongHash.builder()
                 .songHash(songHash)
                 .build();
     }
