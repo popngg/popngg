@@ -2,6 +2,7 @@ package gg.popn.infra.security.adapter;
 
 
 import gg.popn.application.auth.port.out.TokenPort;
+import gg.popn.application.auth.port.out.IssuedAccessToken;
 import gg.popn.domain.user.model.AuthPrincipal;
 import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.domain.user.model.field.UserRole;
@@ -23,8 +24,9 @@ public class JwtTokenProvider implements TokenPort {
     }
 
     @Override
-    public String issueAccessToken(AuthPrincipal principal, Duration ttl) {
-        return Jwts.builder()
+    public IssuedAccessToken issueAccessToken(AuthPrincipal principal) {
+        Duration ttl = Duration.ofHours(jwtConfig.getExpirationHours());
+        String value = Jwts.builder()
                 .setSubject(principal.getPoptomoId().getValue())  // 유저의 poptomoId를 subject로 설정
                 .setIssuer(jwtConfig.getIssuer())  // issuer 설정
                 .setIssuedAt(new Date())
@@ -32,6 +34,7 @@ public class JwtTokenProvider implements TokenPort {
                 .claim("role", principal.getUserRole().getValue())  // role은 claim에 추가
                 .signWith(SignatureAlgorithm.HS512, jwtConfig.getSecretKey())  // 서명 알고리즘 및 비밀키 설정
                 .compact();
+        return new IssuedAccessToken(value, ttl.toSeconds());
     }
 
     @Override

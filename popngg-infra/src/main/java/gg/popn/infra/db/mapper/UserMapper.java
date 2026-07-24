@@ -12,12 +12,12 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
     public User toDomain(UserEntity e) {
         return User.builder()
-                .username(Username.of(e.getUserName()))
+                .username(Username.from(e.getProfile().getUserName()))
                 .poptomoId(PoptomoId.of(e.getPoptomoId()))
-                .popclass(e.getPopclass())
-                .character(e.getCharacter())
-                .comment(e.getComment())
-                .isHidden(IsHidden.of(e.getIsHidden()))
+                .popclass(e.getProfile().getDisplayPopclass())
+                .character(e.getProfile().getCharacterName())
+                .comment(e.getProfile().getComment())
+                .isHidden(IsHidden.of(e.getProfile().isHidden() ? 1 : 0))
                 .role(UserRole.of(e.getRole()))
                 .build();
     }

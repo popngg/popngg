@@ -25,7 +25,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 로그인/회원가입, Swagger 등은 허용
                         .requestMatchers(
-                                "/auth/**",
+                                "/api/v1/auth/login",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
