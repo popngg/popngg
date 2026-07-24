@@ -27,6 +27,10 @@ application-*.yml
 *.properties.local
 *.yml.local
 
+# Local database dumps (external migration inputs only)
+*-dump.sql
+*.sql.dump
+
 # H2 database files
 *.h2.db
 *.lock.db
