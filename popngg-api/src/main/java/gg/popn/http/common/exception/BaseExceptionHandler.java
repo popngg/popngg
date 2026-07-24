@@ -1,12 +1,14 @@
 package gg.popn.http.common.exception;
 
 import gg.popn.domain.common.exception.BaseException;
+import gg.popn.application.user.exception.UserProfileNotFoundException;
 import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -16,6 +18,20 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class BaseExceptionHandler {
+    @ExceptionHandler(UserProfileNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUserProfileNotFound() {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("code", "USER_PROFILE_NOT_FOUND", "message", "User profile not found."));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied() {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of("code", "FORBIDDEN", "message", "Profile update is not allowed."));
+    }
+
     @ExceptionHandler(InvalidPasswordResetTokenException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidPasswordResetToken() {
         return ResponseEntity

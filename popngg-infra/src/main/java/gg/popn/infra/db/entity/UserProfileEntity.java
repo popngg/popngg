@@ -30,15 +30,61 @@ public class UserProfileEntity {
     @Column(name = "comment", nullable = false)
     private String comment;
 
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+
     @Column(name = "is_hidden", nullable = false)
     private boolean hidden;
 
     @Column(name = "display_popclass", nullable = false)
     private int displayPopclass;
 
+    @Column(name = "potential_popclass", nullable = false)
+    private int potentialPopclass;
+
+    @Column(name = "legacy_popclass", nullable = false)
+    private int legacyPopclass;
+
+    @Column(name = "normal_credit", nullable = false)
+    private int normalCredit;
+
+    @Column(name = "extra_credit", nullable = false)
+    private int extraCredit;
+
+    @Column(name = "time_play_10_credit", nullable = false)
+    private int timePlay10Credit;
+
+    @Column(name = "time_play_16_credit", nullable = false)
+    private int timePlay16Credit;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void update(
+            String userName,
+            String characterName,
+            String comment,
+            String profileImageUrl,
+            Boolean hidden,
+            LocalDateTime updatedAt) {
+        if (userName != null) {
+            this.userName = userName;
+        }
+        if (characterName != null) {
+            this.characterName = characterName;
+        }
+        if (comment != null) {
+            this.comment = comment;
+        }
+        if (profileImageUrl != null) {
+            this.profileImageUrl = profileImageUrl;
+        }
+        if (hidden != null) {
+            this.hidden = hidden;
+        }
+        this.updatedAt = updatedAt;
+    }
 }
