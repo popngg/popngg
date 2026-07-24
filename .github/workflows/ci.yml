@@ -36,7 +36,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
-        path: '**/build/reports/jacoco/'
+        path: '**/build/reports/jacoco/test/jacocoTestReport.xml'
         retention-days: 7
     
     - name: Upload test results
