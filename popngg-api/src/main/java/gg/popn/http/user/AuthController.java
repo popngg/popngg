@@ -2,10 +2,15 @@ package gg.popn.http.user;
 
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
+import gg.popn.domain.user.model.field.Password;
+import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.http.user.request.LoginRequest;
-import gg.popn.application.user.dto.response.LoginDto;
+import gg.popn.http.user.response.LoginResponse;
+import gg.popn.application.auth.dto.command.LoginCommand;
+import gg.popn.application.auth.port.in.AuthenticateUserUseCase;
 import gg.popn.http.common.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,18 +20,21 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v2/auth")
-@CrossOrigin(origins = "https://popn.gg, https://api.popn.gg")
+@RequestMapping("/api/v1/auth")
+@CrossOrigin(origins = {"https://popn.gg", "https://api.popn.gg"})
 @Tag(name = "Auth", description = "User operations")
 public class AuthController {
-
+    private final AuthenticateUserUseCase authenticateUser;
 
     @PostMapping("/login")
-    SuccessResponse<LoginDto> login(@RequestBody LoginRequest request) {
-        return SuccessResponse.<LoginDto>builder()
+    SuccessResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        var result = authenticateUser.login(new LoginCommand(
+                PoptomoId.of(request.poptomoId()),
+                Password.of(request.password())));
+        return SuccessResponse.<LoginResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
+                .data(LoginResponse.from(result))
                 .build();
     }
 

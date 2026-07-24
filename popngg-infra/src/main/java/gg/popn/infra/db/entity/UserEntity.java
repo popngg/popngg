@@ -1,61 +1,51 @@
 package gg.popn.infra.db.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-import jakarta.persistence.*;
-
-import lombok.*;
-
-import java.util.Date;
-
-@Entity @Data
-@RequiredArgsConstructor @AllArgsConstructor
-@Builder @Getter
-@Table(name = "\"user\"")
+@Entity
+@Builder
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "users")
 public class UserEntity {
-    @Id @Column(name = "user_id")
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long id;
 
-    @Column(name = "user_name")
-    private String userName;
-
-    @Column(name = "poptomo_id")
+    @Column(name = "poptomo_id", nullable = false)
     private String poptomoId;
 
-    @Column(name = "popclass")
-    private Integer popclass;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-    @Column(name = "\"character\"")
-    private String character;
+    @Column(name = "email")
+    private String email;
 
-    @Column(name = "comment")
-    private String comment;
-
-    @Column(name = "is_hidden")
-    private Integer isHidden;
-
-    @Column(name = "password")
-    private String password;
-
-    @Column(name = "normal_credit")
-    private Integer normalCredit;
-
-    @Column(name = "battle_credit")
-    private Integer battleCredit;
-
-    @Column(name = "local_credit")
-    private Integer localCredit;
-
-    @Column(name = "created_at")
-    private Date createdAt;
-
-    @Column(name = "updated_at")
-    private Date updatedAt;
-
-    @Column(name = "role")
+    @Column(name = "role", nullable = false)
     private String role;
 
-//    @Builder.Default
-//    @OneToMany(mappedBy = "user")
-//    private List<Playdata> playdatas = new ArrayList<>();
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false)
+    private UserProfileEntity profile;
 }

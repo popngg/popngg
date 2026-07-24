@@ -1,12 +1,10 @@
 package gg.popn.application.auth.port.in;
 
 import gg.popn.application.auth.dto.command.LoginCommand;
-import gg.popn.application.auth.dto.response.AuthResult;
+import gg.popn.application.auth.dto.response.LoginResult;
 
 
 public interface  AuthenticateUserUseCase {
 
-    AuthResult login(LoginCommand cmd);
-
-    AuthResult loginWithoutHash(LoginCommand cmd);
+    LoginResult login(LoginCommand cmd);
 }

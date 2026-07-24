@@ -28,10 +28,10 @@ public class UserRepositoryAdapter implements LoadUserPort {
 
     private UserWithHashedPassword toUserWithSecret(UserEntity e) {
         User domain = User.builder()
-                .username(Username.of(e.getUserName()))
+                .username(Username.from(e.getProfile().getUserName()))
                 .poptomoId(PoptomoId.of(e.getPoptomoId()))
                 .role(UserRole.from(e.getRole()))
                 .build();
-        return new UserWithHashedPassword(domain, e.getPassword());
+        return new UserWithHashedPassword(domain, e.getPasswordHash());
     }
 }

@@ -3,13 +3,12 @@ package gg.popn.application.auth.port.out;
 
 import gg.popn.domain.user.model.AuthPrincipal;
 
-import java.time.Duration;
 import java.util.Optional;
 
 public interface TokenPort {
 
     // 토큰 발급
-    String issueAccessToken(AuthPrincipal principal, Duration ttl);
+    IssuedAccessToken issueAccessToken(AuthPrincipal principal);
 
     // 토큰에서 Subject(유저 ID)를 추출
     String parseAndGetSubject(String token);
