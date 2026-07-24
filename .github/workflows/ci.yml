@@ -82,5 +82,23 @@ jobs:
     
     - name: Diff Coverage Check
       run: |
-        # Find all JaCoCo XML reports and run diff-cover
-        find coverage-reports -name "jacocoTestReport.xml" -exec diff-cover --fail-under=80 --compare-branch=origin/main {} +
+        set -euo pipefail
+
+        mapfile -t reports < <(
+          find coverage-reports -name "jacocoTestReport.xml" -type f -print | sort
+        )
+
+        if [ "${#reports[@]}" -eq 0 ]; then
+          echo "No JaCoCo XML reports found."
+          exit 1
+        fi
+
+        diff-cover \
+          "${reports[@]}" \
+          --fail-under=80 \
+          --compare-branch=origin/main \
+          --src-roots \
+            popngg-api/src/main/java \
+            popngg-application/src/main/java \
+            popngg-domain/src/main/java \
+            popngg-infra/src/main/java
