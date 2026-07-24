@@ -2,14 +2,17 @@ package gg.popn.http.song;
 
 import gg.popn.application.song.dto.query.FindSongsQuery;
 import gg.popn.application.song.port.in.FindSongsUseCase;
+import gg.popn.application.song.port.in.FindSongDetailUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
 import gg.popn.http.common.response.SuccessResponse;
 import gg.popn.http.song.response.SongPageResponse;
+import gg.popn.http.song.response.SongDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/songs")
 public class SongController {
     private final FindSongsUseCase findSongsUseCase;
+    private final FindSongDetailUseCase findSongDetailUseCase;
 
     @GetMapping
     public SuccessResponse<SongPageResponse> findSongs(
@@ -37,6 +41,15 @@ public class SongController {
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(SongPageResponse.from(findSongsUseCase.execute(query)))
+                .build();
+    }
+
+    @GetMapping("/{songId}")
+    public SuccessResponse<SongDetailResponse> findSong(@PathVariable long songId) {
+        return SuccessResponse.<SongDetailResponse>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
+                .data(SongDetailResponse.from(findSongDetailUseCase.findSong(songId)))
                 .build();
     }
 }

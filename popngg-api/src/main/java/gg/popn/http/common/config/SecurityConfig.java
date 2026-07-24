@@ -27,12 +27,14 @@ public class SecurityConfig {
                         // 로그인/회원가입, Swagger 등은 허용
                         .requestMatchers(
                                 "/api/v1/auth/login",
-                                "/api/v1/songs",
                                 "/api/v1/auth/password-reset/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/users/**",
+                                "/api/v1/songs/**",
+                                "/api/v1/charts/**").permitAll()
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )

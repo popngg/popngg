@@ -83,6 +83,34 @@ class SongCatalogJdbcAdapterTest {
                 .allMatch(chart -> chart.chartVersion() == 28 && !chart.isUpper());
     }
 
+    @Test
+    void returnsAllChartsForSongDetailWithDisplayMetadata() {
+        var detail = adapter.findSongDetail(1).orElseThrow();
+
+        assertThat(detail.song().songId()).isEqualTo(1);
+        assertThat(detail.charts()).hasSize(2);
+        assertThat(detail.charts().getFirst().difficulty().label()).isEqualTo("LIGHT");
+        assertThat(detail.charts().getFirst().difficulty().shortLabel()).isEqualTo("L");
+        assertThat(detail.charts()).anyMatch(chart ->
+                chart.isUpper() && chart.hasStrictGauge() && chart.chartVersion() == 20);
+    }
+
+    @Test
+    void returnsSeparatedSongAndChartMetadataForChartDetail() {
+        var detail = adapter.findChartDetail(10).orElseThrow();
+
+        assertThat(detail.song().songName()).isEqualTo("Moon Child");
+        assertThat(detail.chart().chartId()).isEqualTo(10);
+        assertThat(detail.chart().hasStrictJudgement()).isTrue();
+        assertThat(detail.chart().isDeleted()).isFalse();
+    }
+
+    @Test
+    void returnsEmptyForUnknownDetailIds() {
+        assertThat(adapter.findSongDetail(999)).isEmpty();
+        assertThat(adapter.findChartDetail(999)).isEmpty();
+    }
+
     private FindSongsQuery query(String keyword, Integer chartVersion, Boolean isUpper) {
         return new FindSongsQuery(keyword, null, chartVersion, null, null,
                 isUpper, null, null, 0, 20);

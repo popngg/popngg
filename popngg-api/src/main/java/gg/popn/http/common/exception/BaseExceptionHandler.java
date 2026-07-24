@@ -3,6 +3,7 @@ package gg.popn.http.common.exception;
 import gg.popn.domain.common.exception.BaseException;
 import gg.popn.application.user.exception.UserProfileNotFoundException;
 import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
+import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,13 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class BaseExceptionHandler {
+    @ExceptionHandler(CatalogItemNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleCatalogItemNotFound(CatalogItemNotFoundException exception) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("code", "CATALOG_ITEM_NOT_FOUND", "message", exception.getMessage()));
+    }
+
     @ExceptionHandler(UserProfileNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleUserProfileNotFound() {
         return ResponseEntity
