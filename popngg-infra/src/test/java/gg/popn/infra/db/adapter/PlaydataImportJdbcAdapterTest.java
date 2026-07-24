@@ -30,13 +30,17 @@ class PlaydataImportJdbcAdapterTest {
                   character_name VARCHAR(128), normal_credit INT, extra_credit INT,
                   time_play_10_credit INT, time_play_16_credit INT, updated_at TIMESTAMP)
                 """);
+        jdbc.execute("ALTER TABLE user_profiles ADD display_popclass INT DEFAULT 0");
+        jdbc.execute("ALTER TABLE user_profiles ADD potential_popclass INT DEFAULT 0");
+        jdbc.execute("ALTER TABLE user_profiles ADD legacy_popclass INT DEFAULT 0");
         jdbc.execute("""
                 CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_hash VARCHAR(32),
                   song_name VARCHAR(255), genre_name VARCHAR(255))
                 """);
         jdbc.execute("""
                 CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT,
-                  difficulty_code INT, is_upper BOOLEAN, is_deleted BOOLEAN)
+                  difficulty_code INT, level INT, chart_version INT,
+                  is_upper BOOLEAN, is_deleted BOOLEAN)
                 """);
         jdbc.execute("""
                 CREATE TABLE renew_logs(renew_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -49,7 +53,8 @@ class PlaydataImportJdbcAdapterTest {
                   user_id BIGINT, chart_id BIGINT, current_version INT, version_score INT,
                   version_rank_code INT, all_time_score INT, all_time_score_version INT,
                   all_time_rank_code INT, medal_code INT, popclass INT,
-                  is_display_popclass_target BOOLEAN, last_renew_log_id BIGINT,
+                  is_display_popclass_target BOOLEAN, popclass_bucket VARCHAR(20),
+                  popclass_bucket_rank INT, last_renew_log_id BIGINT,
                   created_at TIMESTAMP, updated_at TIMESTAMP,
                   UNIQUE(user_id, chart_id))
                 """);
@@ -67,11 +72,17 @@ class PlaydataImportJdbcAdapterTest {
                   event_type VARCHAR(32), renew_log_id BIGINT, created_at TIMESTAMP)
                 """);
         jdbc.update("INSERT INTO users VALUES (1, '0000-0000-0000')");
-        jdbc.update("INSERT INTO user_profiles VALUES (1, 'old', '', 0, 0, 0, 0, CURRENT_TIMESTAMP)");
+        jdbc.update("""
+                INSERT INTO user_profiles
+                    (user_id, user_name, character_name, normal_credit, extra_credit,
+                     time_play_10_credit, time_play_16_credit, updated_at)
+                VALUES (1, 'old', '', 0, 0, 0, 0, CURRENT_TIMESTAMP)
+                """);
         jdbc.update("INSERT INTO songs VALUES (10, 'hash', 'song', 'genre')");
-        jdbc.update("INSERT INTO charts VALUES (100, 10, 3, FALSE, FALSE)");
+        jdbc.update("INSERT INTO charts VALUES (100, 10, 3, 48, 29, FALSE, FALSE)");
         adapter = new PlaydataImportJdbcAdapter(
-                jdbc, new PlaydataUpsertPolicy(), new PlaydataHistoryPolicy(), 29);
+                jdbc, new PlaydataUpsertPolicy(), new PlaydataHistoryPolicy(),
+                new gg.popn.application.playdata.service.PopclassPolicy(), 29);
     }
 
     @Test
@@ -103,7 +114,7 @@ class PlaydataImportJdbcAdapterTest {
     @Test
     void reportsNotFoundAndAmbiguousRowsWithoutSensitiveValues() {
         jdbc.update("INSERT INTO songs VALUES (11, 'hash', 'song', 'genre')");
-        jdbc.update("INSERT INTO charts VALUES (101, 11, 3, FALSE, FALSE)");
+        jdbc.update("INSERT INTO charts VALUES (101, 11, 3, 48, 29, FALSE, FALSE)");
         var rows = List.of(
                 row(999L, null, null, null, null, null, null),
                 row(null, null, 3, false, "hash", null, null));
