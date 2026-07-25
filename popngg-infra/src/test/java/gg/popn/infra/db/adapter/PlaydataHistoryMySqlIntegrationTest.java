@@ -7,9 +7,7 @@ import gg.popn.application.playdata.service.PopclassPolicy;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -19,18 +17,14 @@ import java.util.ArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnabledIfEnvironmentVariable(named = "MYSQL_IT_URL", matches = ".+")
-class PlaydataHistoryMySqlIntegrationTest {
+class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
     private JdbcTemplate jdbc;
     private PlaydataImportJdbcAdapter adapter;
     private TransactionTemplate transaction;
 
     @BeforeEach
     void setUp() {
-        var dataSource = new DriverManagerDataSource(
-                System.getenv("MYSQL_IT_URL"),
-                System.getenv().getOrDefault("MYSQL_IT_USER", "root"),
-                System.getenv().getOrDefault("MYSQL_IT_PASSWORD", ""));
+        var dataSource = mysqlDataSource();
         Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
