@@ -7,6 +7,64 @@ POPNGG-20의 대량 데이터 변환 초안입니다. Flyway는 대상 MVP 스�
 원본 dump와 복원 DB는 읽기 전용 입력입니다. dump를 저장소 안으로 복사하거나
 Git/Jira/PR에 첨부하지 않습니다.
 
+## 전체 마이그레이션 과정
+
+스키마 생성과 legacy dump 데이터 변환은 서로 다른 단계입니다. Adminer에서
+Flyway가 만든 빈 테이블이 보이는 것만으로는 dump 데이터 마이그레이션이 완료된
+것이 아닙니다.
+
+```text
+외부 legacy SQL dump
+        |
+        v
+격리된 legacy DB에 restore (원본 보존)
+        |
+        +-----------------------------+
+                                      |
+빈 target DB -- Flyway V1~V4 --------+--> MVP 스키마 생성
+                                      |
+                                      v
+                              bulk transform 실행
+                                      |
+                                      v
+                          mapping/failure 기록 생성
+                                      |
+                                      v
+                         건수 및 무결성 검증 실행
+                                      |
+                          실패 1건 이상이면 중단
+                                      |
+                                      v
+                              검증된 target DB
+```
+
+1. 외부 dump를 격리된 legacy DB에 복원합니다. 원본 dump와 복원 DB는 변환
+   과정에서 수정하지 않습니다.
+2. 비어 있는 target DB에 Flyway `V1`~`V4`를 적용해 계정, 곡/채보,
+   플레이데이터/이력, 로그/버전 전환 스키마를 만듭니다.
+3. bulk transform이 legacy 데이터를 신규 구조로 적재합니다.
+   - legacy `user`는 `users`와 `user_profiles`로 분리합니다.
+   - legacy `chart`는 같은 song hash를 묶어 `songs`와 `charts`로 분리합니다.
+   - `playdata`는 28버전 current/all-time 상태로 변환합니다.
+   - `history`는 `event_type=MIGRATION`인 `playdata_history`로 옮깁니다.
+4. old/new ID 관계는 `migration_*_map`에, 적재할 수 없는 행은 원본 값 없이
+   `migration_failures`에 숫자 ID와 사유 코드만 기록합니다.
+5. 별도 verification job이 원본/대상 건수, orphan, unique, mapping, popclass,
+   credit 초기화를 확인합니다. `failure_count`가 하나라도 0이 아니면 cutover를
+   중단합니다.
+
+예를 들어 동일한 `(user_id, chart_id)`에 점수 90000과 95000이 있으면 95000
+한 건만 `playdata`에 적재하고 다른 행은 `DUPLICATE_USER_CHART`로 기록합니다.
+레거시 popclass는 `user_profiles.legacy_popclass`에 보존하며, 신규 credit 4종은
+0으로 초기화합니다.
+
+Adminer로 target DB를 확인하는 방법은 [`deploy/README.md`](../deploy/README.md)의
+`Inspect the database locally` 절을 따릅니다. 다음 상태를 구분해서 확인해야 합니다.
+
+- `flyway_schema_history`에 V1~V4만 있고 업무 테이블 row가 0이면 스키마 생성만 완료
+- `migration_sessions`와 `migration_*_map`이 있고 업무 테이블에 row가 있으면 변환 실행
+- `migration_verification_results.failure_count`가 모두 0이면 검증까지 통과
+
 ## 외부 dump end-to-end rehearsal
 
 POPNGG-24의 긴급 로컬 리허설은 외부 dump restore, 격리 대상 스키마 생성, 데이터
