@@ -3,23 +3,17 @@ package gg.popn.infra.db.adapter;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnabledIfEnvironmentVariable(named = "MYSQL_IT_URL", matches = ".+")
-class PlaydataQueryMySqlIntegrationTest {
+class PlaydataQueryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
     private JdbcTemplate jdbc;
     private PlaydataQueryJdbcAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        var dataSource = new DriverManagerDataSource(
-                System.getenv("MYSQL_IT_URL"),
-                System.getenv().getOrDefault("MYSQL_IT_USER", "root"),
-                System.getenv().getOrDefault("MYSQL_IT_PASSWORD", ""));
+        var dataSource = mysqlDataSource();
         Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
                 .cleanDisabled(false).load().clean();
         Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")

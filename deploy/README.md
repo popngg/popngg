@@ -40,6 +40,30 @@ disposable staging account, then verify the affected user playdata and chart ran
 not run a write smoke against a real user. Record only status codes, counts, image tag,
 and timestamps; never record credentials or tokens.
 
+## Inspect the database locally
+
+Adminer is available as an opt-in Compose tool after MySQL is running. It binds only to
+the local loopback interface and is not exposed on the host's external network.
+
+```bash
+docker compose -f deploy/compose.yml --profile tools up -d adminer
+```
+
+Open `http://127.0.0.1:8081` and use:
+
+- System: `MySQL`
+- Server: `mysql`
+- Username: `popngg`
+- Database: `popngg`
+- Password: the local `DB_PASSWORD` value
+
+Set `ADMINER_PORT` to change the host port. Do not expose Adminer publicly or use it as a
+production administration endpoint. Stop it without removing MySQL data:
+
+```bash
+docker compose -f deploy/compose.yml --profile tools stop adminer
+```
+
 For a local teardown:
 
 ```bash
