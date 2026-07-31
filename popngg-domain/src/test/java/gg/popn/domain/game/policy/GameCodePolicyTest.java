@@ -33,11 +33,15 @@ class GameCodePolicyTest {
     }
 
     @Test
-    void assistClearDoesNotRenumberLegacyMedalsAndSortsBeforeFailures() {
-        assertThat(MedalPolicy.ASSIST_EASY.getCode()).isEqualTo(10);
-        assertThat(MedalPolicy.ASSIST_EASY.getLabel()).isEqualTo("ASSIST EASY");
-        assertThat(MedalPolicy.ASSIST_EASY.getSortOrder())
+    void separatesExistingEasyAndLongPopOffAssistWithoutRenumbering() {
+        assertThat(MedalPolicy.EASY.getCode()).isEqualTo(10);
+        assertThat(MedalPolicy.EASY.getLabel()).isEqualTo("EASY");
+        assertThat(MedalPolicy.ASSIST.getCode()).isEqualTo(11);
+        assertThat(MedalPolicy.ASSIST.getLabel()).isEqualTo("ASSIST");
+        assertThat(MedalPolicy.ASSIST.getSortOrder())
                 .isGreaterThan(MedalPolicy.BRONZE_CIRCLE.getSortOrder())
+                .isLessThan(MedalPolicy.EASY.getSortOrder());
+        assertThat(MedalPolicy.EASY.getSortOrder())
                 .isLessThan(MedalPolicy.BLACK_DIAMOND.getSortOrder());
         assertThat(MedalPolicy.fromCode(7)).isEqualTo(MedalPolicy.BLACK_DIAMOND);
         assertUniqueCodesAndSortOrders(

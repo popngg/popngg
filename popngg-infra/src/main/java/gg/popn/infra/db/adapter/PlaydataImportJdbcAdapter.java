@@ -2,6 +2,8 @@ package gg.popn.infra.db.adapter;
 
 import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
+import gg.popn.application.playdata.dto.result.PopclassRecalculationResult;
+import gg.popn.application.playdata.port.out.PopclassRecalculationPort;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
 import gg.popn.application.playdata.service.PlaydataUpsertPolicy;
 import gg.popn.application.playdata.service.PlaydataHistoryPolicy;
@@ -22,7 +24,7 @@ import java.util.List;
 import java.util.Comparator;
 
 @Component
-public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
+public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRecalculationPort {
     private final JdbcTemplate jdbc;
     private final PlaydataUpsertPolicy upsertPolicy;
     private final PlaydataHistoryPolicy historyPolicy;
@@ -65,7 +67,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
                     histories += outcome.historyCount();
                 }
             }
-            rebuildPopclass(userId);
+            rebuildPopclass(command.poptomoId(), userId);
             String status = unmatched.isEmpty() ? "SUCCESS" : matched == 0 ? "FAILED" : "PARTIAL_SUCCESS";
             finishLog(renewLogId, status, matched, updated,
                     unmatched.isEmpty() ? null : summarize(unmatched));
@@ -77,23 +79,35 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
         }
     }
 
-    private void rebuildPopclass(long userId) {
+    @Override
+    @Transactional
+    public PopclassRecalculationResult recalculate(String poptomoId) {
+        return rebuildPopclass(poptomoId, findUserId(poptomoId));
+    }
+
+    private PopclassRecalculationResult rebuildPopclass(String poptomoId, long userId) {
         List<PopclassRow> rows = jdbc.query("""
-                SELECT p.playdata_id, p.chart_id, p.version_score, p.all_time_score,
+                SELECT p.playdata_id, p.chart_id, p.current_version,
+                       p.version_score, p.all_time_score,
                        p.medal_code, c.level, c.chart_version
                   FROM playdata p
                  JOIN charts c ON c.chart_id = p.chart_id
-                 WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                 WHERE p.user_id = ? AND c.is_deleted = FALSE
                 """, (rs, rowNum) -> new PopclassRow(
                 rs.getLong("playdata_id"), rs.getLong("chart_id"),
+                rs.getInt("current_version"),
                 rs.getInt("version_score"), rs.getInt("all_time_score"),
                 rs.getInt("medal_code"), rs.getInt("level"), rs.getInt("chart_version")),
-                userId, currentVersion);
+                userId);
 
         for (PopclassRow row : rows) {
-            row.versionPopclass = popclassPolicy.chartPopclass(
-                    row.level, row.versionScore, row.medalCode);
-            row.potentialPopclass = popclassPolicy.chartPopclass(
+            row.versionPopclass = row.playdataVersion == currentVersion
+                    ? popclassPolicy.newChartPopclass(
+                            row.level, row.versionScore, row.medalCode)
+                    : 0;
+            row.potentialPopclass = popclassPolicy.newChartPopclass(
+                    row.level, row.allTimeScore, row.medalCode);
+            row.legacyPopclass = popclassPolicy.legacyChartPopclass(
                     row.level, row.allTimeScore, row.medalCode);
             jdbc.update("""
                     UPDATE playdata
@@ -103,33 +117,54 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
                     """, row.versionPopclass, row.playdataId);
         }
 
-        Comparator<PopclassRow> order = Comparator
+        Comparator<PopclassRow> displayOrder = Comparator
                 .comparingInt((PopclassRow row) -> row.versionPopclass).reversed()
                 .thenComparing(Comparator.comparingInt(
                         (PopclassRow row) -> row.versionScore).reversed())
                 .thenComparingLong(row -> row.chartId);
         List<PopclassRow> current = rows.stream()
-                .filter(row -> row.chartVersion == currentVersion).sorted(order).limit(20).toList();
+                .filter(row -> row.chartVersion == currentVersion)
+                .sorted(displayOrder).limit(20).toList();
         List<PopclassRow> old = rows.stream()
-                .filter(row -> row.chartVersion < currentVersion).sorted(order).limit(40).toList();
+                .filter(row -> row.chartVersion < currentVersion)
+                .sorted(displayOrder).limit(40).toList();
         mark(current, "CURRENT_VERSION");
         mark(old, "OLD_VERSION");
 
-        int displayPopclass = popclassPolicy.userPopclass(
+        int displayPopclass = popclassPolicy.newUserPopclass(
                 java.util.stream.Stream.concat(current.stream(), old.stream())
                         .map(row -> row.versionPopclass).toList());
-        int potentialPopclass = popclassPolicy.userPopclass(rows.stream()
-                .sorted(Comparator.comparingInt(
+        Comparator<PopclassRow> potentialOrder = Comparator.comparingInt(
                         (PopclassRow row) -> row.potentialPopclass).reversed()
                         .thenComparing(Comparator.comparingInt(
                                 (PopclassRow row) -> row.allTimeScore).reversed())
+                        .thenComparingLong(row -> row.chartId);
+        List<PopclassRow> potentialCurrent = rows.stream()
+                .filter(row -> row.chartVersion == currentVersion)
+                .sorted(potentialOrder).limit(20).toList();
+        List<PopclassRow> potentialOld = rows.stream()
+                .filter(row -> row.chartVersion < currentVersion)
+                .sorted(potentialOrder).limit(40).toList();
+        int potentialPopclass = popclassPolicy.newUserPopclass(
+                java.util.stream.Stream.concat(potentialCurrent.stream(), potentialOld.stream())
+                        .map(row -> row.potentialPopclass).toList());
+        int legacyPopclass = popclassPolicy.legacyUserPopclass(rows.stream()
+                .sorted(Comparator.comparingInt(
+                        (PopclassRow row) -> row.legacyPopclass).reversed()
+                        .thenComparing(Comparator.comparingInt(
+                                (PopclassRow row) -> row.allTimeScore).reversed())
                         .thenComparingLong(row -> row.chartId))
-                .limit(50).map(row -> row.potentialPopclass).toList());
+                .limit(50).map(row -> row.legacyPopclass).toList());
         jdbc.update("""
                 UPDATE user_profiles
-                   SET display_popclass = ?, potential_popclass = ?, updated_at = ?
+                   SET display_popclass = ?, potential_popclass = ?, legacy_popclass = ?,
+                       updated_at = ?
                  WHERE user_id = ?
-                """, displayPopclass, potentialPopclass, Timestamp.from(Instant.now()), userId);
+                """, displayPopclass, potentialPopclass, legacyPopclass,
+                Timestamp.from(Instant.now()), userId);
+        return new PopclassRecalculationResult(
+                poptomoId, legacyPopclass, displayPopclass, potentialPopclass,
+                PopclassPolicy.NEW_POPCLASS_SCALE, current.size(), old.size());
     }
 
     private void mark(List<PopclassRow> rows, String bucket) {
@@ -335,6 +370,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
     private static final class PopclassRow {
         private final long playdataId;
         private final long chartId;
+        private final int playdataVersion;
         private final int versionScore;
         private final int allTimeScore;
         private final int medalCode;
@@ -342,11 +378,14 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort {
         private final int chartVersion;
         private int versionPopclass;
         private int potentialPopclass;
+        private int legacyPopclass;
 
-        private PopclassRow(long playdataId, long chartId, int versionScore, int allTimeScore,
-                            int medalCode, int level, int chartVersion) {
+        private PopclassRow(long playdataId, long chartId, int playdataVersion,
+                            int versionScore, int allTimeScore, int medalCode,
+                            int level, int chartVersion) {
             this.playdataId = playdataId;
             this.chartId = chartId;
+            this.playdataVersion = playdataVersion;
             this.versionScore = versionScore;
             this.allTimeScore = allTimeScore;
             this.medalCode = medalCode;

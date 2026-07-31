@@ -123,11 +123,57 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
                 """, Integer.class)).isEqualTo(40);
         assertThat(jdbc.queryForObject("""
                 SELECT legacy_popclass FROM user_profiles WHERE user_id = 1
-                """, Integer.class)).isEqualTo(7777);
+                """, Integer.class)).isPositive();
         assertThat(jdbc.queryForObject("""
                 SELECT display_popclass > 0 AND potential_popclass > 0
                   FROM user_profiles WHERE user_id = 1
                 """, Boolean.class)).isTrue();
+    }
+
+    @Test
+    void recalculatesAndStoresLegacyAndNewPopclassesInMySql() {
+        jdbc.update("UPDATE charts SET level = 49 WHERE chart_id = 100");
+        jdbc.update("""
+                INSERT INTO playdata
+                    (user_id, chart_id, current_version, version_score, version_rank_code,
+                     all_time_score, all_time_score_version, all_time_rank_code, medal_code,
+                     created_at, updated_at)
+                VALUES (1, 100, 29, 90000, 5, 90000, 29, 5, 4, NOW(), NOW())
+                """);
+
+        var result = transaction.execute(status -> adapter.recalculate("0000-0000-0000"));
+
+        assertThat(result).isNotNull();
+        assertThat(result.displayPopclass()).isEqualTo(2_982);
+        assertThat(result.potentialPopclass()).isEqualTo(2_982);
+        assertThat(result.legacyPopclass()).isEqualTo(196);
+        assertThat(result.newPopclassScale()).isEqualTo(1_000);
+        assertThat(jdbc.queryForMap("""
+                SELECT display_popclass, potential_popclass, legacy_popclass
+                  FROM user_profiles WHERE user_id = 1
+                """))
+                .containsEntry("display_popclass", 2_982)
+                .containsEntry("potential_popclass", 2_982)
+                .containsEntry("legacy_popclass", 196);
+    }
+
+    @Test
+    void keepsLegacyAndPotentialValuesWhenCurrentVersionScoreWasReset() {
+        jdbc.update("UPDATE charts SET level = 49 WHERE chart_id = 100");
+        jdbc.update("""
+                INSERT INTO playdata
+                    (user_id, chart_id, current_version, version_score, version_rank_code,
+                     all_time_score, all_time_score_version, all_time_rank_code, medal_code,
+                     created_at, updated_at)
+                VALUES (1, 100, 28, 90000, 5, 90000, 28, 5, 4, NOW(), NOW())
+                """);
+
+        var result = transaction.execute(status -> adapter.recalculate("0000-0000-0000"));
+
+        assertThat(result).isNotNull();
+        assertThat(result.displayPopclass()).isZero();
+        assertThat(result.potentialPopclass()).isEqualTo(2_982);
+        assertThat(result.legacyPopclass()).isEqualTo(196);
     }
 
     private void seed() {
