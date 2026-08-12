@@ -6,8 +6,8 @@ import java.util.Arrays;
  * Display and ordering policy for the game's clear medals.
  *
  * <p>Codes 1-11 preserve the legacy ordering used by popn.gg. The High Cheers
- * long-pop-off assist clear is appended as code 12 so existing stored values do
- * not move.</p>
+ * long-pop-off clear is appended as code 12 so existing stored values do not
+ * move.</p>
  */
 public enum MedalPolicy {
     GOLD_STAR(1, "GOLD STAR", 1),
@@ -17,8 +17,8 @@ public enum MedalPolicy {
     BRONZE_STAR(5, "BRONZE STAR", 5),
     BRONZE_DIAMOND(6, "BRONZE DIAMOND", 6),
     BRONZE_CIRCLE(7, "BRONZE CIRCLE", 7),
-    ASSIST(12, "ASSIST", 8),
-    EASY(8, "EASY", 9),
+    LONGOFF_CLEAR(12, "LONGOFF CLEAR", 8),
+    EASY_CLEAR(8, "EASY CLEAR", 9),
     BLACK_STAR(9, "BLACK STAR", 10),
     BLACK_DIAMOND(10, "BLACK DIAMOND", 11),
     BLACK_CIRCLE(11, "BLACK CIRCLE", 12);
