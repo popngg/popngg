@@ -25,8 +25,8 @@ public class PopclassPolicy {
 
     /**
      * Returns the estimated High Cheers chart value as a thousandths-scaled integer.
-     * Medal codes map to PERFECT(1), FULL COMBO(2-3), CLEAR(4-6),
-     * EASY(10), and LONG POP OFF ASSIST(11). Failed medals do not receive a
+     * Medal codes map to PERFECT(1), FULL COMBO(2-4), CLEAR(5-7),
+     * EASY(8), and LONG POP OFF ASSIST(12). Failed medals do not receive a
      * clear medal bonus.
      */
     public int newChartPopclass(int level, int score, int medalCode) {
@@ -43,10 +43,10 @@ public class PopclassPolicy {
     private static int newMedalBonus(int medalCode) {
         return switch (medalCode) {
             case 1 -> 21_400;
-            case 2, 3 -> 17_400;
-            case 4, 5, 6 -> 12_400;
-            case 10 -> 6_200;
-            case 11 -> 9_300;
+            case 2, 3, 4 -> 17_400;
+            case 5, 6, 7 -> 12_400;
+            case 8 -> 6_200;
+            case 12 -> 9_300;
             default -> 0;
         };
     }
