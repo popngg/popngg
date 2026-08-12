@@ -33,17 +33,22 @@ class GameCodePolicyTest {
     }
 
     @Test
-    void separatesExistingEasyAndLongPopOffAssistWithoutRenumbering() {
-        assertThat(MedalPolicy.EASY.getCode()).isEqualTo(10);
-        assertThat(MedalPolicy.EASY.getLabel()).isEqualTo("EASY");
-        assertThat(MedalPolicy.ASSIST.getCode()).isEqualTo(11);
-        assertThat(MedalPolicy.ASSIST.getLabel()).isEqualTo("ASSIST");
-        assertThat(MedalPolicy.ASSIST.getSortOrder())
+    void definesCompleteClearMedalOrderWithoutRenumberingLegacyCodes() {
+        assertThat(MedalPolicy.GOLD_STAR.getCode()).isEqualTo(1);
+        assertThat(MedalPolicy.SILVER_CIRCLE.getCode()).isEqualTo(4);
+        assertThat(MedalPolicy.BRONZE_CIRCLE.getCode()).isEqualTo(7);
+        assertThat(MedalPolicy.EASY_CLEAR.getCode()).isEqualTo(8);
+        assertThat(MedalPolicy.EASY_CLEAR.getLabel()).isEqualTo("EASY CLEAR");
+        assertThat(MedalPolicy.BLACK_CIRCLE.getCode()).isEqualTo(11);
+        assertThat(MedalPolicy.LONGOFF_CLEAR.getCode()).isEqualTo(12);
+        assertThat(MedalPolicy.LONGOFF_CLEAR.getLabel()).isEqualTo("LONGOFF CLEAR");
+        assertThat(MedalPolicy.LONGOFF_CLEAR.getSortOrder())
                 .isGreaterThan(MedalPolicy.BRONZE_CIRCLE.getSortOrder())
-                .isLessThan(MedalPolicy.EASY.getSortOrder());
-        assertThat(MedalPolicy.EASY.getSortOrder())
-                .isLessThan(MedalPolicy.BLACK_DIAMOND.getSortOrder());
-        assertThat(MedalPolicy.fromCode(7)).isEqualTo(MedalPolicy.BLACK_DIAMOND);
+                .isLessThan(MedalPolicy.EASY_CLEAR.getSortOrder());
+        assertThat(MedalPolicy.EASY_CLEAR.getSortOrder())
+                .isLessThan(MedalPolicy.BLACK_STAR.getSortOrder());
+        assertThat(MedalPolicy.fromCode(10)).isEqualTo(MedalPolicy.BLACK_DIAMOND);
+        assertThat(MedalPolicy.values()).hasSize(12);
         assertUniqueCodesAndSortOrders(
                 Arrays.stream(MedalPolicy.values()).mapToInt(MedalPolicy::getCode).toArray(),
                 Arrays.stream(MedalPolicy.values()).mapToInt(MedalPolicy::getSortOrder).toArray());

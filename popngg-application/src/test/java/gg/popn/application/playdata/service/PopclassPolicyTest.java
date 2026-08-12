@@ -23,7 +23,7 @@ class PopclassPolicyTest {
 
     @Test
     void calculatesEstimatedNewChartPopclassInThousandths() {
-        assertThat(policy.newChartPopclass(49, 90_000, 4)).isEqualTo(2_982);
+        assertThat(policy.newChartPopclass(49, 90_000, 4)).isEqualTo(3_045);
         assertThat(policy.newChartPopclass(49, 49_999, 1)).isZero();
     }
 
@@ -32,11 +32,11 @@ class PopclassPolicyTest {
         assertThat(policy.newChartPopclass(50, 92_000, 1))
                 .isGreaterThan(policy.newChartPopclass(50, 92_000, 2));
         assertThat(policy.newChartPopclass(50, 92_000, 2))
-                .isGreaterThan(policy.newChartPopclass(50, 92_000, 4));
-        assertThat(policy.newChartPopclass(50, 92_000, 4))
-                .isGreaterThan(policy.newChartPopclass(50, 92_000, 11));
-        assertThat(policy.newChartPopclass(50, 92_000, 11))
-                .isGreaterThan(policy.newChartPopclass(50, 92_000, 10));
+                .isGreaterThan(policy.newChartPopclass(50, 92_000, 5));
+        assertThat(policy.newChartPopclass(50, 92_000, 5))
+                .isGreaterThan(policy.newChartPopclass(50, 92_000, 12));
+        assertThat(policy.newChartPopclass(50, 92_000, 12))
+                .isGreaterThan(policy.newChartPopclass(50, 92_000, 8));
         assertThat(policy.newUserPopclass(List.of(2_982, 3_117))).isEqualTo(6_099);
     }
 }

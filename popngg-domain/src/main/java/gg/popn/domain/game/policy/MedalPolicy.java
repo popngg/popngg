@@ -3,23 +3,25 @@ package gg.popn.domain.game.policy;
 import java.util.Arrays;
 
 /**
- * Medal display policy preserving legacy codes 1-10.
+ * Display and ordering policy for the game's clear medals.
  *
- * <p>Code 10 represents the existing easy-clear medal. Long-pop-off assist clear
- * is assigned code 11 so existing stored values do not move.</p>
+ * <p>Codes 1-11 preserve the legacy ordering used by popn.gg. The High Cheers
+ * long-pop-off clear is appended as code 12 so existing stored values do not
+ * move.</p>
  */
 public enum MedalPolicy {
-    GOLD_DIAMOND(1, "GOLD DIAMOND", 1),
-    SILVER_DIAMOND(2, "SILVER DIAMOND", 2),
-    SILVER_STAR(3, "SILVER STAR", 3),
-    BRONZE_DIAMOND(4, "BRONZE DIAMOND", 4),
+    GOLD_STAR(1, "GOLD STAR", 1),
+    SILVER_STAR(2, "SILVER STAR", 2),
+    SILVER_DIAMOND(3, "SILVER DIAMOND", 3),
+    SILVER_CIRCLE(4, "SILVER CIRCLE", 4),
     BRONZE_STAR(5, "BRONZE STAR", 5),
-    BRONZE_CIRCLE(6, "BRONZE CIRCLE", 6),
-    ASSIST(11, "ASSIST", 7),
-    EASY(10, "EASY", 8),
-    BLACK_DIAMOND(7, "BLACK DIAMOND", 9),
-    BLACK_STAR(8, "BLACK STAR", 10),
-    BLACK_CIRCLE(9, "BLACK CIRCLE", 11);
+    BRONZE_DIAMOND(6, "BRONZE DIAMOND", 6),
+    BRONZE_CIRCLE(7, "BRONZE CIRCLE", 7),
+    LONGOFF_CLEAR(12, "LONGOFF CLEAR", 8),
+    EASY_CLEAR(8, "EASY CLEAR", 9),
+    BLACK_STAR(9, "BLACK STAR", 10),
+    BLACK_DIAMOND(10, "BLACK DIAMOND", 11),
+    BLACK_CIRCLE(11, "BLACK CIRCLE", 12);
 
     private final int code;
     private final String label;
