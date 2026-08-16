@@ -1,0 +1,42 @@
+site_name: popn.gg Refactor Docs
+site_description: popn.gg refactor context, architecture, migration, and API notes
+site_url: https://docs.popn.gg/
+repo_name: popngg
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+
+plugins:
+  - search:
+      lang:
+        - ko
+        - en
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+
+nav:
+  - 개요: index.md
+  - LLM 컨텍스트: llm-context.md
+  - 아키텍처: architecture.md
+  - 게임 시스템: game-system.md
+  - 기존 DB 구조 추정: legacy-db-inference.md
+  - MVP DB 설계 초안: mvp-db-design.md
+  - 데이터 모델링: data-modeling.md
+  - API 설계: api-design.md
+  - 마이그레이션: migration-plan.md
+  - 운영과 배포: operations.md
+  - 의사결정 기록: decisions.md

@@ -5,13 +5,13 @@ spring:
   
   docker:
     compose:
-      file: classpath:docker-compose.yml
+      file: ${LOCAL_COMPOSE_FILE:compose.local.yml}
       lifecycle-management: start-and-stop
 
   datasource:
-    url: jdbc:mysql://mysql:3306/popnggdb?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
-    username: user
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/popngg?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:popngg}
+    password: ${SPRING_DATASOURCE_PASSWORD:local-popngg-password}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -35,6 +35,8 @@ logging:
 # Server
 server:
   port: 8080
+  tomcat:
+    max-swallow-size: 4MB
   servlet:
     encoding:
       charset: UTF-8
@@ -43,7 +45,7 @@ server:
 
 # JWT properties for local
 jwt:
-  secret-key: 12345678901234567890123456789012345678901234567890123456789012345
+  secret-key: ${JWT_SECRET_KEY:local-only-development-key-change-before-production-0123456789abcdef}
   expiration-hours: 24
   issuer: popngg
 

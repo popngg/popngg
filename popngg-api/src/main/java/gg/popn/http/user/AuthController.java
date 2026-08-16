@@ -8,40 +8,74 @@ import gg.popn.http.user.request.LoginRequest;
 import gg.popn.http.user.request.PasswordResetConfirmRequest;
 import gg.popn.http.user.request.PasswordResetRequest;
 import gg.popn.http.user.response.LoginResponse;
+import gg.popn.http.user.response.AuthCheckResponse;
+import gg.popn.infra.security.CustomUserPrincipal;
 import gg.popn.application.auth.dto.command.LoginCommand;
 import gg.popn.application.auth.port.in.AuthenticateUserUseCase;
+import gg.popn.application.auth.port.in.RegisterUserUseCase;
+import gg.popn.application.auth.dto.command.RegisterCommand;
 import gg.popn.application.auth.dto.command.ConfirmPasswordResetCommand;
 import gg.popn.application.auth.dto.command.RequestPasswordResetCommand;
 import gg.popn.application.auth.port.in.PasswordResetUseCase;
 import gg.popn.http.common.response.SuccessResponse;
+import gg.popn.http.user.request.RegisterRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-@CrossOrigin(origins = {"https://popn.gg", "https://api.popn.gg"})
 @Tag(name = "Auth", description = "User operations")
 public class AuthController {
     private final AuthenticateUserUseCase authenticateUser;
     private final PasswordResetUseCase passwordReset;
+    private final RegisterUserUseCase registerUser;
 
     @PostMapping("/login")
-    SuccessResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    SuccessResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                         HttpServletResponse response) {
         var result = authenticateUser.login(new LoginCommand(
                 PoptomoId.of(request.poptomoId()),
                 Password.of(request.password())));
+        setAccessTokenCookie(response, result.accessToken(), result.expiresInSeconds());
         return SuccessResponse.<LoginResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
                 .data(LoginResponse.from(result))
                 .build();
+    }
+
+    @GetMapping("/registrations/{poptomoId}")
+    ResponseEntity<Void> registration(@PathVariable String poptomoId) {
+        return registerUser.exists(poptomoId)
+                ? ResponseEntity.ok().build()
+                : ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/register")
+    SuccessResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request,
+                                            HttpServletResponse response) {
+        var result = registerUser.register(new RegisterCommand(
+                request.poptomoId(), request.password(), request.hidden()));
+        setAccessTokenCookie(response, result.accessToken(), result.expiresInSeconds());
+        return SuccessResponse.<LoginResponse>builder()
+                .code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS)
+                .data(LoginResponse.from(result)).build();
+    }
+
+    private static void setAccessTokenCookie(HttpServletResponse response, String token, long maxAge) {
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", token)
+                .httpOnly(true).secure(true).sameSite("Lax").path("/")
+                .maxAge(maxAge).build().toString());
     }
 
     @PostMapping("/password-reset/request")
@@ -67,11 +101,11 @@ public class AuthController {
     }
 
     @GetMapping("/check")
-    SuccessResponse<Void> check(@AuthenticationPrincipal User user) {
-        return SuccessResponse.<Void>builder()
+    SuccessResponse<AuthCheckResponse> check(@AuthenticationPrincipal CustomUserPrincipal user) {
+        return SuccessResponse.<AuthCheckResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(null) // TODO: implement
+                .data(AuthCheckResponse.from(user))
                 .build();
     }
 }

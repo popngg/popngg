@@ -7,7 +7,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 abstract class MySqlIntegrationTestSupport {
 
     @Container

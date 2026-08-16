@@ -27,7 +27,13 @@ public record ImportPlaydataCommand(
             String genreName,
             Integer score,
             Integer rankCode,
-            Integer medalCode
+            Integer medalCode,
+            Integer versionBestScore,
+            boolean versionBestScorePresent
     ) {
+        public Row(Long chartId, Long songId, Integer difficultyCode, Boolean upper, String songHash,
+                   String songName, String genreName, Integer score, Integer rankCode, Integer medalCode) {
+            this(chartId,songId,difficultyCode,upper,songHash,songName,genreName,score,rankCode,medalCode,null,false);
+        }
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.MediaType;
 
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -23,12 +24,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 로그인/회원가입, Swagger 등은 허용
                         .requestMatchers(
                                 "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/registrations/**",
                                 "/api/v1/auth/password-reset/**",
                                 "/actuator/health",
                                 "/swagger-ui/**",
@@ -41,6 +45,17 @@ public class SecurityConfig {
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write("{\"code\":\"UNAUTHENTICATED\",\"message\":\"Authentication is required.\"}");
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(403);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Access is denied.\"}");
+                        }))
                 // JWT 필터 등록 (UsernamePasswordAuthenticationFilter 앞에)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

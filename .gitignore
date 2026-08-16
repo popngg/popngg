@@ -18,10 +18,9 @@ build/
 # Mac OS
 .DS_Store
 
-# Application properties with sensitive data
-application-*.yml
-!application-local.yml
-!application-docker.yml
+# Runtime secrets. Commit only environment-variable based application profiles.
+.env*
+!.env.example
 
 # Local configuration files
 *.properties.local
@@ -52,8 +51,6 @@ actuator/
 .spring-devtools/
 
 # Local development environment
-.env
-.env.local
 
 # Test reports
 test-results/

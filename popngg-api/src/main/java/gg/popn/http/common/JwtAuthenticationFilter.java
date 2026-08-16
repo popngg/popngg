@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.Arrays;
 
 @Component
 @RequiredArgsConstructor
@@ -29,17 +30,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
-
-        // Authorization 헤더 없거나 Bearer 아니면 패스
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        TokenCandidate candidate = resolveToken(request);
+        if (candidate == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
-
-        Optional<AuthPrincipal> principalOpt = tokenPort.parse(token);
+        Optional<AuthPrincipal> principalOpt = tokenPort.parse(candidate.value());
 
         if (principalOpt.isEmpty()) {
             filterChain.doFilter(request, response);
@@ -60,8 +57,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
+        if (candidate.cookie()) {
+            var renewed = tokenPort.issueAccessToken(authPrincipal);
+            response.addHeader("Set-Cookie", org.springframework.http.ResponseCookie
+                    .from("access_token", renewed.value()).httpOnly(true).secure(true)
+                    .sameSite("Lax").path("/").maxAge(renewed.expiresInSeconds())
+                    .build().toString());
+        }
+
         filterChain.doFilter(request, response);
     }
+
+    private static TokenCandidate resolveToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) return new TokenCandidate(authHeader.substring(7), false);
+        if (request.getCookies() == null) return null;
+        return Arrays.stream(request.getCookies())
+                .filter(cookie -> "access_token".equals(cookie.getName()))
+                .map(cookie -> new TokenCandidate(cookie.getValue(), true)).findFirst().orElse(null);
+    }
+
+    private record TokenCandidate(String value, boolean cookie) {}
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
