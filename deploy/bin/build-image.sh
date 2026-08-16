@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+env_file=${ENV_FILE:-"$repo_root/.env"}
+if [[ -f "$env_file" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$env_file"
+  set +a
+fi
+
 image_repository=${IMAGE_REPOSITORY:-}
 image_tag=${IMAGE_TAG:-}
 [[ "$image_repository" =~ ^[a-zA-Z0-9._/-]+$ ]] || {
@@ -12,7 +21,6 @@ image_tag=${IMAGE_TAG:-}
   exit 64
 }
 
-repo_root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 docker build --pull --label "org.opencontainers.image.revision=$image_tag" \
   --tag "$image_repository:$image_tag" "$repo_root"
 echo "image=$image_repository:$image_tag status=built"

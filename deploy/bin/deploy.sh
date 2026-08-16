@@ -2,6 +2,15 @@
 set -euo pipefail
 
 repo_root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+env_file=${ENV_FILE:-"$repo_root/.env"}
+compose_env=()
+if [[ -f "$env_file" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$env_file"
+  set +a
+  compose_env=(--env-file "$env_file")
+fi
 lock_dir=${DEPLOY_LOCK_DIR:-"$repo_root/.deploy.lock"}
 if ! mkdir "$lock_dir" 2>/dev/null; then
   echo "another deployment is already running" >&2
@@ -16,7 +25,7 @@ trap 'rmdir "$lock_dir"' EXIT
   exit 64
 }
 
-compose=(docker compose -f "$repo_root/deploy/compose.yml")
+compose=(docker compose "${compose_env[@]}" -f "$repo_root/deploy/compose.yml")
 "${compose[@]}" up --no-deps --wait mysql
 "${compose[@]}" run --rm migration
 "${compose[@]}" up -d --no-deps --wait api
