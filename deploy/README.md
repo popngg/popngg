@@ -4,6 +4,10 @@ The API image is built and run with Java 21. Use a commit SHA or release tag; de
 scripts reject `latest`. Secrets are supplied through the environment and are never stored
 in this directory.
 
+The container always uses the Spring `prod` profile. Docker is the packaging/runtime
+mechanism, not the environment name. Local development uses the separate root-level
+`compose.local.yml` and the `local` profile.
+
 ## Stages
 
 1. Build `:popngg-api:bootJar` and the immutable API image.
@@ -23,6 +27,10 @@ export JWT_SECRET_KEY='replace-with-at-least-64-random-characters-before-deploy'
 ./deploy/bin/build-image.sh
 ./deploy/bin/deploy.sh
 ```
+
+Alternatively copy the repository root `.env.example` to `.env`, fill it in, and load it
+into the shell or pass it to Docker Compose. `.env` is ignored by Git. Never reuse the
+local profile's development JWT key in staging or production.
 
 The Compose project or volume must be backed up before production migration. Rollback
 means deploying the previously recorded immutable image tag; schema rollback requires an

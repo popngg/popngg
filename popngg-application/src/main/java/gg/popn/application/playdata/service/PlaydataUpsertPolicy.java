@@ -7,15 +7,15 @@ public class PlaydataUpsertPolicy {
     public Decision decide(State existing, Observation observed, int currentVersion,
                            TransitionPolicy transition) {
         if (existing == null) {
-            return new Decision(true, new State(currentVersion, observed.score(), observed.rankCode(),
+            return new Decision(true, new State(currentVersion, observed.effectiveVersionScore(), observed.rankCode(),
                     observed.score(), currentVersion, observed.rankCode(), observed.medalCode()));
         }
 
         int versionScore;
         Integer versionRank;
         if (existing.currentVersion() == currentVersion) {
-            versionScore = Math.max(existing.versionScore(), observed.score());
-            versionRank = observed.score() >= existing.versionScore()
+            versionScore = Math.max(existing.versionScore(), observed.effectiveVersionScore());
+            versionRank = observed.effectiveVersionScore() >= existing.versionScore()
                     ? observed.rankCode() : existing.versionRankCode();
         } else {
             if (transition == null) {
@@ -23,11 +23,11 @@ public class PlaydataUpsertPolicy {
                         existing.currentVersion(), currentVersion);
             }
             if (transition == TransitionPolicy.RESET) {
-                versionScore = observed.score();
+                versionScore = observed.effectiveVersionScore();
                 versionRank = observed.rankCode();
             } else {
-                versionScore = Math.max(existing.versionScore(), observed.score());
-                versionRank = observed.score() >= existing.versionScore()
+                versionScore = Math.max(existing.versionScore(), observed.effectiveVersionScore());
+                versionRank = observed.effectiveVersionScore() >= existing.versionScore()
                         ? observed.rankCode() : existing.versionRankCode();
             }
         }
@@ -53,7 +53,9 @@ public class PlaydataUpsertPolicy {
     ) {
     }
 
-    public record Observation(int score, int rankCode, int medalCode) {
+    public record Observation(int score, int rankCode, int medalCode, Integer versionBestScore, boolean versionBestScorePresent) {
+        public Observation(int score,int rankCode,int medalCode){this(score,rankCode,medalCode,null,false);}
+        int effectiveVersionScore(){return versionBestScorePresent?(versionBestScore==null?0:versionBestScore):score;}
     }
 
     public record Decision(boolean changed, State state) {

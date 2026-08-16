@@ -14,6 +14,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -30,16 +33,31 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     private final PlaydataHistoryPolicy historyPolicy;
     private final PopclassPolicy popclassPolicy;
     private final int currentVersion;
+    private final TransactionTemplate independentTransaction;
 
     public PlaydataImportJdbcAdapter(JdbcTemplate jdbc, PlaydataUpsertPolicy upsertPolicy,
                                      PlaydataHistoryPolicy historyPolicy,
                                      PopclassPolicy popclassPolicy,
-                                     @Value("${popngg.game.current-version:29}") int currentVersion) {
+                                     @Value("${popngg.game.current-version:29}") int currentVersion,
+                                     PlatformTransactionManager transactionManager) {
         this.jdbc = jdbc;
         this.upsertPolicy = upsertPolicy;
         this.historyPolicy = historyPolicy;
         this.popclassPolicy = popclassPolicy;
         this.currentVersion = currentVersion;
+        this.independentTransaction = new TransactionTemplate(transactionManager);
+        this.independentTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    PlaydataImportJdbcAdapter(JdbcTemplate jdbc, PlaydataUpsertPolicy upsertPolicy,
+                              PlaydataHistoryPolicy historyPolicy, PopclassPolicy popclassPolicy,
+                              int currentVersion) {
+        this.jdbc = jdbc;
+        this.upsertPolicy = upsertPolicy;
+        this.historyPolicy = historyPolicy;
+        this.popclassPolicy = popclassPolicy;
+        this.currentVersion = currentVersion;
+        this.independentTransaction = null;
     }
 
     @Override
@@ -74,7 +92,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
             return new ImportPlaydataResult(renewLogId, command.rows().size(), matched,
                     updated, histories, unmatched.size(), List.copyOf(unmatched));
         } catch (RuntimeException exception) {
-            finishLog(renewLogId, "FAILED", matched, 0, exception.getClass().getSimpleName());
+            finishFailureLog(renewLogId, matched, exception.getClass().getSimpleName());
             throw exception;
         }
     }
@@ -182,7 +200,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                                  long renewLogId) {
         PlaydataUpsertPolicy.State existing = loadState(userId, chartId);
         var observed = new PlaydataUpsertPolicy.Observation(
-                row.score(), row.rankCode(), row.medalCode());
+                row.score(), row.rankCode(), row.medalCode(), row.versionBestScore(), row.versionBestScorePresent());
         var transition = existing == null || existing.currentVersion() == currentVersion
                 ? null : loadTransition(existing.currentVersion(), currentVersion);
         var decision = upsertPolicy.decide(existing, observed, currentVersion, transition);
@@ -297,6 +315,17 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     }
 
     private long startLog(ImportPlaydataCommand command, long userId) {
+        if (independentTransaction == null) {
+            return insertLog(command, userId);
+        }
+        Long id = independentTransaction.execute(status -> insertLog(command, userId));
+        if (id == null) {
+            throw new IllegalStateException("Could not create renew log.");
+        }
+        return id;
+    }
+
+    private long insertLog(ImportPlaydataCommand command, long userId) {
         KeyHolder keys = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement statement = connection.prepareStatement("""
@@ -353,6 +382,15 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                        updated_playdata_count = ?, failure_reason = ?
                  WHERE renew_log_id = ?
                 """, status, matched, updated, reason, id);
+    }
+
+    private void finishFailureLog(long id, int matched, String reason) {
+        if (independentTransaction == null) {
+            finishLog(id, "FAILED", matched, 0, reason);
+            return;
+        }
+        independentTransaction.executeWithoutResult(
+                status -> finishLog(id, "FAILED", matched, 0, reason));
     }
 
     private static String summarize(List<ImportPlaydataResult.UnmatchedRow> rows) {

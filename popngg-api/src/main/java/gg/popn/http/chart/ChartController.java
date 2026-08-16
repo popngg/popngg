@@ -87,7 +87,7 @@ public class ChartController {
                 .build();
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("")
     public SuccessResponse<CreateChartResponse> addChart(@RequestBody CreateChartRequest request) throws Exception {
         CreateChartCommand cmd = ChartAssembler.toCreateCommand(request);

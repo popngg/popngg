@@ -1,0 +1,59 @@
+package gg.popn.http.renewal;
+
+import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
+import gg.popn.application.playdata.port.in.ImportPlaydataUseCase;
+import gg.popn.domain.user.model.field.PoptomoId;
+import gg.popn.domain.user.model.field.UserRole;
+import gg.popn.infra.security.CustomUserPrincipal;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.Instant;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+class RenewalControllerTest {
+    private final ImportPlaydataUseCase useCase = mock(ImportPlaydataUseCase.class);
+    private final RenewalController controller = new RenewalController(useCase);
+
+    @Test
+    void mapsHandoffPayloadToExistingImport() {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
+        chart.setDifficulty("ex"); chart.setLevel(50); chart.setMedal("c");
+        chart.setRank("s"); chart.setScore(99000); chart.setVersionBestScore(98000);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", "character", "170.13"),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+        when(useCase.importPlaydata(argThat(command -> command.rows().getFirst().chartId() == 42
+                && command.rows().getFirst().versionBestScore() == 98000)))
+                .thenReturn(new ImportPlaydataResult(7,1,1,1,1,0,List.of()));
+
+        var response = controller.renew(principal(), request);
+
+        assertThat(response.getData().renewLogId()).isEqualTo(7);
+    }
+
+    @Test
+    void rejectsDifferentGameId() {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var request = new RenewalRequest(1,"popn29",Instant.now(),
+                new RenewalRequest.Profile("9999-9999-9999",null,null,null),List.of(),List.of(),
+                new RenewalRequest.Stats(0,0,0,0,0,0,0));
+        assertThatThrownBy(() -> controller.renew(principal(), request))
+                .isInstanceOf(RenewalException.class)
+                .extracting("code").isEqualTo("GAME_ID_MISMATCH");
+    }
+
+    private static CustomUserPrincipal principal() {
+        return new CustomUserPrincipal(PoptomoId.of("1234-5678-9012"), UserRole.of("USER"));
+    }
+}

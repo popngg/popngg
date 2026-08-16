@@ -6,6 +6,8 @@ import gg.popn.domain.chart.model.field.*;
 import gg.popn.infra.db.entity.ChartEntity;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ChartMapper {
     public static Chart toDomain(ChartEntity chartEntity) {
@@ -33,6 +35,21 @@ public class ChartMapper {
     }
 
     public static List<GroupedChart> toGroupedChart(List<Chart> charts) {
-        return null; // TODO: implement
+        if (charts == null || charts.isEmpty()) {
+            return List.of();
+        }
+        Map<String, GroupedChart.GroupedChartBuilder> grouped = new LinkedHashMap<>();
+        for (Chart chart : charts) {
+            var builder = grouped.computeIfAbsent(
+                    chart.getSongHash().getValue(), ignored -> GroupedChart.builder());
+            switch (chart.getDifficulty().getValue()) {
+                case 1 -> builder.lightChart(chart);
+                case 2 -> builder.normalChart(chart);
+                case 3 -> builder.hyperChart(chart);
+                case 4 -> builder.exChart(chart);
+                default -> throw new IllegalArgumentException("Unsupported chart difficulty.");
+            }
+        }
+        return grouped.values().stream().map(GroupedChart.GroupedChartBuilder::build).toList();
     }
 }

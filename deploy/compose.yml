@@ -17,11 +17,12 @@ services:
   migration:
     image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/popngg?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul
       SPRING_DATASOURCE_USERNAME: popngg
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      SPRING_FLYWAY_ENABLED: "true"
     command:
       - --spring.main.web-application-type=none
       - --spring.flyway.enabled=true
@@ -33,7 +34,7 @@ services:
   api:
     image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/popngg?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul
       SPRING_DATASOURCE_USERNAME: popngg
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}

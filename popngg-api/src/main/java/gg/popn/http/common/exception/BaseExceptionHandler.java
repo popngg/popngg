@@ -3,6 +3,9 @@ package gg.popn.http.common.exception;
 import gg.popn.domain.common.exception.BaseException;
 import gg.popn.application.user.exception.UserProfileNotFoundException;
 import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
+import gg.popn.application.auth.exception.AlreadyRegisteredException;
+import gg.popn.http.renewal.RenewalException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +22,27 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class BaseExceptionHandler {
+    @ExceptionHandler(RenewalException.class)
+    public ResponseEntity<Map<String,Object>> handleRenewal(RenewalException exception){return ResponseEntity.status(exception.status()).body(Map.of("code",exception.code(),"message",exception.getMessage()));}
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String,Object>> handleInvalidPayload(MethodArgumentNotValidException exception){
+        boolean emptyCharts = exception.getBindingResult().getFieldErrors().stream()
+                .anyMatch(error -> "charts".equals(error.getField()) && "NotEmpty".equals(error.getCode()));
+        boolean payloadTooLarge = exception.getBindingResult().getFieldErrors().stream()
+                .anyMatch(error -> "stats.payloadBytes".equals(error.getField()) && "Max".equals(error.getCode()));
+        if (payloadTooLarge) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of(
+                    "code", "PAYLOAD_TOO_LARGE", "message", "The renewal payload exceeds 4 MiB."));
+        }
+        String code = emptyCharts ? "EMPTY_PAYLOAD" : "INVALID_PAYLOAD";
+        String message = emptyCharts ? "At least one played chart is required." : "The request payload is invalid.";
+        return ResponseEntity.badRequest().body(Map.of("code",code,"message",message));
+    }
+    @ExceptionHandler(AlreadyRegisteredException.class)
+    public ResponseEntity<Map<String, Object>> handleAlreadyRegistered() {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("code", "ALREADY_REGISTERED", "message", "The poptomo ID is already registered."));
+    }
     @ExceptionHandler(CatalogItemNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleCatalogItemNotFound(CatalogItemNotFoundException exception) {
         return ResponseEntity
