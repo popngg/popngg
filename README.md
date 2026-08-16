@@ -55,7 +55,9 @@ MySQL-specific integration tests run when Docker is available and are skipped ot
 
 Copy `.env.example` to `.env`, replace every placeholder, and keep `.env` untracked.
 Use a unique random JWT key of at least 64 characters. The production Compose stack uses
-the `prod` profile and refuses to start when required values are absent.
+the `prod` profile and refuses to start when required values are absent. Set
+`CORS_ALLOWED_ORIGINS` to the exact dev or production frontend origins. Deployment scripts
+automatically load the root `.env` file.
 
 ```bash
 cp .env.example .env
@@ -63,6 +65,9 @@ docker compose --env-file .env -f deploy/compose.yml config
 ./deploy/bin/build-image.sh
 ./deploy/bin/deploy.sh
 ```
+
+The API binds to `127.0.0.1:${API_PORT}` and should be exposed through an HTTPS reverse
+proxy. Cookie-authenticated frontend requests must set `credentials: include`.
 
 In managed hosting, inject the variables from the platform's secret manager instead of
 creating an `.env` file. See `deploy/README.md` for migration and rollback details.

@@ -29,8 +29,14 @@ export JWT_SECRET_KEY='replace-with-at-least-64-random-characters-before-deploy'
 ```
 
 Alternatively copy the repository root `.env.example` to `.env`, fill it in, and load it
-into the shell or pass it to Docker Compose. `.env` is ignored by Git. Never reuse the
-local profile's development JWT key in staging or production.
+in. `build-image.sh` and `deploy.sh` automatically load the root `.env`; set `ENV_FILE`
+to use another path. `.env` is ignored by Git. Never reuse the local profile's
+development JWT key in staging or production.
+
+Set `CORS_ALLOWED_ORIGINS` to the exact comma-separated frontend origins, without trailing
+slashes. The API port binds to `127.0.0.1` and is intended to run behind an HTTPS reverse
+proxy. Login cookies are `Secure`, so browser cookie authentication does not work over
+plain HTTP. Frontend requests must use `credentials: include`.
 
 The Compose project or volume must be backed up before production migration. Rollback
 means deploying the previously recorded immutable image tag; schema rollback requires an
