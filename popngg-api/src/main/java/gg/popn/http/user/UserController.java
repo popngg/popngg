@@ -7,9 +7,9 @@ import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
 import gg.popn.http.common.response.SuccessResponse;
+import gg.popn.http.common.response.PageResponse;
 import gg.popn.http.user.request.UpdateUserProfileRequest;
 import gg.popn.http.user.response.UserProfileResponse;
-import gg.popn.http.user.response.UserRankingResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +55,7 @@ public class UserController {
     }
 
     @GetMapping("/rankings")
-    SuccessResponse<UserRankingResponse> getUserRankings(
+    SuccessResponse<PageResponse<UserProfileResponse>> getUserRankings(
             @RequestParam(defaultValue = "displayPopclass") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -63,7 +63,9 @@ public class UserController {
                 UserRankingQuery.Sort.fromApiValue(sort),
                 page,
                 size));
-        return success(UserRankingResponse.from(result));
+        return success(PageResponse.of(
+                result.users().stream().map(UserProfileResponse::from).toList(),
+                result.totalElements(), result.page(), result.size()));
     }
 
     private static <T> SuccessResponse<T> success(T data) {

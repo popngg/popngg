@@ -7,7 +7,8 @@ import gg.popn.application.song.port.in.CreateSongUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
 import gg.popn.http.common.response.SuccessResponse;
-import gg.popn.http.song.response.SongPageResponse;
+import gg.popn.http.common.response.PageResponse;
+import gg.popn.http.song.response.GroupedSongResponse;
 import gg.popn.http.song.response.SongDetailResponse;
 import gg.popn.http.song.response.CreateSongResponse;
 import gg.popn.http.song.request.CreateSongRequest;
@@ -31,7 +32,7 @@ public class SongController {
     private final CreateSongUseCase createSongUseCase;
 
     @GetMapping
-    public SuccessResponse<SongPageResponse> findSongs(
+    public SuccessResponse<PageResponse<GroupedSongResponse>> findSongs(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer version,
             @RequestParam(required = false) Integer chartVersion,
@@ -45,10 +46,13 @@ public class SongController {
     ) {
         FindSongsQuery query = new FindSongsQuery(keyword, version, chartVersion, level,
                 difficulty, isUpper, hasStrictGauge, hasStrictJudgement, page, size);
-        return SuccessResponse.<SongPageResponse>builder()
+        var result = findSongsUseCase.execute(query);
+        return SuccessResponse.<PageResponse<GroupedSongResponse>>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(SongPageResponse.from(findSongsUseCase.execute(query)))
+                .data(PageResponse.of(
+                        result.content().stream().map(GroupedSongResponse::from).toList(),
+                        result.totalElements(), result.page(), result.size()))
                 .build();
     }
 
