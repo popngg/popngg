@@ -31,6 +31,8 @@ public class SecurityConfig {
                         // 로그인/회원가입, Swagger 등은 허용
                         .requestMatchers(
                                 "/api/v1/auth/login",
+                                "/api/v1/auth/session",
+                                "/api/v1/auth/logout",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/registrations/**",
                                 "/api/v1/auth/password-reset/**",

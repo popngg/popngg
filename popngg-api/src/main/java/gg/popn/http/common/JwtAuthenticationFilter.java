@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -21,6 +22,9 @@ import java.util.Arrays;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    @Value("${popngg.auth.cookie-secure:true}")
+    private boolean cookieSecure = true;
 
     private final TokenPort tokenPort; // 🔹 포트만 의존 (jjwt 모름)
 
@@ -60,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (candidate.cookie()) {
             var renewed = tokenPort.issueAccessToken(authPrincipal);
             response.addHeader("Set-Cookie", org.springframework.http.ResponseCookie
-                    .from("access_token", renewed.value()).httpOnly(true).secure(true)
+                    .from("access_token", renewed.value()).httpOnly(true).secure(cookieSecure)
                     .sameSite("Lax").path("/").maxAge(renewed.expiresInSeconds())
                     .build().toString());
         }
@@ -84,6 +88,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         // 토큰 없이 허용할 경로들
         return path.startsWith("/auth")
+                || path.equals("/api/v1/auth/logout")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs");
     }

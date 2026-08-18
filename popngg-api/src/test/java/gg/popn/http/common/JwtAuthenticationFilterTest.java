@@ -83,6 +83,8 @@ class JwtAuthenticationFilterTest {
         assertThat(filter.shouldNotFilter(request("/auth/login"))).isTrue();
         assertThat(filter.shouldNotFilter(request("/swagger-ui/index.html"))).isTrue();
         assertThat(filter.shouldNotFilter(request("/v3/api-docs"))).isTrue();
+        assertThat(filter.shouldNotFilter(request("/api/v1/auth/logout"))).isTrue();
+        assertThat(filter.shouldNotFilter(request("/api/v1/auth/session"))).isFalse();
         assertThat(filter.shouldNotFilter(request("/api/v1/renewals"))).isFalse();
     }
 

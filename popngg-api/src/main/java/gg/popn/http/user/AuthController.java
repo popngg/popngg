@@ -8,7 +8,7 @@ import gg.popn.http.user.request.LoginRequest;
 import gg.popn.http.user.request.PasswordResetConfirmRequest;
 import gg.popn.http.user.request.PasswordResetRequest;
 import gg.popn.http.user.response.LoginResponse;
-import gg.popn.http.user.response.AuthCheckResponse;
+import gg.popn.http.user.response.AuthSessionResponse;
 import gg.popn.infra.security.CustomUserPrincipal;
 import gg.popn.application.auth.dto.command.LoginCommand;
 import gg.popn.application.auth.port.in.AuthenticateUserUseCase;
@@ -17,6 +17,8 @@ import gg.popn.application.auth.dto.command.RegisterCommand;
 import gg.popn.application.auth.dto.command.ConfirmPasswordResetCommand;
 import gg.popn.application.auth.dto.command.RequestPasswordResetCommand;
 import gg.popn.application.auth.port.in.PasswordResetUseCase;
+import gg.popn.application.user.dto.query.UserProfileQuery;
+import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.http.common.response.SuccessResponse;
 import gg.popn.http.user.request.RegisterRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,6 +30,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -36,21 +39,24 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 @Tag(name = "Auth", description = "User operations")
 public class AuthController {
+    @Value("${popngg.auth.cookie-secure:true}")
+    private boolean cookieSecure = true;
+
     private final AuthenticateUserUseCase authenticateUser;
     private final PasswordResetUseCase passwordReset;
     private final RegisterUserUseCase registerUser;
+    private final UserProfileUseCase userProfile;
 
     @PostMapping("/login")
-    SuccessResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request,
-                                         HttpServletResponse response) {
+    SuccessResponse<Void> login(@Valid @RequestBody LoginRequest request,
+                                HttpServletResponse response) {
         var result = authenticateUser.login(new LoginCommand(
                 PoptomoId.of(request.poptomoId()),
                 Password.of(request.password())));
         setAccessTokenCookie(response, result.accessToken(), result.expiresInSeconds());
-        return SuccessResponse.<LoginResponse>builder()
+        return SuccessResponse.<Void>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(LoginResponse.from(result))
                 .build();
     }
 
@@ -72,9 +78,9 @@ public class AuthController {
                 .data(LoginResponse.from(result)).build();
     }
 
-    private static void setAccessTokenCookie(HttpServletResponse response, String token, long maxAge) {
+    private void setAccessTokenCookie(HttpServletResponse response, String token, long maxAge) {
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", token)
-                .httpOnly(true).secure(true).sameSite("Lax").path("/")
+                .httpOnly(true).secure(cookieSecure).sameSite("Lax").path("/")
                 .maxAge(maxAge).build().toString());
     }
 
@@ -100,12 +106,31 @@ public class AuthController {
                 .build();
     }
 
-    @GetMapping("/check")
-    SuccessResponse<AuthCheckResponse> check(@AuthenticationPrincipal CustomUserPrincipal user) {
-        return SuccessResponse.<AuthCheckResponse>builder()
+    @GetMapping("/session")
+    SuccessResponse<AuthSessionResponse> session(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        AuthSessionResponse data = null;
+        if (principal != null) {
+            var profile = userProfile.get(new UserProfileQuery(
+                    principal.getPoptomoId().getValue()));
+            data = new AuthSessionResponse(
+                    profile.poptomoId(), profile.userName(), profile.profileImageUrl());
+        }
+        return SuccessResponse.<AuthSessionResponse>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
-                .data(AuthCheckResponse.from(user))
+                .data(data)
+                .build();
+    }
+
+    @PostMapping("/logout")
+    SuccessResponse<Void> logout(HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", "")
+                .httpOnly(true).secure(cookieSecure).sameSite("Lax").path("/")
+                .maxAge(0).build().toString());
+        return SuccessResponse.<Void>builder()
+                .code(ResponseCode.SUCCESS)
+                .message(ResponseMessage.SUCCESS)
                 .build();
     }
 }
