@@ -8,6 +8,7 @@ import gg.popn.application.playdata.port.out.PlaydataImportPort;
 import gg.popn.application.playdata.service.PlaydataUpsertPolicy;
 import gg.popn.application.playdata.service.PlaydataHistoryPolicy;
 import gg.popn.application.playdata.service.PopclassPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -35,6 +36,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     private final int currentVersion;
     private final TransactionTemplate independentTransaction;
 
+    @Autowired
     public PlaydataImportJdbcAdapter(JdbcTemplate jdbc, PlaydataUpsertPolicy upsertPolicy,
                                      PlaydataHistoryPolicy historyPolicy,
                                      PopclassPolicy popclassPolicy,
