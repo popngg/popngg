@@ -38,6 +38,12 @@ slashes. The API port binds to `127.0.0.1` and is intended to run behind an HTTP
 proxy. Login cookies are `Secure`, so browser cookie authentication does not work over
 plain HTTP. Frontend requests must use `credentials: include`.
 
+Production uses `https://popn.gg` for the Vercel frontend and `https://api.popn.gg` for
+the Oracle-hosted API. Nginx terminates TLS and proxies to `127.0.0.1:8080`; Spring trusts
+the forwarded request metadata through `SERVER_FORWARD_HEADERS_STRATEGY=framework`.
+After DNS, Nginx, and Let's Encrypt are configured, set `BASE_URL=https://api.popn.gg` so
+the deployment smoke test verifies the public HTTPS path rather than only loopback HTTP.
+
 The Compose project or volume must be backed up before production migration. Rollback
 means deploying the previously recorded immutable image tag; schema rollback requires an
 explicit reviewed forward migration and is not performed automatically.
