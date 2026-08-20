@@ -39,7 +39,7 @@ public record ImportPlaydataRequest(
             @Min(1) Long songId,
             Integer difficultyCode,
             Boolean isUpper,
-            @Size(max = 32) String songHash,
+            @Size(max = 64) String songHash,
             @Size(max = 255) String songName,
             @Size(max = 255) String genreName,
             @NotNull @Min(0) @Max(100_000) Integer score,

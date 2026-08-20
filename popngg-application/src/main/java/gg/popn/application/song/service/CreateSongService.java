@@ -5,6 +5,7 @@ import gg.popn.application.song.dto.result.CreateSongResult;
 import gg.popn.application.song.port.in.CreateSongUseCase;
 import gg.popn.application.song.port.out.CreateSongPort;
 import gg.popn.domain.game.policy.DifficultyPolicy;
+import gg.popn.domain.chart.model.field.SongHashGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,11 @@ public class CreateSongService implements CreateSongUseCase {
                 throw new IllegalArgumentException("Duplicate difficulty and Upper combination.");
             }
         }
-        return createSongPort.create(command);
+        var normalizedCommand = new CreateSongCommand(
+                SongHashGenerator.generate(command.genreName(), command.songName(),
+                        command.artistName(), command.version()),
+                command.genreName(), command.songName(), command.artistName(), command.version(),
+                command.jacketUrl(), command.charts());
+        return createSongPort.create(normalizedCommand);
     }
 }
