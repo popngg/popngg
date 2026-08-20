@@ -1,0 +1,1 @@
+ALTER TABLE songs MODIFY song_hash CHAR(64) NULL;

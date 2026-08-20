@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
 
 class CreateSongServiceTest {
     private final CreateSongPort port = mock(CreateSongPort.class);
@@ -19,7 +20,11 @@ class CreateSongServiceTest {
     @Test
     void createsSongWithNormalAndUpperCharts() {
         CreateSongCommand command = command(List.of(chart(4, false), chart(4, true)));
-        when(port.create(command)).thenReturn(new CreateSongResult(1, List.of(10L, 11L)));
+        when(port.create(argThat(created -> created.songHash() != null
+                && created.songHash().length() == 64
+                && created.genreName().equals(command.genreName())
+                && created.charts().equals(command.charts()))))
+                .thenReturn(new CreateSongResult(1, List.of(10L, 11L)));
 
         assertThat(service.execute(command).chartIds()).containsExactly(10L, 11L);
     }
