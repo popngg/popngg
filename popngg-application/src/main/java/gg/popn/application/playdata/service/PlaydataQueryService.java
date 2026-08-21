@@ -31,6 +31,12 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
     }
 
     @Override
+    public java.util.List<PlaydataQueryResults.ChartPlaydata> findLegacyPopclassTargets(
+            String poptomoId) {
+        return port.findLegacyPopclassTargets(poptomoId);
+    }
+
+    @Override
     public PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit) {
         if (limit < 1 || limit > 100) {
             throw new IllegalArgumentException("limit must be between 1 and 100.");

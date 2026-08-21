@@ -2,23 +2,34 @@ package gg.popn.infra.db.adapter;
 
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.application.playdata.port.out.PlaydataQueryPort;
+import gg.popn.application.playdata.service.PopclassPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Comparator;
 
 @Repository
 public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
     private final JdbcTemplate jdbc;
     private final int currentVersion;
+    private final PopclassPolicy popclassPolicy;
 
+    @Autowired
     public PlaydataQueryJdbcAdapter(
             JdbcTemplate jdbc,
-            @Value("${popngg.game.current-version:29}") int currentVersion
+            @Value("${popngg.game.current-version:29}") int currentVersion,
+            PopclassPolicy popclassPolicy
     ) {
         this.jdbc = jdbc;
         this.currentVersion = currentVersion;
+        this.popclassPolicy = popclassPolicy;
+    }
+
+    public PlaydataQueryJdbcAdapter(JdbcTemplate jdbc, int currentVersion) {
+        this(jdbc, currentVersion, new PopclassPolicy());
     }
 
     @Override
@@ -86,6 +97,31 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
     }
 
     @Override
+    public List<PlaydataQueryResults.ChartPlaydata> findLegacyPopclassTargets(
+            String poptomoId) {
+        UserSummary user = findUser(poptomoId);
+        return queryPlaydata("""
+                SELECT p.*, c.level, c.difficulty_code, c.difficulty_label,
+                       c.chart_version, c.is_upper,
+                       s.song_hash, s.genre_name, s.song_name
+                  FROM playdata p
+                  JOIN charts c ON c.chart_id = p.chart_id
+                  JOIN songs s ON s.song_id = c.song_id
+                 WHERE p.user_id = ? AND c.is_deleted = FALSE
+                """, user.userId()).stream()
+                .map(this::withLegacyPopclass)
+                .sorted(Comparator
+                        .comparingInt((PlaydataQueryResults.ChartPlaydata row) ->
+                                row.popclass()).reversed()
+                        .thenComparing(Comparator.comparingInt(
+                                (PlaydataQueryResults.ChartPlaydata row) ->
+                                        row.allTimeBest().score()).reversed())
+                        .thenComparingLong(PlaydataQueryResults.ChartPlaydata::chartId))
+                .limit(50)
+                .toList();
+    }
+
+    @Override
     public PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit) {
         requireChart(chartId);
         List<PlaydataQueryResults.RankingEntry> current = queryRankings("""
@@ -150,6 +186,17 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                 rs.getInt("display_popclass"), rs.getInt("score"),
                 integer(rs, "rank_code"), rs.getInt("medal_code"),
                 integer(rs, "score_version")), args);
+    }
+
+    private PlaydataQueryResults.ChartPlaydata withLegacyPopclass(
+            PlaydataQueryResults.ChartPlaydata row) {
+        int value = popclassPolicy.legacyChartPopclass(
+                row.level(), row.allTimeBest().score(), row.medal().code());
+        return new PlaydataQueryResults.ChartPlaydata(
+                row.chartId(), row.songHash(), row.genreName(), row.songName(),
+                row.difficultyCode(), row.difficultyLabel(), row.level(),
+                row.chartVersion(), row.upper(), row.versionBest(), row.allTimeBest(),
+                row.medal(), value, null, null);
     }
 
     private UserSummary findUser(String poptomoId) {
