@@ -2,6 +2,7 @@ package gg.popn.application.playdata.service;
 
 import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
+import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.port.in.ImportPlaydataUseCase;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
 import lombok.RequiredArgsConstructor;
@@ -22,16 +23,15 @@ public class ImportPlaydataService implements ImportPlaydataUseCase {
         if (command.rows() == null || command.rows().isEmpty()) {
             throw new IllegalArgumentException("At least one playdata row is required.");
         }
-        var identities = new HashSet<String>();
+        var identities = new HashSet<RowIdentity>();
         for (var row : command.rows()) {
             validateRow(row);
-            String identity = row.chartId() != null
-                    ? "chart:" + row.chartId()
-                    : String.join(":", "fallback", String.valueOf(row.songId()),
-                    String.valueOf(row.difficultyCode()), String.valueOf(row.upper()),
-                    String.valueOf(row.songHash()), String.valueOf(row.songName()));
+            RowIdentity identity = row.chartId() != null
+                    ? new RowIdentity(row.chartId(), null, null, null, null, null, null, null)
+                    : new RowIdentity(null, row.songId(), row.difficultyCode(), row.upper(),
+                    row.songHash(), row.songName(), row.genreName(), row.artistName());
             if (!identities.add(identity)) {
-                throw new IllegalArgumentException("Duplicate playdata row identity.");
+                throw new DuplicatePlaydataRowIdentityException();
             }
         }
         return importPort.execute(command);
@@ -54,5 +54,10 @@ public class ImportPlaydataService implements ImportPlaydataUseCase {
         if (!(hasChartId || hasSongDifficulty || hasAlias || hasMetadata)) {
             throw new IllegalArgumentException("A supported chart identity is required.");
         }
+    }
+
+    private record RowIdentity(Long chartId, Long songId, Integer difficultyCode, Boolean upper,
+                               String songHash, String songName, String genreName,
+                               String artistName) {
     }
 }

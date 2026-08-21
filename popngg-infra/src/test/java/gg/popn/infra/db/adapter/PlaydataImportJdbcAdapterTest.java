@@ -35,7 +35,7 @@ class PlaydataImportJdbcAdapterTest {
         jdbc.execute("ALTER TABLE user_profiles ADD legacy_popclass INT DEFAULT 0");
         jdbc.execute("""
                 CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_hash VARCHAR(32),
-                  song_name VARCHAR(255), genre_name VARCHAR(255))
+                  song_name VARCHAR(255), genre_name VARCHAR(255), artist_name VARCHAR(255))
                 """);
         jdbc.execute("""
                 CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT,
@@ -78,7 +78,7 @@ class PlaydataImportJdbcAdapterTest {
                      time_play_10_credit, time_play_16_credit, updated_at)
                 VALUES (1, 'old', '', 0, 0, 0, 0, CURRENT_TIMESTAMP)
                 """);
-        jdbc.update("INSERT INTO songs VALUES (10, 'hash', 'song', 'genre')");
+        jdbc.update("INSERT INTO songs VALUES (10, 'hash', 'song', 'genre', 'artist one')");
         jdbc.update("INSERT INTO charts VALUES (100, 10, 3, 48, 29, FALSE, FALSE)");
         adapter = new PlaydataImportJdbcAdapter(
                 jdbc, new PlaydataUpsertPolicy(), new PlaydataHistoryPolicy(),
@@ -113,7 +113,7 @@ class PlaydataImportJdbcAdapterTest {
 
     @Test
     void reportsNotFoundAndAmbiguousRowsWithoutSensitiveValues() {
-        jdbc.update("INSERT INTO songs VALUES (11, 'hash', 'song', 'genre')");
+        jdbc.update("INSERT INTO songs VALUES (11, 'hash', 'song', 'genre', 'artist two')");
         jdbc.update("INSERT INTO charts VALUES (101, 11, 3, 48, 29, FALSE, FALSE)");
         var rows = List.of(
                 row(999L, null, null, null, null, null, null),
@@ -144,6 +144,19 @@ class PlaydataImportJdbcAdapterTest {
         assertThat(result.historyCount()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM renew_logs", String.class))
                 .isEqualTo("PARTIAL_SUCCESS");
+    }
+
+    @Test
+    void matchesMetadataFallbackByArtistWhenTitleAndGenreAreTheSame() {
+        jdbc.update("INSERT INTO songs VALUES (11, 'other-hash', 'song', 'genre', 'artist two')");
+        jdbc.update("INSERT INTO charts VALUES (101, 11, 3, 48, 29, FALSE, FALSE)");
+        var row = new ImportPlaydataCommand.Row(null, null, 3, false, null,
+                "song", "genre", 90_000, 2, 3, null, false, "artist two");
+
+        var result = adapter.execute(command(row));
+
+        assertThat(result.matchedCount()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT chart_id FROM playdata", Long.class)).isEqualTo(101L);
     }
 
     @Test

@@ -6,6 +6,7 @@ import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
 import gg.popn.application.auth.exception.AlreadyRegisteredException;
 import gg.popn.http.renewal.RenewalException;
 import gg.popn.application.playdata.service.PlaydataUpsertPolicy.MissingGameVersionTransitionException;
+import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,14 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class BaseExceptionHandler {
+    @ExceptionHandler(DuplicatePlaydataRowIdentityException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicatePlaydataRowIdentity(
+            DuplicatePlaydataRowIdentityException exception) {
+        return ResponseEntity.unprocessableEntity().body(Map.of(
+                "code", "DUPLICATE_CHART",
+                "message", exception.getMessage()));
+    }
+
     @ExceptionHandler(RenewalException.class)
     public ResponseEntity<Map<String,Object>> handleRenewal(RenewalException exception){return ResponseEntity.status(exception.status()).body(Map.of("code",exception.code(),"message",exception.getMessage()));}
     @ExceptionHandler(MissingGameVersionTransitionException.class)
