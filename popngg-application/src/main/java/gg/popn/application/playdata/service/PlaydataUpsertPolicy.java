@@ -32,11 +32,24 @@ public class PlaydataUpsertPolicy {
             }
         }
 
-        int allTimeScore = Math.max(existing.allTimeScore(), observed.score());
-        int allTimeVersion = observed.score() > existing.allTimeScore()
-                ? currentVersion : existing.allTimeScoreVersion();
-        Integer allTimeRank = observed.score() >= existing.allTimeScore()
-                ? observed.rankCode() : existing.allTimeRankCode();
+        int allTimeScore;
+        int allTimeVersion;
+        Integer allTimeRank;
+        if (existing.currentVersion() != currentVersion
+                && transition == TransitionPolicy.RESET) {
+            // The first observation after a reset is the authoritative result of
+            // the arcade game's one-time version transfer. Scores achieved after
+            // that transfer on the old version must not survive as all-time scores.
+            allTimeScore = observed.score();
+            allTimeVersion = currentVersion;
+            allTimeRank = observed.rankCode();
+        } else {
+            allTimeScore = Math.max(existing.allTimeScore(), observed.score());
+            allTimeVersion = observed.score() > existing.allTimeScore()
+                    ? currentVersion : existing.allTimeScoreVersion();
+            allTimeRank = observed.score() >= existing.allTimeScore()
+                    ? observed.rankCode() : existing.allTimeRankCode();
+        }
         State state = new State(currentVersion, versionScore, versionRank,
                 allTimeScore, allTimeVersion, allTimeRank, observed.medalCode());
         return new Decision(!state.equals(existing), state);

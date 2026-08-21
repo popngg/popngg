@@ -23,6 +23,8 @@
 - `POST /api/v1/renewals`
 - 인증 사용자의 ID와 `profile.gameId`가 다르면 `403 GAME_ID_MISMATCH`입니다.
 - 지원 게임은 `popn29`, collector version은 `1`이며 환경변수로 변경할 수 있습니다.
+- 28에서 29로 처음 전환할 때 29 게임기에서 확인된 점수를 인계 결과의 기준값으로 삼아 버전 점수와 역대 점수를 `RESET`합니다. 인계 후 28버전에서 올려 29버전으로 넘어오지 않은 점수는 유지하지 않습니다.
+- 29버전 전환 이후의 갱신에서는 버전 점수와 역대 점수가 낮아지지 않고 최고점만 반영됩니다.
 - 채보 마스터는 서버의 `songs`와 `charts`를 기준으로 별도 관리합니다.
 - 채보 레벨은 서버의 채보 마스터를 사용하므로 갱신 요청에서 받지 않습니다.
 - 숫자형 `chartId`가 있으면 우선 사용하고, 없거나 비숫자이면 곡명·장르·난이도로 매칭합니다.
@@ -42,6 +44,7 @@
 
 현재 갱신 오류 코드는 `UNAUTHENTICATED`, `GAME_ID_MISMATCH`, `INVALID_PAYLOAD`,
 `EMPTY_PAYLOAD`, `UNSUPPORTED_GAME`, `UNSUPPORTED_COLLECTOR_VERSION`,
-`UNKNOWN_DIFFICULTY`, `UNKNOWN_MEDAL_CODE`, `UNKNOWN_RANK_CODE`, `PAYLOAD_TOO_LARGE`입니다.
+`UNKNOWN_DIFFICULTY`, `UNKNOWN_MEDAL_CODE`, `UNKNOWN_RANK_CODE`, `PAYLOAD_TOO_LARGE`,
+`MISSING_GAME_VERSION_TRANSITION`입니다.
 
 재시도 제한과 구 경로 종료일, ID 선점 신고 절차는 제품 운영 정책이므로 코드 배포와 별도로 결정합니다.

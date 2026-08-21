@@ -5,6 +5,7 @@ import gg.popn.application.user.exception.UserProfileNotFoundException;
 import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
 import gg.popn.application.auth.exception.AlreadyRegisteredException;
 import gg.popn.http.renewal.RenewalException;
+import gg.popn.application.playdata.service.PlaydataUpsertPolicy.MissingGameVersionTransitionException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,14 @@ import java.util.Map;
 public class BaseExceptionHandler {
     @ExceptionHandler(RenewalException.class)
     public ResponseEntity<Map<String,Object>> handleRenewal(RenewalException exception){return ResponseEntity.status(exception.status()).body(Map.of("code",exception.code(),"message",exception.getMessage()));}
+    @ExceptionHandler(MissingGameVersionTransitionException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingGameVersionTransition(
+            MissingGameVersionTransitionException exception) {
+        log.error("Approved game version transition is missing.", exception);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "code", "MISSING_GAME_VERSION_TRANSITION",
+                "message", exception.getMessage()));
+    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String,Object>> handleInvalidPayload(MethodArgumentNotValidException exception){
         boolean emptyCharts = exception.getBindingResult().getFieldErrors().stream()
