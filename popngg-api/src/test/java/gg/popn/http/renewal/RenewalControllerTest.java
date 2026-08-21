@@ -27,7 +27,7 @@ class RenewalControllerTest {
         ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
         var chart = new RenewalRequest.Chart();
         chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
-        chart.setDifficulty("ex"); chart.setLevel(50); chart.setMedal("c");
+        chart.setDifficulty("ex"); chart.setMedal("c");
         chart.setRank("s"); chart.setScore(99000); chart.setVersionBestScore(98000);
         var request = new RenewalRequest(1, "popn29", Instant.now(),
                 new RenewalRequest.Profile("1234-5678-9012", "name", "character", "170.13"),
@@ -47,7 +47,7 @@ class RenewalControllerTest {
         ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
         var chart = new RenewalRequest.Chart();
         chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
-        chart.setDifficulty("light"); chart.setLevel(4); chart.setMedal("none");
+        chart.setDifficulty("light"); chart.setMedal("none");
         chart.setRank("e"); chart.setScore(12345);
         var request = new RenewalRequest(1, "popn29", Instant.now(),
                 new RenewalRequest.Profile("1234-5678-9012", "name", null, null),

@@ -12,14 +12,13 @@ public record RenewalRequest(@Min(1) int collectorVersion, @NotBlank String game
     public record Profile(@NotBlank String gameId, @Size(max=64) String name,
                           @Size(max=128) String character, @Size(max=32) String popnClass) {}
     public static final class Chart {
-        private String chartId,title,genre,artist,difficulty,medal,rank; private int level,score;
+        private String chartId,title,genre,artist,difficulty,medal,rank; private int score;
         private Integer versionBestScore; private boolean versionBestScorePresent;
         public String getChartId(){return chartId;} public void setChartId(String v){chartId=v;}
         @NotBlank @Size(max=255) public String getTitle(){return title;} public void setTitle(String v){title=v;}
         @NotBlank @Size(max=255) public String getGenre(){return genre;} public void setGenre(String v){genre=v;}
         @Size(max=255) public String getArtist(){return artist;} public void setArtist(String v){artist=v;}
         @NotBlank public String getDifficulty(){return difficulty;} public void setDifficulty(String v){difficulty=v;}
-        @Min(1) @Max(50) public int getLevel(){return level;} public void setLevel(int v){level=v;}
         @NotBlank public String getMedal(){return medal;} public void setMedal(String v){medal=v;}
         @NotBlank public String getRank(){return rank;} public void setRank(String v){rank=v;}
         @Min(0) @Max(100000) public int getScore(){return score;} public void setScore(int v){score=v;}
