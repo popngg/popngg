@@ -14,6 +14,9 @@ class GameCodePolicyTest {
         assertThat(RankPolicy.AA_PLUS.getLabel()).isEqualTo("AA+");
         assertThat(RankPolicy.A_PLUS.getLabel()).isEqualTo("A+");
         assertThat(RankPolicy.B_PLUS.getLabel()).isEqualTo("B+");
+        assertThat(RankPolicy.fromCode(13)).isEqualTo(RankPolicy.NO_RANK);
+        assertThat(RankPolicy.NO_RANK.getLabel()).isEqualTo("NONE");
+        assertThat(RankPolicy.values()).hasSize(13);
         assertUniqueCodesAndSortOrders(
                 Arrays.stream(RankPolicy.values()).mapToInt(RankPolicy::getCode).toArray(),
                 Arrays.stream(RankPolicy.values()).mapToInt(RankPolicy::getSortOrder).toArray());

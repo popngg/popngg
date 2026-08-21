@@ -20,7 +20,8 @@ public enum RankPolicy {
     B(9, "B", 9),
     C(10, "C", 10),
     D(11, "D", 11),
-    E(12, "E", 12);
+    E(12, "E", 12),
+    NO_RANK(13, "NONE", 13);
 
     private final int code;
     private final String label;
