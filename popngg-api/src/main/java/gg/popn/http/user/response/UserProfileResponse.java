@@ -2,6 +2,9 @@ package gg.popn.http.user.response;
 
 import gg.popn.application.user.dto.result.UserProfileResult;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 public record UserProfileResponse(
         String poptomoId,
         String userName,
@@ -12,7 +15,9 @@ public record UserProfileResponse(
         int displayPopclass,
         int potentialPopclass,
         int legacyPopclass,
-        CreditsResponse credits
+        CreditsResponse credits,
+        List<MedalSummaryResponse> medalSummaries,
+        LocalDateTime updatedAt
 ) {
     public static UserProfileResponse from(UserProfileResult result) {
         return new UserProfileResponse(
@@ -29,7 +34,11 @@ public record UserProfileResponse(
                         result.normalCredit(),
                         result.extraCredit(),
                         result.timePlay10Credit(),
-                        result.timePlay16Credit()));
+                        result.timePlay16Credit()),
+                result.medalSummaries().stream()
+                        .map(MedalSummaryResponse::from)
+                        .toList(),
+                result.updatedAt());
     }
 
     public record CreditsResponse(
@@ -38,5 +47,17 @@ public record UserProfileResponse(
             int timePlay10,
             int timePlay16
     ) {
+    }
+
+    public record MedalSummaryResponse(
+            String kind,
+            int maxLevel,
+            long achieved,
+            long total
+    ) {
+        private static MedalSummaryResponse from(UserProfileResult.MedalSummary summary) {
+            return new MedalSummaryResponse(summary.kind(), summary.maxLevel(),
+                    summary.achieved(), summary.total());
+        }
     }
 }
