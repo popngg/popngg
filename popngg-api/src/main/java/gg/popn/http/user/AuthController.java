@@ -80,7 +80,7 @@ public class AuthController {
 
     private void setAccessTokenCookie(HttpServletResponse response, String token, long maxAge) {
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", token)
-                .httpOnly(true).secure(cookieSecure).sameSite("Lax").path("/")
+                .httpOnly(true).secure(cookieSecure).sameSite("None").path("/")
                 .maxAge(maxAge).build().toString());
     }
 
@@ -126,7 +126,7 @@ public class AuthController {
     @PostMapping("/logout")
     SuccessResponse<Void> logout(HttpServletResponse response) {
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", "")
-                .httpOnly(true).secure(cookieSecure).sameSite("Lax").path("/")
+                .httpOnly(true).secure(cookieSecure).sameSite("None").path("/")
                 .maxAge(0).build().toString());
         return SuccessResponse.<Void>builder()
                 .code(ResponseCode.SUCCESS)

@@ -65,7 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             var renewed = tokenPort.issueAccessToken(authPrincipal);
             response.addHeader("Set-Cookie", org.springframework.http.ResponseCookie
                     .from("access_token", renewed.value()).httpOnly(true).secure(cookieSecure)
-                    .sameSite("Lax").path("/").maxAge(renewed.expiresInSeconds())
+                    .sameSite("None").path("/").maxAge(renewed.expiresInSeconds())
                     .build().toString());
         }
 
