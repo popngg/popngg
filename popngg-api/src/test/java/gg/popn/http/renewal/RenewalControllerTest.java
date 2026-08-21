@@ -27,7 +27,7 @@ class RenewalControllerTest {
         ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
         var chart = new RenewalRequest.Chart();
         chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
-        chart.setDifficulty("ex"); chart.setLevel(50); chart.setMedal("c");
+        chart.setDifficulty("ex"); chart.setMedal("c");
         chart.setRank("s"); chart.setScore(99000); chart.setVersionBestScore(98000);
         var request = new RenewalRequest(1, "popn29", Instant.now(),
                 new RenewalRequest.Profile("1234-5678-9012", "name", "character", "170.13"),
@@ -39,6 +39,26 @@ class RenewalControllerTest {
         var response = controller.renew(principal(), request);
 
         assertThat(response.getData().renewLogId()).isEqualTo(7);
+    }
+
+    @Test
+    void mapsNoneMedalToNoMedalCode() {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
+        chart.setDifficulty("light"); chart.setMedal("none");
+        chart.setRank("e"); chart.setScore(12345);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", null, null),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+        when(useCase.importPlaydata(argThat(command -> command.rows().getFirst().medalCode() == 0
+                && command.rows().getFirst().score() == 12345)))
+                .thenReturn(new ImportPlaydataResult(8,1,1,1,1,0,List.of()));
+
+        var response = controller.renew(principal(), request);
+
+        assertThat(response.getData().renewLogId()).isEqualTo(8);
     }
 
     @Test

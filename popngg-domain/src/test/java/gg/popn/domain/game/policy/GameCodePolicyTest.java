@@ -40,6 +40,8 @@ class GameCodePolicyTest {
         assertThat(MedalPolicy.EASY_CLEAR.getCode()).isEqualTo(8);
         assertThat(MedalPolicy.EASY_CLEAR.getLabel()).isEqualTo("EASY CLEAR");
         assertThat(MedalPolicy.BLACK_CIRCLE.getCode()).isEqualTo(11);
+        assertThat(MedalPolicy.NO_MEDAL.getCode()).isZero();
+        assertThat(MedalPolicy.NO_MEDAL.getLabel()).isEqualTo("NONE");
         assertThat(MedalPolicy.LONGOFF_CLEAR.getCode()).isEqualTo(12);
         assertThat(MedalPolicy.LONGOFF_CLEAR.getLabel()).isEqualTo("LONGOFF CLEAR");
         assertThat(MedalPolicy.LONGOFF_CLEAR.getSortOrder())
@@ -48,7 +50,8 @@ class GameCodePolicyTest {
         assertThat(MedalPolicy.EASY_CLEAR.getSortOrder())
                 .isLessThan(MedalPolicy.BLACK_STAR.getSortOrder());
         assertThat(MedalPolicy.fromCode(10)).isEqualTo(MedalPolicy.BLACK_DIAMOND);
-        assertThat(MedalPolicy.values()).hasSize(12);
+        assertThat(MedalPolicy.fromCode(0)).isEqualTo(MedalPolicy.NO_MEDAL);
+        assertThat(MedalPolicy.values()).hasSize(13);
         assertUniqueCodesAndSortOrders(
                 Arrays.stream(MedalPolicy.values()).mapToInt(MedalPolicy::getCode).toArray(),
                 Arrays.stream(MedalPolicy.values()).mapToInt(MedalPolicy::getSortOrder).toArray());
@@ -58,7 +61,7 @@ class GameCodePolicyTest {
     void unknownCodesAreRejected() {
         assertThatThrownBy(() -> RankPolicy.fromCode(0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MedalPolicy.fromCode(0))
+        assertThatThrownBy(() -> MedalPolicy.fromCode(13))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DifficultyPolicy.fromCode(0))
                 .isInstanceOf(IllegalArgumentException.class);
