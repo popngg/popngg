@@ -53,6 +53,7 @@ class PlaydataQueryJdbcAdapterTest {
         var levelRank = adapter.count("0000", "LEVEL", "RANK");
         var difficultyMedal = adapter.count("0000", "DIFFICULTY", "MEDAL");
         var popclass = adapter.findPopclass("0000");
+        var legacyTargets = adapter.findLegacyPopclassTargets("0000");
         var rankings = adapter.findChartRankings(100, 2);
 
         assertThat(user.playdata()).hasSize(2);
@@ -60,6 +61,9 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(levelRank.groups()).hasSize(2);
         assertThat(difficultyMedal.groups()).hasSize(2);
         assertThat(popclass.targets()).hasSize(1);
+        assertThat(legacyTargets).extracting(row -> row.chartId())
+                .containsExactly(100L, 101L);
+        assertThat(legacyTargets.getFirst().popclass()).isEqualTo(9_779);
         assertThat(rankings.currentVersion()).extracting(row -> row.poptomoId())
                 .containsExactly("0000", "1111");
         assertThat(rankings.allTime()).extracting(row -> row.poptomoId())

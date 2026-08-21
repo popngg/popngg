@@ -9,5 +9,8 @@ public interface PlaydataQueryPort {
 
     PlaydataQueryResults.Popclass findPopclass(String poptomoId);
 
+    java.util.List<PlaydataQueryResults.ChartPlaydata> findLegacyPopclassTargets(
+            String poptomoId);
+
     PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit);
 }

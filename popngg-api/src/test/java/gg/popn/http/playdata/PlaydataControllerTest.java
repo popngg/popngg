@@ -25,11 +25,14 @@ class PlaydataControllerTest {
         when(useCase.findUserPlaydata("0000")).thenReturn(user);
         when(useCase.count("0000", "level", "rank")).thenReturn(counts);
         when(useCase.findPopclass("0000")).thenReturn(popclass);
+        when(useCase.findLegacyPopclassTargets("0000")).thenReturn(List.of());
         when(useCase.findChartRankings(1, 50)).thenReturn(rankings);
 
         assertThat(controller.findUserPlaydata("0000").getData()).isSameAs(user);
         assertThat(controller.count("0000", "level", "rank").getData()).isSameAs(counts);
-        assertThat(controller.findPopclass("0000").getData()).isSameAs(popclass);
+        assertThat(controller.findCurrentPopclassTargets("0000").getData().newSongs())
+                .isEmpty();
+        assertThat(controller.findLegacyPopclassTargets("0000").getData()).isEmpty();
         assertThat(controller.findChartRankings(1, 50).getData()).isSameAs(rankings);
     }
 }

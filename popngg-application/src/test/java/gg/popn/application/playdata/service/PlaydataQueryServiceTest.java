@@ -42,10 +42,12 @@ class PlaydataQueryServiceTest {
         var rankings = new PlaydataQueryResults.ChartRankings(1, List.of(), List.of());
         when(port.findUserPlaydata("0000")).thenReturn(user);
         when(port.findPopclass("0000")).thenReturn(popclass);
+        when(port.findLegacyPopclassTargets("0000")).thenReturn(List.of());
         when(port.findChartRankings(1, 10)).thenReturn(rankings);
 
         assertThat(service.findUserPlaydata("0000")).isSameAs(user);
         assertThat(service.findPopclass("0000")).isSameAs(popclass);
+        assertThat(service.findLegacyPopclassTargets("0000")).isEmpty();
         assertThat(service.findChartRankings(1, 10)).isSameAs(rankings);
     }
 }
