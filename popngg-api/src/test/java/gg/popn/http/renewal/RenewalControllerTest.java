@@ -113,7 +113,7 @@ class RenewalControllerTest {
             "s_plus, 1", "s, 2", "aaa, 3", "aa_plus, 4", "aa, 5",
             "a_plus, 6", "a, 7", "b_plus, 8", "b, 9", "c, 10",
             "d, 11", "e, 12", "none, 13",
-            "a3, 3", "a2, 5", "a1, 7"
+            "a3, 3", "a2_plus, 4", "a2, 5", "a1_plus, 6", "a1, 7"
     })
     void mapsCurrentAndLegacyRankNames(String rank, int expectedCode) {
         ReflectionTestUtils.setField(controller, "collectorVersion", 1);
