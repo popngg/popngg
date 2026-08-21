@@ -37,6 +37,47 @@ services:
         condition: service_healthy
     restart: "no"
 
+  catalog-migration:
+    image: mysql:8.0
+    environment:
+      MYSQL_PWD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    command:
+      - sh
+      - -c
+      - >-
+        set -eu;
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg
+        --execute="CREATE TABLE IF NOT EXISTS catalog_data_migrations (
+        migration_key VARCHAR(128) PRIMARY KEY, applied_at DATETIME NOT NULL)";
+        if ! mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg
+        --batch --skip-column-names
+        --execute="SELECT 1 FROM catalog_data_migrations
+        WHERE migration_key = 'popn29-v3-catalog-20260821'" | grep -qx 1; then
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg < /confirmed-deletions.sql;
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg < /existing-song-updates.sql;
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg < /new-songs-and-charts.sql;
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg
+        --execute="INSERT INTO catalog_data_migrations
+        (migration_key, applied_at) VALUES
+        ('popn29-v3-catalog-20260821', CURRENT_TIMESTAMP)";
+        fi
+    volumes:
+      - ./sql/apply_confirmed_deletions.sql:/confirmed-deletions.sql:ro
+      - ./sql/apply_existing_song_updates.sql:/existing-song-updates.sql:ro
+      - ./sql/apply_new_songs_and_charts.sql:/new-songs-and-charts.sql:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    restart: "no"
+
   api:
     image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
@@ -57,7 +98,7 @@ services:
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8080"
     depends_on:
-      migration:
+      catalog-migration:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]

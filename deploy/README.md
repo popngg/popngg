@@ -14,8 +14,10 @@ mechanism, not the environment name. Local development uses the separate root-le
 2. Acquire the environment deployment lock.
 3. Start MySQL 8 and wait for its health check.
 4. Run Flyway as a one-shot migration service.
-5. Start the API with application Flyway disabled.
-6. Wait for `/actuator/health`, then run smoke tests.
+5. Run the idempotent pop'n 29 catalog migrations: confirmed deletions/renames,
+   1,953 existing-song v3 metadata updates, then 108 new songs and 432 charts.
+6. Start the API with application Flyway disabled.
+7. Wait for `/actuator/health`, then run smoke tests.
 
 ```bash
 export IMAGE_REPOSITORY=popngg-api
@@ -47,6 +49,16 @@ the deployment smoke test verifies the public HTTPS path rather than only loopba
 The Compose project or volume must be backed up before production migration. Rollback
 means deploying the previously recorded immutable image tag; schema rollback requires an
 explicit reviewed forward migration and is not performed automatically.
+
+The catalog migration first marks 60 confirmed deleted charts. It then preserves existing
+IDs and playdata while updating 1,953 existing songs to the v3 hash, official genre/artist
+(including the 560 genre changes and `つぼみ` correction), and S3 jacket URL.
+Finally, MySQL assigns new auto-increment `song_id` values to 108 High☆Cheers!! songs
+(100 regular and 8 UPPER) and inserts their 432 charts. Each SQL file is idempotent and
+uses transactional assertions; a failure prevents the API container from starting. After
+all three data steps succeed, `catalog_data_migrations` records
+`popn29-v3-catalog-20260821`. Later deployments skip this completed data migration, so
+future catalog edits are not compared against the historical before-state on every merge.
 
 ## Smoke scenarios
 

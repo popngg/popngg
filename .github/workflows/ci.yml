@@ -25,6 +25,49 @@ jobs:
     
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+
+    - name: Validate deployment manifests
+      env:
+        IMAGE_REPOSITORY: popngg-api
+        IMAGE_TAG: ci-validation
+        DB_PASSWORD: ci-password
+        DB_ROOT_PASSWORD: ci-root-password
+        JWT_SECRET_KEY: ci-only-secret-key-0123456789abcdefghijklmnopqrstuvwxyz-ABCDE
+      run: |
+        set -euo pipefail
+        bash -n deploy/bin/deploy.sh
+        docker compose -f deploy/compose.yml config >/dev/null
+        python3 - <<'PY'
+        import re
+        from pathlib import Path
+
+        deletions = Path('deploy/sql/apply_confirmed_deletions.sql').read_text()
+        delete_ids = re.search(
+            r"UPDATE charts.*?WHERE chart_id IN \((.*?)\);", deletions, re.DOTALL
+        ).group(1)
+        if len(re.findall(r'\d+', delete_ids)) != 60:
+            raise SystemExit('expected 60 deleted chart IDs')
+
+        existing = Path('deploy/sql/apply_existing_song_updates.sql').read_text()
+        existing_values = existing.split(
+            'INSERT INTO existing_song_updates VALUES', 1
+        )[1].split('CREATE TEMPORARY TABLE migration_assertions', 1)[0]
+        if len(re.findall(r"^\('[0-9]+'", existing_values, re.MULTILINE)) != 1953:
+            raise SystemExit('expected 1953 existing song updates')
+
+        new = Path('deploy/sql/apply_new_songs_and_charts.sql').read_text()
+        new_values = new.split('INSERT INTO new_song_catalog VALUES', 1)[1].split(
+            'CREATE TEMPORARY TABLE migration_assertions', 1
+        )[0]
+        if len(re.findall(r"^\('[0-9a-f]{64}'", new_values, re.MULTILINE)) != 108:
+            raise SystemExit('expected 108 new songs')
+        if "staged_new_charts FROM new_chart_catalog" not in new:
+            raise SystemExit('new chart verification is missing')
+
+        compose = Path('deploy/compose.yml').read_text()
+        if "popn29-v3-catalog-20260821" not in compose:
+            raise SystemExit('catalog migration history key is missing')
+        PY
     
     - name: Build with Gradle
       run: ./gradlew build -x test

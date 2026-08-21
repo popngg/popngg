@@ -18,8 +18,8 @@ class CreateSongServiceTest {
     private final CreateSongService service = new CreateSongService(port);
 
     @Test
-    void createsSongWithNormalAndUpperCharts() {
-        CreateSongCommand command = command(List.of(chart(4, false), chart(4, true)));
+    void createsSongWithConsistentChartType() {
+        CreateSongCommand command = command(List.of(chart(3, false), chart(4, false)));
         when(port.create(argThat(created -> created.songHash() != null
                 && created.songHash().length() == 64
                 && created.genreName().equals(command.genreName())
@@ -27,6 +27,15 @@ class CreateSongServiceTest {
                 .thenReturn(new CreateSongResult(1, List.of(10L, 11L)));
 
         assertThat(service.execute(command).chartIds()).containsExactly(10L, 11L);
+    }
+
+    @Test
+    void rejectsMixedNormalAndUpperCharts() {
+        CreateSongCommand command = command(List.of(chart(3, false), chart(4, true)));
+
+        assertThatThrownBy(() -> service.execute(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cannot mix");
     }
 
     @Test
