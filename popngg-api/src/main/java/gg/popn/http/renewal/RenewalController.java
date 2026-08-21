@@ -7,9 +7,10 @@ import gg.popn.infra.security.CustomUserPrincipal;
 import jakarta.validation.Valid; import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value; import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*; import java.util.Locale;
+import org.springframework.web.bind.annotation.*; import java.util.Locale; import java.util.regex.Pattern;
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/renewals")
 public class RenewalController {
+    private static final Pattern UPPER_SUFFIX = Pattern.compile("\\s*\\(UPPER\\)\\s*$", Pattern.CASE_INSENSITIVE);
     private final ImportPlaydataUseCase importPlaydata;
     @Value("${popngg.renewal.collector-version:1}") private int collectorVersion;
     @Value("${popngg.renewal.game:popn29}") private String supportedGame;
@@ -25,7 +26,8 @@ public class RenewalController {
         return SuccessResponse.<RenewalResponse>builder().code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS).data(RenewalResponse.from(result)).build();
     }
     private ImportPlaydataCommand.Row toRow(RenewalRequest.Chart c){Long id=null;if(c.getChartId()!=null&&!c.getChartId().isBlank())try{id=Long.valueOf(c.getChartId());}catch(NumberFormatException ignored){}
-        return new ImportPlaydataCommand.Row(id,null,difficulty(c.getDifficulty()),false,null,c.getTitle(),c.getGenre(),c.getScore(),rank(c.getRank()),medal(c.getMedal()),c.getVersionBestScore(),c.isVersionBestScorePresent(),c.getArtist());}
+        var upperMatcher=UPPER_SUFFIX.matcher(c.getTitle());boolean upper=upperMatcher.find();String title=upper?upperMatcher.replaceFirst("").strip():c.getTitle();
+        return new ImportPlaydataCommand.Row(id,null,difficulty(c.getDifficulty()),upper,null,title,c.getGenre(),c.getScore(),rank(c.getRank()),medal(c.getMedal()),c.getVersionBestScore(),c.isVersionBestScorePresent(),c.getArtist());}
     private int difficulty(String v){return switch(v.toLowerCase(Locale.ROOT)){case"l","light","easy"->1;case"n","normal"->2;case"h","hyper"->3;case"ex"->4;default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_DIFFICULTY","Unknown difficulty code: "+v);};}
     private int rank(String v){return switch(v.toLowerCase(Locale.ROOT)){case"s"->2;case"a3"->3;case"a2"->5;case"a1"->7;case"b"->9;case"c"->10;case"d"->11;case"e"->12;case"none"->13;default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_RANK_CODE","Unknown rank code: "+v);};}
     private int medal(String v){if("none".equalsIgnoreCase(v))return 0;if(v.length()==1&&v.charAt(0)>='a'&&v.charAt(0)<='k')return v.charAt(0)-'a'+1;throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_MEDAL_CODE","Unknown medal code: "+v);}
