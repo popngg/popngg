@@ -27,7 +27,37 @@ public class RenewalController {
     private ImportPlaydataCommand.Row toRow(RenewalRequest.Chart c){Long id=null;if(c.getChartId()!=null&&!c.getChartId().isBlank())try{id=Long.valueOf(c.getChartId());}catch(NumberFormatException ignored){}
         return new ImportPlaydataCommand.Row(id,null,difficulty(c.getDifficulty()),false,null,c.getTitle(),c.getGenre(),c.getScore(),rank(c.getRank()),medal(c.getMedal()),c.getVersionBestScore(),c.isVersionBestScorePresent(),c.getArtist());}
     private int difficulty(String v){return switch(v.toLowerCase(Locale.ROOT)){case"l","light","easy"->1;case"n","normal"->2;case"h","hyper"->3;case"ex"->4;default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_DIFFICULTY","Unknown difficulty code: "+v);};}
-    private int rank(String v){return switch(v.toLowerCase(Locale.ROOT)){case"s"->2;case"a3"->3;case"a2"->5;case"a1"->7;case"b"->9;case"c"->10;case"d"->11;case"e"->12;case"none"->13;default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_RANK_CODE","Unknown rank code: "+v);};}
-    private int medal(String v){if("none".equalsIgnoreCase(v))return 0;if(v.length()==1&&v.charAt(0)>='a'&&v.charAt(0)<='k')return v.charAt(0)-'a'+1;throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_MEDAL_CODE","Unknown medal code: "+v);}
+    private int rank(String v){return switch(v.toLowerCase(Locale.ROOT)){
+        case"s_plus"->1;
+        case"s"->2;
+        case"aaa","a3"->3;
+        case"aa_plus"->4;
+        case"aa","a2"->5;
+        case"a_plus"->6;
+        case"a","a1"->7;
+        case"b_plus"->8;
+        case"b"->9;
+        case"c"->10;
+        case"d"->11;
+        case"e"->12;
+        case"none"->13;
+        default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_RANK_CODE","Unknown rank code: "+v);
+    };}
+    private int medal(String v){return switch(v.toLowerCase(Locale.ROOT)){
+        case"none"->13;
+        case"a"->1;
+        case"b"->2;
+        case"c"->3;
+        case"d"->4;
+        case"e"->5;
+        case"f"->6;
+        case"g"->7;
+        case"h"->8;
+        case"i"->9;
+        case"j"->10;
+        case"k"->11;
+        case"l"->12;
+        default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_MEDAL_CODE","Unknown medal code: "+v);
+    };}
     private static RenewalException error(HttpStatus s,String c,String m){return new RenewalException(s,c,m);}
 }
