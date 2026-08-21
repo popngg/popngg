@@ -28,6 +28,7 @@ trap 'rmdir "$lock_dir"' EXIT
 compose=(docker compose "${compose_env[@]}" -f "$repo_root/deploy/compose.yml")
 "${compose[@]}" up --no-deps --wait mysql
 "${compose[@]}" run --rm migration
+"${compose[@]}" run --rm --no-deps catalog-migration
 "${compose[@]}" up -d --no-deps --wait api
 "$repo_root/deploy/bin/smoke-test.sh"
 echo "deployment image=$IMAGE_REPOSITORY:$IMAGE_TAG status=healthy"

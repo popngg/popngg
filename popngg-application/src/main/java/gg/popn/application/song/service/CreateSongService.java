@@ -27,6 +27,7 @@ public class CreateSongService implements CreateSongUseCase {
             throw new IllegalArgumentException("Song metadata and at least one chart are required.");
         }
         Set<String> chartKeys = new HashSet<>();
+        boolean isUpperSong = command.charts().get(0).isUpper();
         for (CreateSongCommand.CreateChartCommand chart : command.charts()) {
             DifficultyPolicy.fromCode(chart.difficulty());
             if (chart.level() < 1 || chart.level() > 50) {
@@ -35,10 +36,13 @@ public class CreateSongService implements CreateSongUseCase {
             if (!chartKeys.add(chart.difficulty() + ":" + chart.isUpper())) {
                 throw new IllegalArgumentException("Duplicate difficulty and Upper combination.");
             }
+            if (chart.isUpper() != isUpperSong) {
+                throw new IllegalArgumentException("A song cannot mix regular and Upper charts.");
+            }
         }
         var normalizedCommand = new CreateSongCommand(
                 SongHashGenerator.generate(command.genreName(), command.songName(),
-                        command.artistName(), command.version()),
+                        command.artistName(), command.version(), isUpperSong),
                 command.genreName(), command.songName(), command.artistName(), command.version(),
                 command.jacketUrl(), command.charts());
         return createSongPort.create(normalizedCommand);

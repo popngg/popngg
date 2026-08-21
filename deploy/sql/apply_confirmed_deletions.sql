@@ -1,0 +1,43 @@
+-- Idempotently hide confirmed deleted charts while preserving playdata/history.
+START TRANSACTION;
+
+UPDATE charts
+SET is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE chart_id IN (
+    1527, 1528, 1529, 1530,
+    1794, 1795, 1796, 1797,
+    3464, 3465, 3466, 3467,
+    4648, 4649, 4650, 4651,
+    5028, 5029, 5030, 5031,
+    5160, 5161, 5162, 5163,
+    5172, 5173, 5174, 5175,
+    5256, 5257, 5258, 5259,
+    5444, 5445, 5446, 5447,
+    5468, 5469, 5470, 5471,
+    5504, 5505, 5506, 5507,
+    5516, 5517, 5518, 5519,
+    5600, 5601, 5602, 5603,
+    5636, 5637, 5638, 5639,
+    6337, 6338, 6339, 6340
+);
+
+CREATE TEMPORARY TABLE deletion_assertion (
+    actual_count INT NOT NULL CHECK (actual_count = 60)
+);
+
+INSERT INTO deletion_assertion
+SELECT COUNT(*)
+FROM charts
+WHERE is_deleted = TRUE AND chart_id IN (
+    1527, 1528, 1529, 1530, 1794, 1795, 1796, 1797,
+    3464, 3465, 3466, 3467, 4648, 4649, 4650, 4651,
+    5028, 5029, 5030, 5031, 5160, 5161, 5162, 5163,
+    5172, 5173, 5174, 5175, 5256, 5257, 5258, 5259,
+    5444, 5445, 5446, 5447, 5468, 5469, 5470, 5471,
+    5504, 5505, 5506, 5507, 5516, 5517, 5518, 5519,
+    5600, 5601, 5602, 5603, 5636, 5637, 5638, 5639,
+    6337, 6338, 6339, 6340
+);
+
+COMMIT;

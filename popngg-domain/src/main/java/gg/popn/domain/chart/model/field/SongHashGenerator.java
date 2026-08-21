@@ -12,12 +12,13 @@ public final class SongHashGenerator {
     private SongHashGenerator() {
     }
 
-    public static String generate(String genre, String title, String artist, int debutVersion) {
-        String canonical = "popngg-song:v2\n"
-                + "genre=" + normalize(genre) + "\n"
-                + "title=" + normalize(title) + "\n"
+    public static String generate(String genre, String title, String artist, int debutVersion, boolean isUpper) {
+        String canonical = "popngg-song:v3\n"
+                + "genre=" + normalizeWithoutUpperMarker(genre) + "\n"
+                + "title=" + normalizeWithoutUpperMarker(title) + "\n"
                 + "artist=" + normalize(artist) + "\n"
-                + "debutVersion=" + debutVersion;
+                + "debutVersion=" + debutVersion + "\n"
+                + "isUpper=" + isUpper;
         try {
             return HexFormat.of().formatHex(
                     MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8)));
@@ -32,5 +33,9 @@ public final class SongHashGenerator {
         }
         return Normalizer.normalize(value, Normalizer.Form.NFC)
                 .trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeWithoutUpperMarker(String value) {
+        return normalize(value).replaceFirst("\\s*\\(upper\\)$", "");
     }
 }
