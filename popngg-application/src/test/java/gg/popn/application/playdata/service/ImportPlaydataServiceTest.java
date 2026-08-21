@@ -2,6 +2,7 @@ package gg.popn.application.playdata.service;
 
 import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
+import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
 import org.junit.jupiter.api.Test;
 
@@ -61,8 +62,24 @@ class ImportPlaydataServiceTest {
         var duplicate = row(1L, null, null, null, null, null, null, 1, 1, 1);
         assertThatThrownBy(() -> service.importPlaydata(
                 new ImportPlaydataCommand("id", null, List.of(duplicate, duplicate))))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Duplicate");
+                .isInstanceOf(DuplicatePlaydataRowIdentityException.class);
+    }
+
+    @Test
+    void treatsSameMetadataWithDifferentArtistsAsDifferentFallbackIdentities() {
+        var rows = List.of(
+                rowWithArtist("artist one"),
+                rowWithArtist("artist two"));
+        var command = new ImportPlaydataCommand("id", null, rows);
+        var expected = new ImportPlaydataResult(1, 2, 2, 0, 0, 0, List.of());
+        when(port.execute(command)).thenReturn(expected);
+
+        assertThat(service.importPlaydata(command)).isEqualTo(expected);
+    }
+
+    private static ImportPlaydataCommand.Row rowWithArtist(String artist) {
+        return new ImportPlaydataCommand.Row(null, null, 3, false, null,
+                "same title", "same genre", 1, 1, 1, null, false, artist);
     }
 
     private static ImportPlaydataCommand command(ImportPlaydataCommand.Row row) {
