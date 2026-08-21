@@ -45,7 +45,7 @@ public class PopclassPolicy {
             case 1 -> 21_400;
             case 2, 3, 4 -> 17_400;
             case 5, 6, 7 -> 12_400;
-            case 8 -> 6_200;
+            case 11 -> 6_200;
             case 12 -> 9_300;
             default -> 0;
         };

@@ -36,24 +36,24 @@ class GameCodePolicyTest {
     }
 
     @Test
-    void definesCompleteClearMedalOrderWithoutRenumberingLegacyCodes() {
+    void definesCompleteClearMedalOrderUsingHighCheersSourceCodes() {
         assertThat(MedalPolicy.GOLD_STAR.getCode()).isEqualTo(1);
         assertThat(MedalPolicy.SILVER_CIRCLE.getCode()).isEqualTo(4);
         assertThat(MedalPolicy.BRONZE_CIRCLE.getCode()).isEqualTo(7);
-        assertThat(MedalPolicy.EASY_CLEAR.getCode()).isEqualTo(8);
+        assertThat(MedalPolicy.BLACK_STAR.getCode()).isEqualTo(8);
+        assertThat(MedalPolicy.BLACK_CIRCLE.getCode()).isEqualTo(10);
+        assertThat(MedalPolicy.EASY_CLEAR.getCode()).isEqualTo(11);
         assertThat(MedalPolicy.EASY_CLEAR.getLabel()).isEqualTo("EASY CLEAR");
-        assertThat(MedalPolicy.BLACK_CIRCLE.getCode()).isEqualTo(11);
-        assertThat(MedalPolicy.NO_MEDAL.getCode()).isZero();
+        assertThat(MedalPolicy.NO_MEDAL.getCode()).isEqualTo(13);
         assertThat(MedalPolicy.NO_MEDAL.getLabel()).isEqualTo("NONE");
         assertThat(MedalPolicy.LONGOFF_CLEAR.getCode()).isEqualTo(12);
         assertThat(MedalPolicy.LONGOFF_CLEAR.getLabel()).isEqualTo("LONGOFF CLEAR");
-        assertThat(MedalPolicy.LONGOFF_CLEAR.getSortOrder())
-                .isGreaterThan(MedalPolicy.BRONZE_CIRCLE.getSortOrder())
+        assertThat(MedalPolicy.BLACK_CIRCLE.getSortOrder())
                 .isLessThan(MedalPolicy.EASY_CLEAR.getSortOrder());
         assertThat(MedalPolicy.EASY_CLEAR.getSortOrder())
-                .isLessThan(MedalPolicy.BLACK_STAR.getSortOrder());
-        assertThat(MedalPolicy.fromCode(10)).isEqualTo(MedalPolicy.BLACK_DIAMOND);
-        assertThat(MedalPolicy.fromCode(0)).isEqualTo(MedalPolicy.NO_MEDAL);
+                .isLessThan(MedalPolicy.LONGOFF_CLEAR.getSortOrder());
+        assertThat(MedalPolicy.fromCode(9)).isEqualTo(MedalPolicy.BLACK_DIAMOND);
+        assertThat(MedalPolicy.fromCode(13)).isEqualTo(MedalPolicy.NO_MEDAL);
         assertThat(MedalPolicy.values()).hasSize(13);
         assertUniqueCodesAndSortOrders(
                 Arrays.stream(MedalPolicy.values()).mapToInt(MedalPolicy::getCode).toArray(),
@@ -64,7 +64,7 @@ class GameCodePolicyTest {
     void unknownCodesAreRejected() {
         assertThatThrownBy(() -> RankPolicy.fromCode(0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MedalPolicy.fromCode(13))
+        assertThatThrownBy(() -> MedalPolicy.fromCode(0))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DifficultyPolicy.fromCode(0))
                 .isInstanceOf(IllegalArgumentException.class);
