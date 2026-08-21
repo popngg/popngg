@@ -26,8 +26,10 @@ public class RenewalController {
         return SuccessResponse.<RenewalResponse>builder().code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS).data(RenewalResponse.from(result)).build();
     }
     private ImportPlaydataCommand.Row toRow(RenewalRequest.Chart c){Long id=null;if(c.getChartId()!=null&&!c.getChartId().isBlank())try{id=Long.valueOf(c.getChartId());}catch(NumberFormatException ignored){}
-        var upperMatcher=UPPER_SUFFIX.matcher(c.getTitle());boolean upper=upperMatcher.find();String title=upper?upperMatcher.replaceFirst("").strip():c.getTitle();
-        return new ImportPlaydataCommand.Row(id,null,difficulty(c.getDifficulty()),upper,null,title,c.getGenre(),c.getScore(),rank(c.getRank()),medal(c.getMedal()),c.getVersionBestScore(),c.isVersionBestScorePresent(),c.getArtist());}
+        boolean upper=hasUpperSuffix(c.getTitle())||hasUpperSuffix(c.getGenre());String title=withoutUpperSuffix(c.getTitle());String genre=withoutUpperSuffix(c.getGenre());
+        return new ImportPlaydataCommand.Row(id,null,difficulty(c.getDifficulty()),upper,null,title,genre,c.getScore(),rank(c.getRank()),medal(c.getMedal()),c.getVersionBestScore(),c.isVersionBestScorePresent(),c.getArtist());}
+    private static boolean hasUpperSuffix(String value){return UPPER_SUFFIX.matcher(value).find();}
+    private static String withoutUpperSuffix(String value){return UPPER_SUFFIX.matcher(value).replaceFirst("").strip();}
     private int difficulty(String v){return switch(v.toLowerCase(Locale.ROOT)){case"l","light","easy"->1;case"n","normal"->2;case"h","hyper"->3;case"ex"->4;default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_DIFFICULTY","Unknown difficulty code: "+v);};}
     private int rank(String v){return switch(v.toLowerCase(Locale.ROOT)){
         case"s_plus"->1;

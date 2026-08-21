@@ -140,7 +140,7 @@ class RenewalControllerTest {
         ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
         var chart = new RenewalRequest.Chart();
         chart.setChartId("Bphwoc7OmreNwltHB5NYZA==");
-        chart.setTitle("Fate No.23 (UPPER)"); chart.setGenre("レヴェラチューン");
+        chart.setTitle("Fate No.23(UPPER)"); chart.setGenre("レヴェラチューン(UPPER)");
         chart.setArtist("PON feat.秋成"); chart.setDifficulty("ex");
         chart.setMedal("g"); chart.setRank("a1"); chart.setScore(84771);
         var request = new RenewalRequest(1, "popn29", Instant.now(),
