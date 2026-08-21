@@ -6,6 +6,8 @@ import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.domain.user.model.field.UserRole;
 import gg.popn.infra.security.CustomUserPrincipal;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
@@ -53,13 +55,37 @@ class RenewalControllerTest {
         var request = new RenewalRequest(1, "popn29", Instant.now(),
                 new RenewalRequest.Profile("1234-5678-9012", "name", null, null),
                 List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
-        when(useCase.importPlaydata(argThat(command -> command.rows().getFirst().medalCode() == 0
+        when(useCase.importPlaydata(argThat(command -> command.rows().getFirst().medalCode() == 13
                 && command.rows().getFirst().score() == 12345)))
                 .thenReturn(new ImportPlaydataResult(8,1,1,1,1,0,List.of()));
 
         var response = controller.renew(principal(), request);
 
         assertThat(response.getData().renewLogId()).isEqualTo(8);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "a, 1", "b, 2", "c, 3", "d, 4", "e, 5", "f, 6", "g, 7",
+            "h, 8", "i, 9", "j, 10", "k, 11", "l, 12", "none, 13"
+    })
+    void mapsCurrentMedalNames(String medal, int expectedCode) {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
+        chart.setDifficulty("ex"); chart.setMedal(medal);
+        chart.setRank("s"); chart.setScore(90000);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", null, null),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+        when(useCase.importPlaydata(argThat(command ->
+                command.rows().getFirst().medalCode() == expectedCode)))
+                .thenReturn(new ImportPlaydataResult(11,1,1,1,1,0,List.of()));
+
+        var response = controller.renew(principal(), request);
+
+        assertThat(response.getData().renewLogId()).isEqualTo(11);
     }
 
     @Test
@@ -80,6 +106,32 @@ class RenewalControllerTest {
         var response = controller.renew(principal(), request);
 
         assertThat(response.getData().renewLogId()).isEqualTo(9);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "s_plus, 1", "s, 2", "aaa, 3", "aa_plus, 4", "aa, 5",
+            "a_plus, 6", "a, 7", "b_plus, 8", "b, 9", "c, 10",
+            "d, 11", "e, 12", "none, 13",
+            "a3, 3", "a2, 5", "a1, 7"
+    })
+    void mapsCurrentAndLegacyRankNames(String rank, int expectedCode) {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
+        chart.setDifficulty("ex"); chart.setMedal("c");
+        chart.setRank(rank); chart.setScore(90000);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", null, null),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+        when(useCase.importPlaydata(argThat(command ->
+                command.rows().getFirst().rankCode() == expectedCode)))
+                .thenReturn(new ImportPlaydataResult(10,1,1,1,1,0,List.of()));
+
+        var response = controller.renew(principal(), request);
+
+        assertThat(response.getData().renewLogId()).isEqualTo(10);
     }
 
     @Test

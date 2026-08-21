@@ -36,7 +36,7 @@ class PopclassPolicyTest {
         assertThat(policy.newChartPopclass(50, 92_000, 5))
                 .isGreaterThan(policy.newChartPopclass(50, 92_000, 12));
         assertThat(policy.newChartPopclass(50, 92_000, 12))
-                .isGreaterThan(policy.newChartPopclass(50, 92_000, 8));
+                .isGreaterThan(policy.newChartPopclass(50, 92_000, 11));
         assertThat(policy.newUserPopclass(List.of(2_982, 3_117))).isEqualTo(6_099);
     }
 }

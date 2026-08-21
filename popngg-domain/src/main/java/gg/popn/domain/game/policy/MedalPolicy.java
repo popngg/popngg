@@ -5,9 +5,9 @@ import java.util.Arrays;
 /**
  * Display and ordering policy for the game's clear medals.
  *
- * <p>Codes 1-11 preserve the legacy ordering used by popn.gg. The High Cheers
- * long-pop-off clear is appended as code 12 so existing stored values do not
- * move. Code 0 represents source data that reports no medal.</p>
+ * <p>Codes 1-12 follow the High Cheers source order: regular medals A-J,
+ * easy clear K, and long-pop-off clear L. Code 0 represents source data that
+ * reports no medal and uses code 13.</p>
  */
 public enum MedalPolicy {
     GOLD_STAR(1, "GOLD STAR", 1),
@@ -17,12 +17,12 @@ public enum MedalPolicy {
     BRONZE_STAR(5, "BRONZE STAR", 5),
     BRONZE_DIAMOND(6, "BRONZE DIAMOND", 6),
     BRONZE_CIRCLE(7, "BRONZE CIRCLE", 7),
-    LONGOFF_CLEAR(12, "LONGOFF CLEAR", 8),
-    EASY_CLEAR(8, "EASY CLEAR", 9),
-    BLACK_STAR(9, "BLACK STAR", 10),
-    BLACK_DIAMOND(10, "BLACK DIAMOND", 11),
-    BLACK_CIRCLE(11, "BLACK CIRCLE", 12),
-    NO_MEDAL(0, "NONE", 13);
+    BLACK_STAR(8, "BLACK STAR", 8),
+    BLACK_DIAMOND(9, "BLACK DIAMOND", 9),
+    BLACK_CIRCLE(10, "BLACK CIRCLE", 10),
+    EASY_CLEAR(11, "EASY CLEAR", 11),
+    LONGOFF_CLEAR(12, "LONGOFF CLEAR", 12),
+    NO_MEDAL(13, "NONE", 13);
 
     private final int code;
     private final String label;
