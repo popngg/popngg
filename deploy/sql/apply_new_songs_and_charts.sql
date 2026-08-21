@@ -5,7 +5,7 @@ CREATE TEMPORARY TABLE new_song_catalog (
   song_name VARCHAR(255) NOT NULL, artist_name VARCHAR(255) NOT NULL,
   version INT NOT NULL, jacket_url VARCHAR(512) NOT NULL, is_upper BOOLEAN NOT NULL,
   light_level TINYINT, normal_level TINYINT, hyper_level TINYINT, ex_level TINYINT
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 INSERT INTO new_song_catalog VALUES
 ('72aabb2e749be3e07b407e3b8a31d2862cdf937b1875926974020b7a875d61b8', 'バンギャー', 'A Certified Banger Moment', 'めめめ', 29, 'https://static.popn.gg/72aabb2e749be3e07b407e3b8a31d2862cdf937b1875926974020b7a875d61b8.png', FALSE, 11, 29, 40, 47),
 ('eff6d66c1d7771cf583202cf072c2a37a11e527df42e2367b1c65275aa24c560', 'DTMスピードラン', 'Any%', 'めめめ', 29, 'https://static.popn.gg/eff6d66c1d7771cf583202cf072c2a37a11e527df42e2367b1c65275aa24c560.png', FALSE, 11, 28, 41, 47),
@@ -140,7 +140,7 @@ CREATE TEMPORARY TABLE new_chart_catalog (
   difficulty_label VARCHAR(16) NOT NULL, level TINYINT NOT NULL,
   chart_version INT NOT NULL, is_upper BOOLEAN NOT NULL,
   PRIMARY KEY (song_hash, difficulty_code)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 INSERT INTO new_chart_catalog
 SELECT n.song_hash, d.difficulty_code, d.difficulty_label,
        CASE d.difficulty_code WHEN 1 THEN n.light_level WHEN 2 THEN n.normal_level

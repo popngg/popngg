@@ -49,6 +49,8 @@ jobs:
             raise SystemExit('expected 60 deleted chart IDs')
 
         existing = Path('deploy/sql/apply_existing_song_updates.sql').read_text()
+        if existing.count(') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;') < 1:
+            raise SystemExit('existing-song staging table collation is not pinned')
         existing_values = existing.split(
             'INSERT INTO existing_song_updates VALUES', 1
         )[1].split('CREATE TEMPORARY TABLE migration_assertions', 1)[0]
@@ -56,6 +58,8 @@ jobs:
             raise SystemExit('expected 1953 existing song updates')
 
         new = Path('deploy/sql/apply_new_songs_and_charts.sql').read_text()
+        if new.count(') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;') < 2:
+            raise SystemExit('new-song staging table collations are not pinned')
         new_values = new.split('INSERT INTO new_song_catalog VALUES', 1)[1].split(
             'CREATE TEMPORARY TABLE migration_assertions', 1
         )[0]

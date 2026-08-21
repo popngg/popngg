@@ -6,7 +6,7 @@ CREATE TEMPORARY TABLE existing_song_updates (
   old_genre_name VARCHAR(255) NOT NULL, new_genre_name VARCHAR(255) NOT NULL,
   old_artist_name VARCHAR(255), new_artist_name VARCHAR(255) NOT NULL,
   old_jacket_url VARCHAR(512), new_jacket_url VARCHAR(512) NOT NULL
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 INSERT INTO existing_song_updates VALUES
 ('1237', 'c859d961da6993d8afdca62904e6f2fb', '2b6afe039d6f6f7caa9b2191dea29da705d5b16d1ebe0dbd53fccbe95b07a2d2', '*ハロー、プラネット。', '*ハロー、プラネット。', NULL, 'sasakure.UK', 'https://static.popn.gg/c859d961da6993d8afdca62904e6f2fb.png', 'https://static.popn.gg/2b6afe039d6f6f7caa9b2191dea29da705d5b16d1ebe0dbd53fccbe95b07a2d2.png'),
 ('120', '705dedfe702092c2d37c318581bdf801', 'a96763a2d795cab2079f6ddf93b7766ffef9868a9a89db8359e113899aa4e99e', 'Ａ．Ｉ．テクノ', 'Ａ．Ｉ．テクノ', NULL, 'V.C.O. featuring Alt', 'https://static.popn.gg/705dedfe702092c2d37c318581bdf801.png', 'https://static.popn.gg/a96763a2d795cab2079f6ddf93b7766ffef9868a9a89db8359e113899aa4e99e.png'),
