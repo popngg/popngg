@@ -56,9 +56,23 @@ class PlaydataUpsertPolicyTest {
         var existing = state(28, 95_000, 1, 97_000, 28, 1, 2);
 
         assertThat(policy.decide(existing, observation(90_000, 3, 4), 29, RESET)
-                .state().versionScore()).isEqualTo(90_000);
+                .state()).isEqualTo(state(29, 90_000, 3,
+                90_000, 29, 3, 4));
         assertThat(policy.decide(existing, observation(90_000, 3, 4), 29, CARRY_OVER)
-                .state().versionScore()).isEqualTo(95_000);
+                .state()).isEqualTo(state(29, 95_000, 1,
+                97_000, 28, 1, 4));
+    }
+
+    @Test
+    void replacesOldAllTimeScoreWithAuthoritativeTransferResultOnReset() {
+        var scoreRecordedAfterTransfer = state(28, 98_000, 1,
+                98_000, 28, 1, 2);
+
+        var decision = policy.decide(scoreRecordedAfterTransfer,
+                observation(90_000, 3, 4), 29, RESET);
+
+        assertThat(decision.state()).isEqualTo(state(29, 90_000, 3,
+                90_000, 29, 3, 4));
     }
 
     @Test
