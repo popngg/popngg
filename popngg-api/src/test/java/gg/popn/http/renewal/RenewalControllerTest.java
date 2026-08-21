@@ -135,6 +135,31 @@ class RenewalControllerTest {
     }
 
     @Test
+    void stripsUpperSuffixAndMatchesTheUpperChart() {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("Bphwoc7OmreNwltHB5NYZA==");
+        chart.setTitle("Fate No.23 (UPPER)"); chart.setGenre("レヴェラチューン");
+        chart.setArtist("PON feat.秋成"); chart.setDifficulty("ex");
+        chart.setMedal("g"); chart.setRank("a1"); chart.setScore(84771);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", null, null),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+        when(useCase.importPlaydata(argThat(command -> {
+            var row = command.rows().getFirst();
+            return row.chartId() == null && row.upper()
+                    && row.songName().equals("Fate No.23")
+                    && row.genreName().equals("レヴェラチューン")
+                    && row.artistName().equals("PON feat.秋成");
+        }))).thenReturn(new ImportPlaydataResult(10,1,1,1,1,0,List.of()));
+
+        var response = controller.renew(principal(), request);
+
+        assertThat(response.getData().renewLogId()).isEqualTo(10);
+    }
+
+    @Test
     void rejectsDifferentGameId() {
         ReflectionTestUtils.setField(controller, "collectorVersion", 1);
         ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
