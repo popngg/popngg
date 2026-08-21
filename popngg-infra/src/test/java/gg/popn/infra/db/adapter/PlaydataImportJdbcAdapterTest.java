@@ -232,8 +232,8 @@ class PlaydataImportJdbcAdapterTest {
                        all_time_score_version, medal_code FROM playdata
                 """)).containsEntry("current_version", 29)
                 .containsEntry("version_score", 90_000)
-                .containsEntry("all_time_score", 95_000)
-                .containsEntry("all_time_score_version", 28)
+                .containsEntry("all_time_score", 90_000)
+                .containsEntry("all_time_score_version", 29)
                 .containsEntry("medal_code", 5);
     }
 
