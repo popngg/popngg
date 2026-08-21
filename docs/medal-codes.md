@@ -4,6 +4,7 @@
 
 | 코드 | 이름 | 조건 |
 | ---: | --- | --- |
+| 0 | `NO_MEDAL` | 원천 데이터의 메달 없음 (`none`) |
 | 1 | `GOLD_STAR` | GOOD 0, BAD 0으로 클리어 |
 | 2 | `SILVER_STAR` | BAD 0, GOOD 1~5로 클리어 |
 | 3 | `SILVER_DIAMOND` | BAD 0, GOOD 6~20으로 클리어 |

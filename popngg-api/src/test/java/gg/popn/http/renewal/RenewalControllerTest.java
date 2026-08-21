@@ -42,6 +42,26 @@ class RenewalControllerTest {
     }
 
     @Test
+    void mapsNoneMedalToNoMedalCode() {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
+        chart.setDifficulty("light"); chart.setLevel(4); chart.setMedal("none");
+        chart.setRank("e"); chart.setScore(12345);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", null, null),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+        when(useCase.importPlaydata(argThat(command -> command.rows().getFirst().medalCode() == 0
+                && command.rows().getFirst().score() == 12345)))
+                .thenReturn(new ImportPlaydataResult(8,1,1,1,1,0,List.of()));
+
+        var response = controller.renew(principal(), request);
+
+        assertThat(response.getData().renewLogId()).isEqualTo(8);
+    }
+
+    @Test
     void rejectsDifferentGameId() {
         ReflectionTestUtils.setField(controller, "collectorVersion", 1);
         ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
