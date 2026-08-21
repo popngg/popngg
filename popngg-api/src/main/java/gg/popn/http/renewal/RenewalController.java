@@ -33,9 +33,9 @@ public class RenewalController {
         case"s_plus"->1;
         case"s"->2;
         case"aaa","a3"->3;
-        case"aa_plus"->4;
+        case"aa_plus","a2_plus"->4;
         case"aa","a2"->5;
-        case"a_plus"->6;
+        case"a_plus","a1_plus"->6;
         case"a","a1"->7;
         case"b_plus"->8;
         case"b"->9;
