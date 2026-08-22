@@ -68,9 +68,22 @@ jobs:
         if "staged_new_charts FROM new_chart_catalog" not in new:
             raise SystemExit('new chart verification is missing')
 
+        levels = Path('deploy/sql/apply_popn29_level_changes.sql').read_text()
+        level_values = levels.split(
+            'INSERT INTO popn29_level_updates VALUES', 1
+        )[1].split('CREATE TEMPORARY TABLE popn29_level_assertions', 1)[0]
+        if len(re.findall(r"^\([0-9]+,", level_values, re.MULTILINE)) != 91:
+            raise SystemExit('expected 91 popn29 level updates')
+        if len(set(re.findall(r"^\(([0-9]+),", level_values, re.MULTILINE))) != 91:
+            raise SystemExit('popn29 level update chart IDs must be unique')
+        if "COUNT(*) = 91 AND SUM(c.level = u.new_level) = 91" not in levels:
+            raise SystemExit('popn29 level verification is missing')
+
         compose = Path('deploy/compose.yml').read_text()
         if "popn29-v3-catalog-20260821" not in compose:
             raise SystemExit('catalog migration history key is missing')
+        if "popn29-v4-levels-20260822" not in compose:
+            raise SystemExit('popn29 level migration history key is missing')
         PY
     
     - name: Build with Gradle

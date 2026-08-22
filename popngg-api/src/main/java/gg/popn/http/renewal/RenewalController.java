@@ -7,7 +7,7 @@ import gg.popn.infra.security.CustomUserPrincipal;
 import jakarta.validation.Valid; import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value; import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*; import java.util.Locale; import java.util.regex.Pattern;
+import org.springframework.web.bind.annotation.*; import java.math.BigDecimal; import java.math.RoundingMode; import java.util.Locale; import java.util.regex.Pattern;
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/renewals")
 public class RenewalController {
     private static final Pattern UPPER_SUFFIX = Pattern.compile(
@@ -23,7 +23,7 @@ public class RenewalController {
         String id=principal.getPoptomoId().getValue();
         if(!id.equals(request.profile().gameId())) throw error(HttpStatus.FORBIDDEN,"GAME_ID_MISMATCH","The collected game ID does not match the authenticated user.");
         var rows=request.charts().stream().map(this::toRow).toList();
-        var profile=new ImportPlaydataCommand.ProfileSnapshot(request.profile().name(),request.profile().character(),null,null,null,null);
+        var profile=new ImportPlaydataCommand.ProfileSnapshot(request.profile().name(),request.profile().character(),null,null,null,null,popnClass(request.profile().popnClass()));
         var result=importPlaydata.importPlaydata(new ImportPlaydataCommand(id,profile,rows));
         return SuccessResponse.<RenewalResponse>builder().code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS).data(RenewalResponse.from(result)).build();
     }
@@ -32,6 +32,16 @@ public class RenewalController {
         return new ImportPlaydataCommand.Row(id,null,difficulty(c.getDifficulty()),upper,null,title,genre,c.getScore(),rank(c.getRank()),medal(c.getMedal()),c.getVersionBestScore(),c.isVersionBestScorePresent(),c.getArtist());}
     private static boolean hasUpperSuffix(String value){return UPPER_SUFFIX.matcher(value).find();}
     private static String withoutUpperSuffix(String value){return UPPER_SUFFIX.matcher(value).replaceFirst("").strip();}
+    private Integer popnClass(String value){
+        if(value==null||value.isBlank()) return null;
+        try{
+            int scaled=new BigDecimal(value.strip()).setScale(3,RoundingMode.UNNECESSARY).movePointRight(3).intValueExact();
+            if(scaled<0) throw new ArithmeticException("negative popn class");
+            return scaled;
+        }catch(ArithmeticException|NumberFormatException exception){
+            throw error(HttpStatus.UNPROCESSABLE_ENTITY,"INVALID_POPN_CLASS","Invalid popn class: "+value);
+        }
+    }
     private int difficulty(String v){return switch(v.toLowerCase(Locale.ROOT)){case"l","light","easy"->1;case"n","normal"->2;case"h","hyper"->3;case"ex"->4;default->throw error(HttpStatus.UNPROCESSABLE_ENTITY,"UNKNOWN_DIFFICULTY","Unknown difficulty code: "+v);};}
     private int rank(String v){return switch(v.toLowerCase(Locale.ROOT)){
         case"s_plus"->1;

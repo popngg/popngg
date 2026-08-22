@@ -87,7 +87,8 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                     histories += outcome.historyCount();
                 }
             }
-            rebuildPopclass(command.poptomoId(), userId);
+            rebuildPopclass(command.poptomoId(), userId,
+                    command.profile() == null ? null : command.profile().displayPopclass());
             String status = unmatched.isEmpty() ? "SUCCESS" : matched == 0 ? "FAILED" : "PARTIAL_SUCCESS";
             finishLog(renewLogId, status, matched, updated,
                     unmatched.isEmpty() ? null : summarize(unmatched));
@@ -102,10 +103,11 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Override
     @Transactional
     public PopclassRecalculationResult recalculate(String poptomoId) {
-        return rebuildPopclass(poptomoId, findUserId(poptomoId));
+        return rebuildPopclass(poptomoId, findUserId(poptomoId), null);
     }
 
-    private PopclassRecalculationResult rebuildPopclass(String poptomoId, long userId) {
+    private PopclassRecalculationResult rebuildPopclass(
+            String poptomoId, long userId, Integer requestedDisplayPopclass) {
         List<PopclassRow> rows = jdbc.query("""
                 SELECT p.playdata_id, p.chart_id, p.current_version,
                        p.version_score, p.all_time_score,
@@ -151,9 +153,11 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         mark(current, "CURRENT_VERSION");
         mark(old, "OLD_VERSION");
 
-        int displayPopclass = popclassPolicy.newUserPopclass(
+        int calculatedDisplayPopclass = popclassPolicy.newUserPopclass(
                 java.util.stream.Stream.concat(current.stream(), old.stream())
                         .map(row -> row.displayPopclass).toList());
+        int displayPopclass = requestedDisplayPopclass == null
+                ? calculatedDisplayPopclass : requestedDisplayPopclass;
         Comparator<PopclassRow> potentialOrder = Comparator.comparingInt(
                         (PopclassRow row) -> row.potentialPopclass).reversed()
                         .thenComparing(Comparator.comparingInt(
