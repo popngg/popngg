@@ -15,5 +15,7 @@ public interface SongCatalogQueryPort {
 
     Optional<SongDetailView> findSongDetail(long songId);
 
+    Optional<SongDetailView> findSongDetail(String songHash);
+
     Optional<ChartDetailView> findChartDetail(long chartId);
 }

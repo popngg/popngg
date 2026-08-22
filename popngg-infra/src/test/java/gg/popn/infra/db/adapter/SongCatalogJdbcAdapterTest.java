@@ -126,6 +126,15 @@ class SongCatalogJdbcAdapterTest {
     }
 
     @Test
+    void findsSongDetailByHash() {
+        var detail = adapter.findSongDetail("hash-1").orElseThrow();
+
+        assertThat(detail.song().songId()).isEqualTo(1);
+        assertThat(detail.song().songHash()).isEqualTo("hash-1");
+        assertThat(detail.charts()).hasSize(2);
+    }
+
+    @Test
     void returnsSeparatedSongAndChartMetadataForChartDetail() {
         var detail = adapter.findChartDetail(10).orElseThrow();
 

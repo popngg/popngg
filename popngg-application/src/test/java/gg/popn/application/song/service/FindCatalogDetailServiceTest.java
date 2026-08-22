@@ -26,18 +26,23 @@ class FindCatalogDetailServiceTest {
         SongDetailView songDetail = new SongDetailView(song, List.of());
         ChartDetailView chartDetail = new ChartDetailView(song, null);
         when(port.findSongDetail(1)).thenReturn(Optional.of(songDetail));
+        when(port.findSongDetail("hash")).thenReturn(Optional.of(songDetail));
         when(port.findChartDetail(2)).thenReturn(Optional.of(chartDetail));
 
         assertThat(service.findSong(1)).isSameAs(songDetail);
+        assertThat(service.findSong("hash")).isSameAs(songDetail);
         assertThat(service.findChart(2)).isSameAs(chartDetail);
     }
 
     @Test
     void rejectsUnknownIds() {
         when(port.findSongDetail(9)).thenReturn(Optional.empty());
+        when(port.findSongDetail("missing")).thenReturn(Optional.empty());
         when(port.findChartDetail(9)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findSong(9))
+                .isInstanceOf(CatalogItemNotFoundException.class);
+        assertThatThrownBy(() -> service.findSong("missing"))
                 .isInstanceOf(CatalogItemNotFoundException.class);
         assertThatThrownBy(() -> service.findChart(9))
                 .isInstanceOf(CatalogItemNotFoundException.class);
