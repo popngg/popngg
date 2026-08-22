@@ -4,8 +4,10 @@ import gg.popn.application.auth.port.out.CurrentPrincipalPort;
 import gg.popn.application.user.dto.command.UpdateUserProfileCommand;
 import gg.popn.application.user.dto.query.UserProfileQuery;
 import gg.popn.application.user.dto.query.UserRankingQuery;
+import gg.popn.application.user.dto.query.FindUsersQuery;
 import gg.popn.application.user.dto.result.UserProfileResult;
 import gg.popn.application.user.dto.result.UserRankingResult;
+import gg.popn.application.user.dto.result.UserListResult;
 import gg.popn.application.user.exception.UserProfileNotFoundException;
 import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.application.user.port.out.UserProfilePort;
@@ -51,6 +53,12 @@ public class UserProfileService implements UserProfileUseCase {
                 query.page(),
                 query.size(),
                 result.totalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserListResult findUsers(FindUsersQuery query) {
+        return profilePort.findUsers(query);
     }
 
     private boolean canManage(String poptomoId) {

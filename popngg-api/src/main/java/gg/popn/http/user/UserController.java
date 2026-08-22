@@ -3,6 +3,7 @@ package gg.popn.http.user;
 import gg.popn.application.user.dto.command.UpdateUserProfileCommand;
 import gg.popn.application.user.dto.query.UserProfileQuery;
 import gg.popn.application.user.dto.query.UserRankingQuery;
+import gg.popn.application.user.dto.query.FindUsersQuery;
 import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
@@ -10,6 +11,7 @@ import gg.popn.http.common.response.SuccessResponse;
 import gg.popn.http.common.response.PageResponse;
 import gg.popn.http.user.request.UpdateUserProfileRequest;
 import gg.popn.http.user.response.UserProfileResponse;
+import gg.popn.http.user.response.UserListResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users")
 public class UserController {
     private final UserProfileUseCase userProfile;
+
+    @GetMapping
+    SuccessResponse<PageResponse<UserListResponse>> findUsers(
+            @RequestParam(name = "q", required = false) String keyword,
+            @RequestParam(defaultValue = "rank") String sort,
+            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        if (page < 1) throw new IllegalArgumentException("page must be one or greater");
+        var result = userProfile.findUsers(new FindUsersQuery(
+                keyword, FindUsersQuery.Sort.fromApiValue(sort),
+                FindUsersQuery.Order.fromApiValue(order), page - 1, size));
+        return success(PageResponse.of(
+                result.users().stream().map(UserListResponse::from).toList(),
+                result.totalElements(), result.page(), result.size()));
+    }
 
     @GetMapping("/{poptomoId}")
     SuccessResponse<UserProfileResponse> getUser(

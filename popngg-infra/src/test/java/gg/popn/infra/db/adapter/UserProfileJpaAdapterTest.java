@@ -2,6 +2,7 @@ package gg.popn.infra.db.adapter;
 
 import gg.popn.infra.db.entity.UserEntity;
 import gg.popn.infra.db.entity.UserProfileEntity;
+import gg.popn.application.user.dto.query.FindUsersQuery;
 import gg.popn.infra.db.jpa.UserJpaRepository;
 import gg.popn.infra.db.jpa.UserProfileJpaRepository;
 import jakarta.persistence.EntityManager;
@@ -28,6 +29,16 @@ class UserProfileJpaAdapterTest {
                 "sa", "");
         jdbc = new JdbcTemplate(source);
         jdbc.execute("DROP ALL OBJECTS");
+        jdbc.execute("""
+                CREATE TABLE users(
+                  user_id BIGINT PRIMARY KEY, poptomo_id VARCHAR(32) NOT NULL)
+                """);
+        jdbc.execute("""
+                CREATE TABLE user_profiles(
+                  user_id BIGINT PRIMARY KEY, user_name VARCHAR(64),
+                  profile_image_url VARCHAR(512), comment VARCHAR(255),
+                  display_popclass INT, is_hidden BOOLEAN, updated_at TIMESTAMP)
+                """);
         jdbc.execute("""
                 CREATE TABLE charts(
                   chart_id BIGINT PRIMARY KEY, level INT NOT NULL, is_deleted BOOLEAN NOT NULL)
@@ -117,6 +128,33 @@ class UserProfileJpaAdapterTest {
                         "full-combo", 49, 1, 2),
                 new gg.popn.application.user.dto.result.UserProfileResult.MedalSummary(
                         "perfect", 0, 0, 0));
+    }
+
+    @Test
+    void findsPublicUsersUsingFrontendSearchSortAndPagination() {
+        jdbc.update("INSERT INTO users VALUES (10, '1234-5678-9012'), (20, '9999-9999-9999')");
+        jdbc.update("""
+                INSERT INTO user_profiles VALUES
+                  (10, 'alpha', NULL, 'first', 177000, FALSE, TIMESTAMP '2026-08-22 10:00:00'),
+                  (20, 'hidden', NULL, 'second', 200000, TRUE, TIMESTAMP '2026-08-22 11:00:00')
+                """);
+        jdbc.update("""
+                INSERT INTO playdata(user_id, chart_id, current_version, medal_code) VALUES
+                  (10, 1, 29, 1), (10, 3, 29, 5)
+                """);
+
+        var result = adapter.findUsers(new FindUsersQuery(
+                "alpha", FindUsersQuery.Sort.RANK,
+                FindUsersQuery.Order.ASC, 0, 20));
+
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.users()).singleElement().satisfies(user -> {
+            assertThat(user.poptomoId()).isEqualTo("1234-5678-9012");
+            assertThat(user.rank()).isEqualTo(1);
+            assertThat(user.displayPopclass()).isEqualTo(177000);
+            assertThat(user.bestLevels()).extracting(summary -> summary.maxLevel())
+                    .containsExactly(49, 48, 48);
+        });
     }
 
     private static UserEntity user(Long id, String poptomoId, LocalDateTime updatedAt) {
