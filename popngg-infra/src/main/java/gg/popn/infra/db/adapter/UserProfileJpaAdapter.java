@@ -104,9 +104,9 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         List<LevelMedalCounts> levels = jdbc.query("""
                 SELECT c.level,
                        COUNT(*) AS total_count,
-                       SUM(CASE WHEN p.medal_code IN (1,2,3,4,5,6,7,8,12)
+                       SUM(CASE WHEN p.medal_code IN (1,2,3,4,5,6,7,11,12)
                                 THEN 1 ELSE 0 END) AS clear_count,
-                       SUM(CASE WHEN p.medal_code IN (1,2)
+                       SUM(CASE WHEN p.medal_code IN (1,2,3,4)
                                 THEN 1 ELSE 0 END) AS full_combo_count,
                        SUM(CASE WHEN p.medal_code = 1
                                 THEN 1 ELSE 0 END) AS perfect_count

@@ -41,7 +41,8 @@ class UserProfileJpaAdapterTest {
                 INSERT INTO charts(chart_id, level, is_deleted) VALUES
                   (1, 48, FALSE), (2, 48, FALSE),
                   (3, 49, FALSE), (4, 49, FALSE),
-                  (5, 50, FALSE), (6, 50, TRUE)
+                  (5, 50, FALSE), (6, 50, TRUE),
+                  (7, 47, FALSE), (8, 46, FALSE)
                 """);
 
         userRepository = mock(UserJpaRepository.class);
@@ -63,6 +64,8 @@ class UserProfileJpaAdapterTest {
                   (10, 1, 29, 1),
                   (10, 3, 29, 2),
                   (10, 5, 29, 7),
+                  (10, 7, 29, 11),
+                  (10, 8, 29, 8),
                   (10, 4, 28, 1)
                 """);
 
@@ -91,6 +94,29 @@ class UserProfileJpaAdapterTest {
             assertThat(summary.achieved()).isZero();
             assertThat(summary.total()).isZero();
         });
+    }
+
+    @Test
+    void treatsEasyAsClearAndBlackMedalsAsFailed() {
+        when(userRepository.findByPoptomoId("1111-1111-1111"))
+                .thenReturn(Optional.of(user(30L, "1111-1111-1111", LocalDateTime.now())));
+        jdbc.update("""
+                INSERT INTO playdata(user_id, chart_id, current_version, medal_code) VALUES
+                  (30, 7, 29, 11),
+                  (30, 5, 29, 8),
+                  (30, 3, 29, 4)
+                """);
+
+        var summaries = adapter.findByPoptomoId("1111-1111-1111")
+                .orElseThrow().medalSummaries();
+
+        assertThat(summaries).containsExactly(
+                new gg.popn.application.user.dto.result.UserProfileResult.MedalSummary(
+                        "clear", 49, 1, 2),
+                new gg.popn.application.user.dto.result.UserProfileResult.MedalSummary(
+                        "full-combo", 49, 1, 2),
+                new gg.popn.application.user.dto.result.UserProfileResult.MedalSummary(
+                        "perfect", 0, 0, 0));
     }
 
     private static UserEntity user(Long id, String poptomoId, LocalDateTime updatedAt) {

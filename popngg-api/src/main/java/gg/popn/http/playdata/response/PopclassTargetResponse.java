@@ -40,21 +40,10 @@ public record PopclassTargetResponse(
                 target.difficultyCode(),
                 target.level(),
                 best.score(),
-                frontendMedalCode(target.medal().code()),
+                target.medal().code(),
                 best.rankCode() == null ? 13 : best.rankCode(),
                 best.gameVersion() == null ? target.chartVersion() : best.gameVersion(),
                 target.popclass() == null ? 0 : target.popclass());
-    }
-
-    private static int frontendMedalCode(int backendCode) {
-        return switch (backendCode) {
-            case 0 -> 13;
-            case 9 -> 10;
-            case 10 -> 11;
-            case 11 -> 12;
-            case 12 -> 9;
-            default -> backendCode;
-        };
     }
 
     public record CurrentTargets(

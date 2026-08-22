@@ -44,7 +44,7 @@ public record ImportPlaydataRequest(
             @Size(max = 255) String genreName,
             @NotNull @Min(0) @Max(100_000) Integer score,
             @NotNull Integer rankCode,
-            @NotNull Integer medalCode
+            @NotNull @Min(1) @Max(13) Integer medalCode
     ) {
         ImportPlaydataCommand.Row toCommand() {
             return new ImportPlaydataCommand.Row(chartId, songId, difficultyCode, isUpper,
