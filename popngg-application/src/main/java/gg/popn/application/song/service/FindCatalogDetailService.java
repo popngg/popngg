@@ -23,6 +23,12 @@ public class FindCatalogDetailService implements FindSongDetailUseCase, FindChar
     }
 
     @Override
+    public SongDetailView findSong(String songHash) {
+        return songCatalogQueryPort.findSongDetail(songHash)
+                .orElseThrow(() -> new CatalogItemNotFoundException("Song", songHash));
+    }
+
+    @Override
     public ChartDetailView findChart(long chartId) {
         return songCatalogQueryPort.findChartDetail(chartId)
                 .orElseThrow(() -> new CatalogItemNotFoundException("Chart", chartId));

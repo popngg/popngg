@@ -53,10 +53,10 @@ class FrontendChartControllerTest {
                 48, 29, false, false, true, false);
         var deleted = new ChartMetadataView(3, new DifficultyView(3, "HYPER", "H", 3),
                 45, 29, false, false, false, true);
-        when(detail.findSong(1)).thenReturn(new SongDetailView(song, List.of(active, deleted)));
+        when(detail.findSong("hash")).thenReturn(new SongDetailView(song, List.of(active, deleted)));
         var controller = new FrontendChartController(mock(FindSongsUseCase.class), detail);
 
-        var response = controller.findChart(1).getData();
+        var response = controller.findChart("hash").getData();
 
         assertThat(response.title()).isEqualTo("title");
         assertThat(response.charts()).extracting(item -> item.chartId()).containsExactly(2L);

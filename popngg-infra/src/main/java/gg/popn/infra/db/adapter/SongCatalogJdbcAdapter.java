@@ -136,12 +136,22 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
 
     @Override
     public Optional<SongDetailView> findSongDetail(long songId) {
-        List<SongMetadataView> songs = jdbcTemplate.query("""
+        return findSongDetail("song_id", songId);
+    }
+
+    @Override
+    public Optional<SongDetailView> findSongDetail(String songHash) {
+        return findSongDetail("song_hash", songHash);
+    }
+
+    private Optional<SongDetailView> findSongDetail(String column, Object value) {
+        String songSql = """
                         SELECT song_id, song_hash, genre_name, song_name, artist_name, version, jacket_url
                         FROM songs
-                        WHERE song_id = :songId
-                        """,
-                new MapSqlParameterSource("songId", songId),
+                        WHERE %s = :value
+                        """.formatted(column);
+        List<SongMetadataView> songs = jdbcTemplate.query(songSql,
+                new MapSqlParameterSource("value", value),
                 (rs, rowNum) -> songMetadata(rs));
         if (songs.isEmpty()) {
             return Optional.empty();
@@ -153,7 +163,7 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                         WHERE song_id = :songId
                         ORDER BY difficulty_code, is_upper
                         """,
-                new MapSqlParameterSource("songId", songId),
+                new MapSqlParameterSource("songId", songs.getFirst().songId()),
                 (rs, rowNum) -> chartMetadata(rs));
         return Optional.of(new SongDetailView(songs.getFirst(), charts));
     }

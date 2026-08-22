@@ -46,9 +46,9 @@ public class FrontendChartController {
                 result.totalElements(), result.page(), result.size()));
     }
 
-    @GetMapping("/{songId}")
-    public SuccessResponse<FrontendChartResponse> findChart(@PathVariable long songId) {
-        return success(FrontendChartResponse.from(findSongDetailUseCase.findSong(songId)));
+    @GetMapping("/{songHash}")
+    public SuccessResponse<FrontendChartResponse> findChart(@PathVariable String songHash) {
+        return success(FrontendChartResponse.from(findSongDetailUseCase.findSong(songHash)));
     }
 
     private static <T> SuccessResponse<T> success(T data) {
