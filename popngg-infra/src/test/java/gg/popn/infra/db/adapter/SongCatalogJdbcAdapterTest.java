@@ -7,6 +7,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SongCatalogJdbcAdapterTest {
@@ -81,6 +83,34 @@ class SongCatalogJdbcAdapterTest {
         assertThat(result).hasSize(2);
         assertThat(result.getFirst().charts())
                 .allMatch(chart -> chart.chartVersion() == 28 && !chart.isUpper());
+    }
+
+    @Test
+    void frontendFiltersByLevelRangeAndDifficultiesButReturnsEveryChart() {
+        FindSongsQuery query = new FindSongsQuery(
+                null, null, null, 48, 50, List.of(4),
+                null, null, null, FindSongsQuery.Sort.MAX_LEVEL,
+                FindSongsQuery.Order.DESC, true, 0, 20);
+
+        var result = adapter.findPage(query);
+
+        assertThat(adapter.count(query)).isEqualTo(1);
+        assertThat(result).singleElement().satisfies(song -> {
+            assertThat(song.songName()).isEqualTo("Moon Child");
+            assertThat(song.charts()).extracting(chart -> chart.difficulty())
+                    .containsExactly(1, 4);
+        });
+    }
+
+    @Test
+    void frontendSortsByVersionDescending() {
+        FindSongsQuery query = new FindSongsQuery(
+                null, null, null, null, null, null,
+                null, null, null, FindSongsQuery.Sort.VERSION,
+                FindSongsQuery.Order.DESC, true, 0, 20);
+
+        assertThat(adapter.findPage(query)).extracting(song -> song.songId())
+                .containsExactly(2L, 1L);
     }
 
     @Test

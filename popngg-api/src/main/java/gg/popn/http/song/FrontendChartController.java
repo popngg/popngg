@@ -26,17 +26,21 @@ public class FrontendChartController {
     public SuccessResponse<PageResponse<FrontendChartResponse>> findCharts(
             @RequestParam(name = "q", required = false) String keyword,
             @RequestParam(required = false) Integer version,
-            @RequestParam(required = false) Integer chartVersion,
-            @RequestParam(required = false) Integer level,
-            @RequestParam(required = false) Integer difficulty,
-            @RequestParam(required = false) Boolean isUpper,
-            @RequestParam(required = false) Boolean hasStrictGauge,
-            @RequestParam(required = false) Boolean hasStrictJudgement,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) Integer levelMin,
+            @RequestParam(required = false) Integer levelMax,
+            @RequestParam(required = false) java.util.List<Integer> difficulty,
+            @RequestParam(defaultValue = "version") String sort,
+            @RequestParam(defaultValue = "desc") String order,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        var result = findSongsUseCase.execute(new FindSongsQuery(keyword, version, chartVersion,
-                level, difficulty, isUpper, hasStrictGauge, hasStrictJudgement, page, size));
+        if (page < 1) {
+            throw new IllegalArgumentException("page must be one or greater");
+        }
+        var result = findSongsUseCase.execute(new FindSongsQuery(
+                keyword, version, null, levelMin, levelMax, difficulty,
+                null, null, null, FindSongsQuery.Sort.from(sort),
+                FindSongsQuery.Order.from(order), true, page - 1, size));
         return success(PageResponse.of(
                 result.content().stream().map(FrontendChartResponse::from).toList(),
                 result.totalElements(), result.page(), result.size()));
