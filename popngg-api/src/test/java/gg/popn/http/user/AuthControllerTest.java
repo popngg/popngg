@@ -72,7 +72,7 @@ class AuthControllerTest {
                 {"poptomoId":"1234-5678-9012","password":"%s","isPrivate":true}
                 """.formatted(PASSWORD), RegisterRequest.class);
 
-        assertThat(request.hidden()).isTrue();
+        assertThat(request.isPrivate()).isTrue();
     }
 
     @Test

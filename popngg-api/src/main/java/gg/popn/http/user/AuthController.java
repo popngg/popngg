@@ -70,7 +70,7 @@ public class AuthController {
     SuccessResponse<AuthSessionResponse> register(@Valid @RequestBody RegisterRequest request,
                                                   HttpServletResponse response) {
         var result = registerUser.register(new RegisterCommand(
-                request.poptomoId(), request.password(), request.hidden()));
+                request.poptomoId(), request.password(), request.isPrivate()));
         setAccessTokenCookie(response, result.accessToken(), result.expiresInSeconds());
         return SuccessResponse.<AuthSessionResponse>builder()
                 .code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS)
