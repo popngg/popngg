@@ -23,7 +23,11 @@ class PlaydataControllerTest {
         var popclass = new PlaydataQueryResults.Popclass(
                 "0000", "user", 1, 2, 3, List.of());
         var rankings = new PlaydataQueryResults.ChartRankings(1, List.of(), List.of());
-        var progress = new PlaydataQueryResults.Progress(List.of(),
+        var progressRow = new PlaydataQueryResults.ProgressRow(
+                48, 2, 90_000,
+                List.of(new PlaydataQueryResults.CodeCount(1, 2)),
+                List.of(new PlaydataQueryResults.CodeCount(2, 2)));
+        var progress = new PlaydataQueryResults.Progress(List.of(progressRow),
                 new PlaydataQueryResults.ProgressCounts(0, 0, List.of(), List.of()));
         when(useCase.findUserPlaydata("0000")).thenReturn(user);
         when(useCase.count("0000", "level", "rank")).thenReturn(counts);
@@ -41,6 +45,15 @@ class PlaydataControllerTest {
         assertThat(controller.findLegacyPopclassTargets("0000").getData()).isEmpty();
         assertThat(controller.findChartRankings(1, 50).getData()).isSameAs(rankings);
         assertThat(controller.findProgress("0000", "level").getData()).isSameAs(progress);
+        assertThat(controller.findLevelStats("0000").getData()).singleElement()
+                .satisfies(stats -> {
+                    assertThat(stats.level()).isEqualTo(48);
+                    assertThat(stats.total()).isEqualTo(2);
+                    assertThat(stats.medals()).containsExactly(
+                            new PlaydataQueryResults.CodeCount(1, 2));
+                    assertThat(stats.ranks()).containsExactly(
+                            new PlaydataQueryResults.CodeCount(2, 2));
+                });
         assertThat(controller.findUserRecords("0000", null, null, null, null,
                 null, null, null, null, null, "level", "desc", 1, 20)
                 .getData().totalItems()).isZero();

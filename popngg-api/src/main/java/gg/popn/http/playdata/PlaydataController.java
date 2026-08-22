@@ -8,6 +8,7 @@ import gg.popn.domain.common.ResponseMessage;
 import gg.popn.http.common.response.SuccessResponse;
 import gg.popn.http.common.response.PageResponse;
 import gg.popn.http.playdata.response.PopclassTargetResponse;
+import gg.popn.http.playdata.response.LevelStatsResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -70,6 +71,14 @@ public class PlaydataController {
             @RequestParam(defaultValue = "level") String by
     ) {
         return success(queryUseCase.findProgress(poptomoId, by));
+    }
+
+    @GetMapping("/api/v1/users/{poptomoId}/level-stats")
+    public SuccessResponse<List<LevelStatsResponse>> findLevelStats(
+            @PathVariable String poptomoId
+    ) {
+        var progress = queryUseCase.findProgress(poptomoId, "level");
+        return success(progress.rows().stream().map(LevelStatsResponse::from).toList());
     }
 
     @GetMapping("/api/v1/users/{poptomoId}/popn-class-targets/current")
