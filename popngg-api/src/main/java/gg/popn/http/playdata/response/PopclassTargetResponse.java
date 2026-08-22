@@ -21,6 +21,11 @@ public record PopclassTargetResponse(
 
     public static PopclassTargetResponse current(
             PlaydataQueryResults.ChartPlaydata target) {
+        return from(target, target.versionBest());
+    }
+
+    public static PopclassTargetResponse potential(
+            PlaydataQueryResults.ChartPlaydata target) {
         return from(target, target.allTimeBest());
     }
 
@@ -51,16 +56,27 @@ public record PopclassTargetResponse(
             List<PopclassTargetResponse> oldSongs
     ) {
         public static CurrentTargets from(PlaydataQueryResults.Popclass popclass) {
+            return from(popclass, false);
+        }
+
+        public static CurrentTargets potentialFrom(PlaydataQueryResults.Popclass popclass) {
+            return from(popclass, true);
+        }
+
+        private static CurrentTargets from(
+                PlaydataQueryResults.Popclass popclass, boolean potential) {
             return new CurrentTargets(
-                    targets(popclass, "CURRENT_VERSION"),
-                    targets(popclass, "OLD_VERSION"));
+                    targets(popclass, "CURRENT_VERSION", potential),
+                    targets(popclass, "OLD_VERSION", potential));
         }
 
         private static List<PopclassTargetResponse> targets(
-                PlaydataQueryResults.Popclass popclass, String bucket) {
+                PlaydataQueryResults.Popclass popclass, String bucket, boolean potential) {
             return popclass.targets().stream()
                     .filter(target -> bucket.equals(target.popclassBucket()))
-                    .map(PopclassTargetResponse::current)
+                    .map(target -> potential
+                            ? PopclassTargetResponse.potential(target)
+                            : PopclassTargetResponse.current(target))
                     .toList();
         }
     }

@@ -135,16 +135,17 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
         jdbc.update("UPDATE charts SET level = 49 WHERE chart_id = 100");
         jdbc.update("""
                 INSERT INTO playdata
-                    (user_id, chart_id, current_version, version_score, version_rank_code,
+                    (user_id, chart_id, current_version, version_score, version_score_known,
+                     version_rank_code,
                      all_time_score, all_time_score_version, all_time_rank_code, medal_code,
                      created_at, updated_at)
-                VALUES (1, 100, 29, 0, NULL, 90000, 29, 5, 4, NOW(), NOW())
+                VALUES (1, 100, 29, 80000, TRUE, 7, 90000, 29, 5, 4, NOW(), NOW())
                 """);
 
         var result = transaction.execute(status -> adapter.recalculate("0000-0000-0000"));
 
         assertThat(result).isNotNull();
-        assertThat(result.displayPopclass()).isEqualTo(3_045);
+        assertThat(result.displayPopclass()).isEqualTo(2_919);
         assertThat(result.potentialPopclass()).isEqualTo(3_045);
         assertThat(result.legacyPopclass()).isEqualTo(196);
         assertThat(result.newPopclassScale()).isEqualTo(1_000);
@@ -152,7 +153,7 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
                 SELECT display_popclass, potential_popclass, legacy_popclass
                   FROM user_profiles WHERE user_id = 1
                 """))
-                .containsEntry("display_popclass", 3_045)
+                .containsEntry("display_popclass", 2_919)
                 .containsEntry("potential_popclass", 3_045)
                 .containsEntry("legacy_popclass", 196);
     }
@@ -203,12 +204,12 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
 
     private static ImportPlaydataCommand command(int score, int rank, int medal) {
         var row = new ImportPlaydataCommand.Row(100L, null, null, null,
-                null, null, null, score, rank, medal);
+                null, null, null, score, rank, medal, score, true, null);
         return new ImportPlaydataCommand("0000-0000-0000", null, List.of(row));
     }
 
     private static ImportPlaydataCommand.Row row(long chartId, int score, int medal) {
         return new ImportPlaydataCommand.Row(chartId, null, null, null,
-                null, null, null, score, 4, medal);
+                null, null, null, score, 4, medal, score, true, null);
     }
 }

@@ -86,16 +86,17 @@ class PlaydataQueryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
                 """);
         jdbc.update("""
                 INSERT INTO playdata
-                    (user_id, chart_id, current_version, version_score, version_rank_code,
+                    (user_id, chart_id, current_version, version_score, version_score_known,
+                     version_rank_code,
                      all_time_score, all_time_score_version, all_time_rank_code, medal_code,
                      popclass, is_display_popclass_target, popclass_bucket,
                      popclass_bucket_rank, created_at, updated_at)
                 VALUES
-                    (1, 100, 29, 95000, 2, 97000, 28, 1, 2,
+                    (1, 100, 29, 95000, TRUE, 2, 97000, 28, 1, 2,
                      10000, TRUE, 'CURRENT_VERSION', 1, NOW(), NOW()),
-                    (1, 101, 29, 90000, 3, 90000, 29, 3, 4,
+                    (1, 101, 29, 90000, TRUE, 3, 90000, 29, 3, 4,
                      9000, FALSE, NULL, NULL, NOW(), NOW()),
-                    (2, 100, 29, 94000, 3, 99000, 28, 1, 3,
+                    (2, 100, 29, 94000, TRUE, 3, 99000, 28, 1, 3,
                      9800, FALSE, NULL, NULL, NOW(), NOW())
                 """);
     }

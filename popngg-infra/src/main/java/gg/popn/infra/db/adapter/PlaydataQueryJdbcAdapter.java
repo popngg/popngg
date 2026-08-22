@@ -2,6 +2,7 @@ package gg.popn.infra.db.adapter;
 
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
+import gg.popn.application.playdata.exception.ActualPopclassUnavailableException;
 import gg.popn.application.playdata.port.out.PlaydataQueryPort;
 import gg.popn.application.playdata.service.PopclassPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -228,6 +229,20 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
     @Override
     public PlaydataQueryResults.Popclass findPopclass(String poptomoId) {
         UserSummary user = findUser(poptomoId);
+        Integer total = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM playdata p
+                  JOIN charts c ON c.chart_id = p.chart_id
+                 WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                """, Integer.class, user.userId(), currentVersion);
+        Integer unknown = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM playdata p
+                  JOIN charts c ON c.chart_id = p.chart_id
+                 WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                   AND p.version_score_known = FALSE
+                """, Integer.class, user.userId(), currentVersion);
+        if (total == null || total == 0 || unknown == null || unknown > 0) {
+            throw new ActualPopclassUnavailableException(poptomoId);
+        }
         List<PlaydataQueryResults.ChartPlaydata> rows = queryPlaydata("""
                 SELECT p.*, c.level, c.difficulty_code, c.difficulty_label,
                        c.chart_version, c.is_upper,
@@ -244,6 +259,37 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         return new PlaydataQueryResults.Popclass(
                 poptomoId, user.userName(), user.displayPopclass(),
                 user.potentialPopclass(), user.legacyPopclass(), rows);
+    }
+
+    @Override
+    public PlaydataQueryResults.Popclass findPotentialPopclass(String poptomoId) {
+        UserSummary user = findUser(poptomoId);
+        List<PlaydataQueryResults.ChartPlaydata> rows = queryPlaydata("""
+                SELECT p.*, c.level, c.difficulty_code, c.difficulty_label,
+                       c.chart_version, c.is_upper,
+                       s.song_hash, s.genre_name, s.song_name
+                  FROM playdata p
+                  JOIN charts c ON c.chart_id = p.chart_id
+                  JOIN songs s ON s.song_id = c.song_id
+                 WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                """, user.userId(), currentVersion).stream()
+                .map(this::withPotentialPopclass)
+                .toList();
+        Comparator<PlaydataQueryResults.ChartPlaydata> order = Comparator
+                .comparingInt((PlaydataQueryResults.ChartPlaydata row) -> row.popclass()).reversed()
+                .thenComparing(Comparator.comparingInt(
+                        (PlaydataQueryResults.ChartPlaydata row) -> row.allTimeBest().score()).reversed())
+                .thenComparingLong(PlaydataQueryResults.ChartPlaydata::chartId);
+        List<PlaydataQueryResults.ChartPlaydata> current = rankedBucket(rows.stream()
+                .filter(row -> row.chartVersion() == currentVersion)
+                .sorted(order).limit(20).toList(), "CURRENT_VERSION");
+        List<PlaydataQueryResults.ChartPlaydata> old = rankedBucket(rows.stream()
+                .filter(row -> row.chartVersion() < currentVersion)
+                .sorted(order).limit(40).toList(), "OLD_VERSION");
+        return new PlaydataQueryResults.Popclass(
+                poptomoId, user.userName(), user.displayPopclass(),
+                user.potentialPopclass(), user.legacyPopclass(),
+                java.util.stream.Stream.concat(current.stream(), old.stream()).toList());
     }
 
     @Override
@@ -347,6 +393,31 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                 row.difficultyCode(), row.difficultyLabel(), row.level(),
                 row.chartVersion(), row.upper(), row.versionBest(), row.allTimeBest(),
                 row.medal(), value, null, null);
+    }
+
+    private PlaydataQueryResults.ChartPlaydata withPotentialPopclass(
+            PlaydataQueryResults.ChartPlaydata row) {
+        int value = popclassPolicy.newChartPopclass(
+                row.level(), row.allTimeBest().score(), row.medal().code());
+        return copyPopclass(row, value, null, null);
+    }
+
+    private static List<PlaydataQueryResults.ChartPlaydata> rankedBucket(
+            List<PlaydataQueryResults.ChartPlaydata> rows, String bucket) {
+        return java.util.stream.IntStream.range(0, rows.size())
+                .mapToObj(index -> copyPopclass(
+                        rows.get(index), rows.get(index).popclass(), bucket, index + 1))
+                .toList();
+    }
+
+    private static PlaydataQueryResults.ChartPlaydata copyPopclass(
+            PlaydataQueryResults.ChartPlaydata row, int value,
+            String bucket, Integer bucketRank) {
+        return new PlaydataQueryResults.ChartPlaydata(
+                row.chartId(), row.songHash(), row.genreName(), row.songName(),
+                row.difficultyCode(), row.difficultyLabel(), row.level(),
+                row.chartVersion(), row.upper(), row.versionBest(), row.allTimeBest(),
+                row.medal(), value, bucket, bucketRank);
     }
 
     private UserSummary findUser(String poptomoId) {

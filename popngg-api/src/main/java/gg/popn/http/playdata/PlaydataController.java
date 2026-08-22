@@ -89,6 +89,14 @@ public class PlaydataController {
                 queryUseCase.findPopclass(poptomoId)));
     }
 
+    @GetMapping("/api/v1/users/{poptomoId}/popn-class-targets/potential")
+    public SuccessResponse<PopclassTargetResponse.CurrentTargets> findPotentialPopclassTargets(
+            @PathVariable String poptomoId
+    ) {
+        return success(PopclassTargetResponse.CurrentTargets.potentialFrom(
+                queryUseCase.findPotentialPopclass(poptomoId)));
+    }
+
     @GetMapping("/api/v1/users/{poptomoId}/popn-class-targets/legacy")
     public SuccessResponse<List<PopclassTargetResponse>> findLegacyPopclassTargets(
             @PathVariable String poptomoId
