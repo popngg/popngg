@@ -1,6 +1,7 @@
 package gg.popn.application.playdata.service;
 
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
+import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import gg.popn.application.playdata.port.in.PlaydataQueryUseCase;
 import gg.popn.application.playdata.port.out.PlaydataQueryPort;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,34 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
         String normalizedGroup = normalize(groupBy, "LEVEL", "DIFFICULTY");
         String normalizedTarget = normalize(target, "RANK", "MEDAL");
         return port.count(poptomoId, normalizedGroup, normalizedTarget);
+    }
+
+    @Override
+    public PlaydataQueryResults.UserRecords findUserRecords(
+            String poptomoId, FindUserRecordsQuery query) {
+        if (query.page() < 0) throw new IllegalArgumentException("page must not be negative");
+        if (query.size() < 1 || query.size() > 100) {
+            throw new IllegalArgumentException("size must be between 1 and 100");
+        }
+        if (query.levelMin() != null && query.levelMax() != null
+                && query.levelMin() > query.levelMax()) {
+            throw new IllegalArgumentException("levelMin must not exceed levelMax");
+        }
+        if (query.scoreMin() != null && query.scoreMax() != null
+                && query.scoreMin() > query.scoreMax()) {
+            throw new IllegalArgumentException("scoreMin must not exceed scoreMax");
+        }
+        String sort = normalize(query.sort(), "LEVEL", "SCORE");
+        String order = normalize(query.order(), "ASC", "DESC");
+        return port.findUserRecords(poptomoId, new FindUserRecordsQuery(
+                query.keyword(), query.version(), query.levelMin(), query.levelMax(),
+                query.difficulties(), query.medals(), query.ranks(), query.scoreMin(),
+                query.scoreMax(), sort, order, query.page(), query.size()));
+    }
+
+    @Override
+    public PlaydataQueryResults.Progress findProgress(String poptomoId, String by) {
+        return port.findProgress(poptomoId, normalize(by, "LEVEL", "DIFFICULTY"));
     }
 
     @Override

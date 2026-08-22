@@ -1,9 +1,12 @@
 package gg.popn.infra.db.adapter;
 
+import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,7 +31,8 @@ class PlaydataQueryJdbcAdapterTest {
                 """);
         jdbc.execute("""
                 CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_hash VARCHAR(32),
-                  genre_name VARCHAR(255), song_name VARCHAR(255))
+                  genre_name VARCHAR(255), song_name VARCHAR(255), artist_name VARCHAR(255),
+                  version INT, jacket_url VARCHAR(512))
                 """);
         jdbc.execute("""
                 CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT,
@@ -52,6 +56,10 @@ class PlaydataQueryJdbcAdapterTest {
         var user = adapter.findUserPlaydata("0000");
         var levelRank = adapter.count("0000", "LEVEL", "RANK");
         var difficultyMedal = adapter.count("0000", "DIFFICULTY", "MEDAL");
+        var records = adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                "song", null, 40, 50, List.of(2, 3), null, null,
+                90_000, null, "SCORE", "DESC", 0, 20));
+        var progress = adapter.findProgress("0000", "LEVEL");
         var popclass = adapter.findPopclass("0000");
         var legacyTargets = adapter.findLegacyPopclassTargets("0000");
         var rankings = adapter.findChartRankings(100, 2);
@@ -60,6 +68,13 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(user.playdata().getFirst().versionBest().score()).isEqualTo(95_000);
         assertThat(levelRank.groups()).hasSize(2);
         assertThat(difficultyMedal.groups()).hasSize(2);
+        assertThat(records.items()).extracting(row -> row.id())
+                .containsExactly("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        assertThat(records.totalItems()).isEqualTo(2);
+        assertThat(progress.rows()).hasSize(2);
+        assertThat(progress.summary().total()).isEqualTo(2);
+        assertThat(progress.summary().averageScore()).isEqualTo(92_500);
         assertThat(popclass.targets()).hasSize(1);
         assertThat(legacyTargets).extracting(row -> row.chartId())
                 .containsExactly(100L, 101L);
@@ -87,8 +102,10 @@ class PlaydataQueryJdbcAdapterTest {
                 """);
         jdbc.update("""
                 INSERT INTO songs VALUES
-                    (10, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'genre-a', 'song-a'),
-                    (11, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'genre-b', 'song-b')
+                    (10, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'genre-a', 'song-a',
+                     'artist-a', 29, 'jacket-a'),
+                    (11, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'genre-b', 'song-b',
+                     'artist-b', 28, 'jacket-b')
                 """);
         jdbc.update("""
                 INSERT INTO charts VALUES

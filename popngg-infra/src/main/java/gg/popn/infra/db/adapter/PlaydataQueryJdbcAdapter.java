@@ -1,6 +1,7 @@
 package gg.popn.infra.db.adapter;
 
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
+import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import gg.popn.application.playdata.port.out.PlaydataQueryPort;
 import gg.popn.application.playdata.service.PopclassPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Repository
 public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
@@ -73,6 +77,152 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                                 target, rs.getInt("target_code"), rs.getLong("row_count")),
                 user.userId(), currentVersion);
         return new PlaydataQueryResults.Counts(groups);
+    }
+
+    @Override
+    public PlaydataQueryResults.UserRecords findUserRecords(
+            String poptomoId, FindUserRecordsQuery query) {
+        UserSummary user = findUser(poptomoId);
+        var where = new StringBuilder("""
+                 FROM playdata p
+                 JOIN charts c ON c.chart_id = p.chart_id
+                 JOIN songs s ON s.song_id = c.song_id
+                WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                """);
+        List<Object> args = new ArrayList<>();
+        args.add(user.userId());
+        args.add(currentVersion);
+        addLike(where, args, query.keyword());
+        addEquals(where, args, "s.version", query.version());
+        addBound(where, args, "c.level", ">=", query.levelMin());
+        addBound(where, args, "c.level", "<=", query.levelMax());
+        addIn(where, args, "c.difficulty_code", query.difficulties());
+        addIn(where, args, "p.medal_code", query.medals());
+        addIn(where, args, "COALESCE(p.version_rank_code, 13)", query.ranks());
+        addBound(where, args, "p.version_score", ">=", query.scoreMin());
+        addBound(where, args, "p.version_score", "<=", query.scoreMax());
+
+        long total = jdbc.queryForObject("SELECT COUNT(*) " + where, Long.class, args.toArray());
+        String sortColumn = query.sort().equals("SCORE") ? "p.version_score" : "c.level";
+        String sql = """
+                SELECT s.song_hash, s.song_name, s.genre_name, s.jacket_url, s.version,
+                       c.difficulty_code, c.level, p.version_score, p.medal_code,
+                       COALESCE(p.version_rank_code, 13) AS rank_code, p.popclass
+                """ + where + " ORDER BY " + sortColumn + " " + query.order()
+                + ", p.chart_id ASC LIMIT ? OFFSET ?";
+        List<Object> pageArgs = new ArrayList<>(args);
+        pageArgs.add(query.size());
+        pageArgs.add(query.page() * query.size());
+        var items = jdbc.query(sql, (rs, rowNum) -> new PlaydataQueryResults.UserRecord(
+                required(rs.getString("song_hash")), rs.getString("song_name"),
+                rs.getString("genre_name"), required(rs.getString("jacket_url")),
+                rs.getInt("difficulty_code"), rs.getInt("level"),
+                rs.getInt("version_score"), rs.getInt("medal_code"),
+                rs.getInt("rank_code"), rs.getInt("version"), rs.getInt("popclass")),
+                pageArgs.toArray());
+        return new PlaydataQueryResults.UserRecords(
+                items, total, query.page(), query.size());
+    }
+
+    @Override
+    public PlaydataQueryResults.Progress findProgress(String poptomoId, String by) {
+        UserSummary user = findUser(poptomoId);
+        String groupColumn = by.equals("LEVEL") ? "c.level" : "c.difficulty_code";
+        String sql = """
+                SELECT %s AS group_code, p.version_score, p.medal_code,
+                       COALESCE(p.version_rank_code, 13) AS rank_code
+                  FROM playdata p
+                  JOIN charts c ON c.chart_id = p.chart_id
+                 WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                 ORDER BY %s
+                """.formatted(groupColumn, groupColumn);
+        Map<Integer, ProgressAccumulator> rows = new LinkedHashMap<>();
+        ProgressAccumulator summary = new ProgressAccumulator();
+        jdbc.query(sql, rs -> {
+            int key = rs.getInt("group_code");
+            int score = rs.getInt("version_score");
+            int medal = rs.getInt("medal_code");
+            int rank = rs.getInt("rank_code");
+            rows.computeIfAbsent(key, ignored -> new ProgressAccumulator())
+                    .add(score, medal, rank);
+            summary.add(score, medal, rank);
+        }, user.userId(), currentVersion);
+        var resultRows = rows.entrySet().stream()
+                .map(entry -> entry.getValue().toRow(entry.getKey()))
+                .toList();
+        return new PlaydataQueryResults.Progress(resultRows, summary.toCounts());
+    }
+
+    private static void addLike(StringBuilder where, List<Object> args, String keyword) {
+        if (keyword == null || keyword.isBlank()) return;
+        where.append(" AND (s.song_name LIKE ? OR s.genre_name LIKE ? OR s.artist_name LIKE ?)");
+        String value = "%" + keyword.trim() + "%";
+        args.add(value);
+        args.add(value);
+        args.add(value);
+    }
+
+    private static void addEquals(StringBuilder where, List<Object> args,
+                                  String column, Integer value) {
+        if (value == null) return;
+        where.append(" AND ").append(column).append(" = ?");
+        args.add(value);
+    }
+
+    private static void addBound(StringBuilder where, List<Object> args,
+                                 String column, String operator, Integer value) {
+        if (value == null) return;
+        where.append(" AND ").append(column).append(' ').append(operator).append(" ?");
+        args.add(value);
+    }
+
+    private static void addIn(StringBuilder where, List<Object> args,
+                              String column, List<Integer> values) {
+        if (values == null || values.isEmpty()) return;
+        where.append(" AND ").append(column).append(" IN (")
+                .append("?,".repeat(values.size()), 0, values.size() * 2 - 1)
+                .append(')');
+        args.addAll(values);
+    }
+
+    private static String required(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static final class ProgressAccumulator {
+        private int total;
+        private long scoreSum;
+        private final Map<Integer, Integer> medals = new java.util.TreeMap<>();
+        private final Map<Integer, Integer> ranks = new java.util.TreeMap<>();
+
+        void add(int score, int medal, int rank) {
+            total++;
+            scoreSum += score;
+            medals.merge(medal, 1, Integer::sum);
+            ranks.merge(rank, 1, Integer::sum);
+        }
+
+        PlaydataQueryResults.ProgressRow toRow(int key) {
+            return new PlaydataQueryResults.ProgressRow(
+                    key, total, average(), codeCounts(medals), codeCounts(ranks));
+        }
+
+        PlaydataQueryResults.ProgressCounts toCounts() {
+            return new PlaydataQueryResults.ProgressCounts(
+                    total, average(), codeCounts(medals), codeCounts(ranks));
+        }
+
+        private int average() {
+            return total == 0 ? 0 : (int) Math.round((double) scoreSum / total);
+        }
+
+        private static List<PlaydataQueryResults.CodeCount> codeCounts(
+                Map<Integer, Integer> values) {
+            return values.entrySet().stream()
+                    .map(entry -> new PlaydataQueryResults.CodeCount(
+                            entry.getKey(), entry.getValue()))
+                    .toList();
+        }
     }
 
     @Override
