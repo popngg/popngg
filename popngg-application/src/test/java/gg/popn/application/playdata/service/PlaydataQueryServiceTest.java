@@ -1,5 +1,6 @@
 package gg.popn.application.playdata.service;
 
+import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.application.playdata.port.out.PlaydataQueryPort;
 import org.junit.jupiter.api.Test;
@@ -49,5 +50,39 @@ class PlaydataQueryServiceTest {
         assertThat(service.findPopclass("0000")).isSameAs(popclass);
         assertThat(service.findLegacyPopclassTargets("0000")).isEmpty();
         assertThat(service.findChartRankings(1, 10)).isSameAs(rankings);
+    }
+
+    @Test
+    void validatesAndDelegatesFrontendQueries() {
+        var query = new FindUserRecordsQuery(null, 29, 1, 50, null, null, null,
+                0, 100_000, "level", "desc", 0, 20);
+        var records = new PlaydataQueryResults.UserRecords(List.of(), 0, 0, 20);
+        var progress = new PlaydataQueryResults.Progress(List.of(),
+                new PlaydataQueryResults.ProgressCounts(0, 0, List.of(), List.of()));
+        when(port.findUserRecords("0000", new FindUserRecordsQuery(
+                null, 29, 1, 50, null, null, null, 0, 100_000,
+                "LEVEL", "DESC", 0, 20))).thenReturn(records);
+        when(port.findProgress("0000", "DIFFICULTY")).thenReturn(progress);
+
+        assertThat(service.findUserRecords("0000", query)).isSameAs(records);
+        assertThat(service.findProgress("0000", "difficulty")).isSameAs(progress);
+    }
+
+    @Test
+    void rejectsInvalidFrontendQueryRangesAndPagination() {
+        assertThatThrownBy(() -> service.findUserRecords("0000", query(1, 20, 10, 1, 0, 100)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findUserRecords("0000", query(1, 20, 1, 10, 100, 0)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findUserRecords("0000", query(-1, 20, 1, 10, 0, 100)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findUserRecords("0000", query(0, 101, 1, 10, 0, 100)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static FindUserRecordsQuery query(
+            int page, int size, int levelMin, int levelMax, int scoreMin, int scoreMax) {
+        return new FindUserRecordsQuery(null, null, levelMin, levelMax, null, null, null,
+                scoreMin, scoreMax, "level", "desc", page, size);
     }
 }

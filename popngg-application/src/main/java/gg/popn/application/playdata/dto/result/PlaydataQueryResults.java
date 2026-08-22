@@ -44,6 +44,30 @@ public final class PlaydataQueryResults {
     public record Counts(List<GroupCount> groups) {
     }
 
+    public record UserRecords(List<UserRecord> items, long totalItems, int page, int size) {
+    }
+
+    public record UserRecord(
+            String id, String title, String genre, String bannerUrl,
+            int difficulty, int level, int score, int medal, int rank,
+            int version, int popnClass
+    ) {
+    }
+
+    public record Progress(List<ProgressRow> rows, ProgressCounts summary) {
+    }
+
+    public record ProgressRow(int key, int total, int averageScore,
+                              List<CodeCount> medals, List<CodeCount> ranks) {
+    }
+
+    public record ProgressCounts(int total, int averageScore,
+                                 List<CodeCount> medals, List<CodeCount> ranks) {
+    }
+
+    public record CodeCount(int code, int count) {
+    }
+
     public record GroupCount(String group, int groupCode, String groupLabel,
                              String target, int targetCode, long count) {
     }
