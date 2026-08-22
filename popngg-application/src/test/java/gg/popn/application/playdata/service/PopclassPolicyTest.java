@@ -14,6 +14,8 @@ class PopclassPolicyTest {
         assertThat(policy.legacyChartPopclass(48, 90_000, 2)).isEqualTo(9_650);
         assertThat(policy.legacyChartPopclass(48, 90_000, 6)).isEqualTo(9_613);
         assertThat(policy.legacyChartPopclass(1, 0, 9)).isZero();
+        assertThat(policy.legacyChartPopclass(48, 90_000, 8)).isEqualTo(9_558);
+        assertThat(policy.legacyChartPopclass(48, 90_000, 11)).isEqualTo(9_613);
     }
 
     @Test
