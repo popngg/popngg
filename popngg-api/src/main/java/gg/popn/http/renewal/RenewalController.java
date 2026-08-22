@@ -10,7 +10,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*; import java.util.Locale; import java.util.regex.Pattern;
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/renewals")
 public class RenewalController {
-    private static final Pattern UPPER_SUFFIX = Pattern.compile("\\s*\\(UPPER\\)\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern UPPER_SUFFIX = Pattern.compile(
+            "\\s*\\(UPPER\\)\\s*$",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
     private final ImportPlaydataUseCase importPlaydata;
     @Value("${popngg.renewal.collector-version:1}") private int collectorVersion;
     @Value("${popngg.renewal.game:popn29}") private String supportedGame;
