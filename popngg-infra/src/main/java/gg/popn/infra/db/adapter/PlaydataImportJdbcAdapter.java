@@ -110,7 +110,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
             String poptomoId, long userId, Integer requestedDisplayPopclass) {
         List<PopclassRow> rows = jdbc.query("""
                 SELECT p.playdata_id, p.chart_id, p.current_version,
-                       p.version_score, p.all_time_score,
+                       p.version_score, p.version_score_known, p.all_time_score,
                        p.medal_code, c.level, c.chart_version
                   FROM playdata p
                  JOIN charts c ON c.chart_id = p.chart_id
@@ -118,14 +118,15 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                 """, (rs, rowNum) -> new PopclassRow(
                 rs.getLong("playdata_id"), rs.getLong("chart_id"),
                 rs.getInt("current_version"),
-                rs.getInt("version_score"), rs.getInt("all_time_score"),
+                rs.getInt("version_score"), rs.getBoolean("version_score_known"),
+                rs.getInt("all_time_score"),
                 rs.getInt("medal_code"), rs.getInt("level"), rs.getInt("chart_version")),
                 userId);
 
         for (PopclassRow row : rows) {
-            row.displayPopclass = row.playdataVersion == currentVersion
+            row.displayPopclass = row.playdataVersion == currentVersion && row.versionScoreKnown
                     ? popclassPolicy.newChartPopclass(
-                            row.level, row.allTimeScore, row.medalCode)
+                            row.level, row.versionScore, row.medalCode)
                     : 0;
             row.potentialPopclass = popclassPolicy.newChartPopclass(
                     row.level, row.allTimeScore, row.medalCode);
@@ -210,7 +211,12 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         var transition = existing == null || existing.currentVersion() == currentVersion
                 ? null : loadTransition(existing.currentVersion(), currentVersion);
         var decision = upsertPolicy.decide(existing, observed, currentVersion, transition);
-        if (!decision.changed()) return new UpsertOutcome(false, 0);
+        boolean resetVersionKnowledge = existing == null
+                || existing.currentVersion() != currentVersion;
+        if (!decision.changed()) {
+            updateVersionScoreKnowledge(userId, chartId, observed, resetVersionKnowledge);
+            return new UpsertOutcome(false, 0);
+        }
         if (existing == null) {
             insertState(userId, chartId, renewLogId, decision.state());
         } else {
@@ -218,7 +224,18 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         }
         var events = historyPolicy.events(existing, decision.state(), transition);
         appendHistory(userId, chartId, renewLogId, existing, decision.state(), events);
+        updateVersionScoreKnowledge(userId, chartId, observed, resetVersionKnowledge);
         return new UpsertOutcome(true, events.size());
+    }
+
+    private void updateVersionScoreKnowledge(long userId, long chartId,
+                                             PlaydataUpsertPolicy.Observation observed,
+                                             boolean reset) {
+        if (!observed.versionBestScorePresent() && !reset) return;
+        jdbc.update("""
+                UPDATE playdata SET version_score_known = ?
+                 WHERE user_id = ? AND chart_id = ?
+                """, observed.versionBestScorePresent(), userId, chartId);
     }
 
     private PlaydataUpsertPolicy.State loadState(long userId, long chartId) {
@@ -424,6 +441,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         private final long chartId;
         private final int playdataVersion;
         private final int versionScore;
+        private final boolean versionScoreKnown;
         private final int allTimeScore;
         private final int medalCode;
         private final int level;
@@ -433,12 +451,14 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         private int legacyPopclass;
 
         private PopclassRow(long playdataId, long chartId, int playdataVersion,
-                            int versionScore, int allTimeScore, int medalCode,
+                            int versionScore, boolean versionScoreKnown,
+                            int allTimeScore, int medalCode,
                             int level, int chartVersion) {
             this.playdataId = playdataId;
             this.chartId = chartId;
             this.playdataVersion = playdataVersion;
             this.versionScore = versionScore;
+            this.versionScoreKnown = versionScoreKnown;
             this.allTimeScore = allTimeScore;
             this.medalCode = medalCode;
             this.level = level;

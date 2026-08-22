@@ -60,6 +60,11 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
     }
 
     @Override
+    public PlaydataQueryResults.Popclass findPotentialPopclass(String poptomoId) {
+        return port.findPotentialPopclass(poptomoId);
+    }
+
+    @Override
     public java.util.List<PlaydataQueryResults.ChartPlaydata> findLegacyPopclassTargets(
             String poptomoId) {
         return port.findLegacyPopclassTargets(poptomoId);

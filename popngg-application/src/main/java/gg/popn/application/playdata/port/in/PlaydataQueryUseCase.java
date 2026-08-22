@@ -15,6 +15,8 @@ public interface PlaydataQueryUseCase {
 
     PlaydataQueryResults.Popclass findPopclass(String poptomoId);
 
+    PlaydataQueryResults.Popclass findPotentialPopclass(String poptomoId);
+
     java.util.List<PlaydataQueryResults.ChartPlaydata> findLegacyPopclassTargets(
             String poptomoId);
 

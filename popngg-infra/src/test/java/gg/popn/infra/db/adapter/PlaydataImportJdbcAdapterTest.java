@@ -51,6 +51,7 @@ class PlaydataImportJdbcAdapterTest {
         jdbc.execute("""
                 CREATE TABLE playdata(playdata_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                   user_id BIGINT, chart_id BIGINT, current_version INT, version_score INT,
+                  version_score_known BOOLEAN DEFAULT FALSE,
                   version_rank_code INT, all_time_score INT, all_time_score_version INT,
                   all_time_rank_code INT, medal_code INT, popclass INT,
                   is_display_popclass_target BOOLEAN, popclass_bucket VARCHAR(20),
@@ -214,6 +215,19 @@ class PlaydataImportJdbcAdapterTest {
         assertThat(result.historyCount()).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM playdata_history", Integer.class))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void recordsWhetherVersionBestScoreWasProvided() {
+        var known = new ImportPlaydataCommand.Row(100L, null, null, null,
+                null, null, null, 95_000, 2, 3, 90_000, true, null);
+
+        adapter.execute(command(known));
+
+        assertThat(jdbc.queryForObject(
+                "SELECT version_score_known FROM playdata", Boolean.class)).isTrue();
+        assertThat(jdbc.queryForObject(
+                "SELECT version_score FROM playdata", Integer.class)).isEqualTo(90_000);
     }
 
     @Test

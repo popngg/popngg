@@ -1,6 +1,7 @@
 package gg.popn.infra.db.adapter;
 
 import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
+import gg.popn.application.playdata.exception.ActualPopclassUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,6 +43,7 @@ class PlaydataQueryJdbcAdapterTest {
         jdbc.execute("""
                 CREATE TABLE playdata(playdata_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                   user_id BIGINT, chart_id BIGINT, current_version INT, version_score INT,
+                  version_score_known BOOLEAN DEFAULT TRUE,
                   version_rank_code INT, all_time_score INT, all_time_score_version INT,
                   all_time_rank_code INT, medal_code INT, popclass INT,
                   is_display_popclass_target BOOLEAN, popclass_bucket VARCHAR(20),
@@ -61,6 +63,7 @@ class PlaydataQueryJdbcAdapterTest {
                 90_000, null, "SCORE", "DESC", 0, 20));
         var progress = adapter.findProgress("0000", "LEVEL");
         var popclass = adapter.findPopclass("0000");
+        var potential = adapter.findPotentialPopclass("0000");
         var legacyTargets = adapter.findLegacyPopclassTargets("0000");
         var rankings = adapter.findChartRankings(100, 2);
 
@@ -76,6 +79,9 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(progress.summary().total()).isEqualTo(2);
         assertThat(progress.summary().averageScore()).isEqualTo(92_500);
         assertThat(popclass.targets()).hasSize(1);
+        assertThat(potential.targets()).extracting(row -> row.chartId())
+                .containsExactly(100L, 101L);
+        assertThat(potential.targets().getFirst().popclass()).isGreaterThan(0);
         assertThat(legacyTargets).extracting(row -> row.chartId())
                 .containsExactly(100L, 101L);
         assertThat(legacyTargets.getFirst().popclass()).isEqualTo(9_779);
@@ -91,6 +97,15 @@ class PlaydataQueryJdbcAdapterTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> adapter.findChartRankings(999, 10))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsActualTableWhenAnyVersionBestScoreIsUnknown() {
+        jdbc.update("UPDATE playdata SET version_score_known = FALSE WHERE chart_id = 101");
+
+        assertThatThrownBy(() -> adapter.findPopclass("0000"))
+                .isInstanceOf(ActualPopclassUnavailableException.class);
+        assertThat(adapter.findPotentialPopclass("0000").targets()).hasSize(2);
     }
 
     private void seed() {

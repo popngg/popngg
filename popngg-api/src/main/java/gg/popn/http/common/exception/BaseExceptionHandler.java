@@ -7,6 +7,7 @@ import gg.popn.application.auth.exception.AlreadyRegisteredException;
 import gg.popn.http.renewal.RenewalException;
 import gg.popn.application.playdata.service.PlaydataUpsertPolicy.MissingGameVersionTransitionException;
 import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
+import gg.popn.application.playdata.exception.ActualPopclassUnavailableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,14 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class BaseExceptionHandler {
+    @ExceptionHandler(ActualPopclassUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleActualPopclassUnavailable(
+            ActualPopclassUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "code", "ACTUAL_POPN_CLASS_UNAVAILABLE",
+                "message", exception.getMessage()));
+    }
+
     @ExceptionHandler(DuplicatePlaydataRowIdentityException.class)
     public ResponseEntity<Map<String, Object>> handleDuplicatePlaydataRowIdentity(
             DuplicatePlaydataRowIdentityException exception) {

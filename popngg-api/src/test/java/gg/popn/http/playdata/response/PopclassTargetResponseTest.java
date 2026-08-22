@@ -20,9 +20,21 @@ class PopclassTargetResponseTest {
                 new PopclassTargetResponse(
                         "100", "song", "genre",
                         "https://static.popn.gg/hash.png",
-                        4, 48, 97_000, 13, 2, 28, 2_500));
+                        4, 48, 90_000, 13, 13, 29, 2_500));
         assertThat(response.oldSongs()).hasSize(1);
         assertThat(response.oldSongs().getFirst().medal()).isEqualTo(12);
+    }
+
+    @Test
+    void mapsPotentialTargetsFromAllTimeValues() {
+        var response = PopclassTargetResponse.CurrentTargets.potentialFrom(
+                new PlaydataQueryResults.Popclass(
+                        "0000", "user", 1, 2, 3,
+                        List.of(target("CURRENT_VERSION", 1, 3, 5))));
+
+        assertThat(response.newSongs().getFirst().score()).isEqualTo(97_000);
+        assertThat(response.newSongs().getFirst().rank()).isEqualTo(2);
+        assertThat(response.newSongs().getFirst().version()).isEqualTo(28);
     }
 
     @Test
