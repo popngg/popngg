@@ -38,11 +38,17 @@ class RenewalControllerTest {
                 && command.rows().getFirst().versionBestScore() == 98000
                 && command.rows().getFirst().artistName().equals("artist")
                 && command.profile().displayPopclass() == 170_130)))
-                .thenReturn(new ImportPlaydataResult(7,1,1,1,1,0,List.of()));
+                .thenReturn(new ImportPlaydataResult(7,1,1,1,1,0,
+                        1,2,3,40,List.of()));
 
         var response = controller.renew(principal(), request);
 
         assertThat(response.getData().renewLogId()).isEqualTo(7);
+        assertThat(response.getData().summary().chartsScanned()).isEqualTo(1);
+        assertThat(response.getData().summary().recordsAdded()).isEqualTo(1);
+        assertThat(response.getData().summary().medalsImproved()).isEqualTo(2);
+        assertThat(response.getData().summary().scoresImproved()).isEqualTo(3);
+        assertThat(response.getData().summary().popnClassDelta()).isEqualTo(40);
     }
 
     @Test

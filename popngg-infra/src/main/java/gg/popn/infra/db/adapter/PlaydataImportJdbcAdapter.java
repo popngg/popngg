@@ -66,12 +66,16 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Transactional
     public ImportPlaydataResult execute(ImportPlaydataCommand command) {
         long userId = findUserId(command.poptomoId());
+        Integer previousDisplayPopclass = findDisplayPopclass(userId);
         updateProfile(userId, command.profile());
         long renewLogId = startLog(command, userId);
         var unmatched = new ArrayList<ImportPlaydataResult.UnmatchedRow>();
         int matched = 0;
         int updated = 0;
         int histories = 0;
+        int recordsAdded = 0;
+        int medalsImproved = 0;
+        int scoresImproved = 0;
         try {
             for (int index = 0; index < command.rows().size(); index++) {
                 Match match = match(command.rows().get(index));
@@ -85,15 +89,21 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                         updated++;
                     }
                     histories += outcome.historyCount();
+                    if (outcome.recordAdded()) recordsAdded++;
+                    if (outcome.medalImproved()) medalsImproved++;
+                    if (outcome.scoreImproved()) scoresImproved++;
                 }
             }
-            rebuildPopclass(command.poptomoId(), userId,
+            var popclass = rebuildPopclass(command.poptomoId(), userId,
                     command.profile() == null ? null : command.profile().displayPopclass());
+            Integer popnClassDelta = previousDisplayPopclass == null
+                    ? null : popclass.displayPopclass() - previousDisplayPopclass;
             String status = unmatched.isEmpty() ? "SUCCESS" : matched == 0 ? "FAILED" : "PARTIAL_SUCCESS";
             finishLog(renewLogId, status, matched, updated,
                     unmatched.isEmpty() ? null : summarize(unmatched));
             return new ImportPlaydataResult(renewLogId, command.rows().size(), matched,
-                    updated, histories, unmatched.size(), List.copyOf(unmatched));
+                    updated, histories, unmatched.size(), recordsAdded, medalsImproved,
+                    scoresImproved, popnClassDelta, List.copyOf(unmatched));
         } catch (RuntimeException exception) {
             finishFailureLog(renewLogId, matched, exception.getClass().getSimpleName());
             throw exception;
@@ -215,7 +225,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                 || existing.currentVersion() != currentVersion;
         if (!decision.changed()) {
             updateVersionScoreKnowledge(userId, chartId, observed, resetVersionKnowledge);
-            return new UpsertOutcome(false, 0);
+            return new UpsertOutcome(false, 0, false, false, false);
         }
         if (existing == null) {
             insertState(userId, chartId, renewLogId, decision.state());
@@ -225,7 +235,13 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         var events = historyPolicy.events(existing, decision.state(), transition);
         appendHistory(userId, chartId, renewLogId, existing, decision.state(), events);
         updateVersionScoreKnowledge(userId, chartId, observed, resetVersionKnowledge);
-        return new UpsertOutcome(true, events.size());
+        boolean recordAdded = existing == null;
+        boolean medalImproved = existing != null
+                && decision.state().medalCode() < existing.medalCode();
+        boolean scoreImproved = existing != null
+                && (decision.state().versionScore() > existing.versionScore()
+                || decision.state().allTimeScore() > existing.allTimeScore());
+        return new UpsertOutcome(true, events.size(), recordAdded, medalImproved, scoreImproved);
     }
 
     private void updateVersionScoreKnowledge(long userId, long chartId,
@@ -318,6 +334,13 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
             throw new IllegalArgumentException("Authenticated user was not found.");
         }
         return ids.getFirst();
+    }
+
+    private Integer findDisplayPopclass(long userId) {
+        List<Integer> values = jdbc.query(
+                "SELECT display_popclass FROM user_profiles WHERE user_id = ?",
+                (rs, rowNum) -> (Integer) rs.getObject(1), userId);
+        return values.isEmpty() ? null : values.getFirst();
     }
 
     private void updateProfile(long userId, ImportPlaydataCommand.ProfileSnapshot profile) {
@@ -433,7 +456,8 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     private record Match(Long chartId, String reason) {
     }
 
-    private record UpsertOutcome(boolean updated, int historyCount) {
+    private record UpsertOutcome(boolean updated, int historyCount, boolean recordAdded,
+                                 boolean medalImproved, boolean scoreImproved) {
     }
 
     private static final class PopclassRow {
