@@ -46,8 +46,9 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                 WHERE cf.song_id = s.song_id
                   AND cf.is_deleted = FALSE
                   AND (:chartVersion IS NULL OR cf.chart_version = :chartVersion)
-                  AND (:level IS NULL OR cf.level = :level)
-                  AND (:difficulty IS NULL OR cf.difficulty_code = :difficulty)
+                  AND (:levelMin IS NULL OR cf.level >= :levelMin)
+                  AND (:levelMax IS NULL OR cf.level <= :levelMax)
+                  AND (:hasDifficulties = FALSE OR cf.difficulty_code IN (:difficulties))
                   AND (:isUpper IS NULL OR cf.is_upper = :isUpper)
                   AND (:hasStrictGauge IS NULL OR cf.has_strict_gauge = :hasStrictGauge)
                   AND (:hasStrictJudgement IS NULL OR cf.has_strict_judgement = :hasStrictJudgement)
@@ -70,9 +71,11 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
 
         List<SongRow> songs = jdbcTemplate.query("""
                         SELECT s.song_id, s.song_hash, s.genre_name, s.song_name,
-                               s.artist_name, s.version, s.jacket_url
-                        """ + SONG_FILTERS + """
-                        ORDER BY s.song_id
+                               s.artist_name, s.version, s.jacket_url,
+                               (SELECT MAX(cs.level) FROM charts cs
+                                 WHERE cs.song_id = s.song_id AND cs.is_deleted = FALSE) AS max_level
+                        """ + SONG_FILTERS + " ORDER BY " + orderBy(query) + """
+                        , s.song_id ASC
                         LIMIT :limit OFFSET :offset
                         """,
                 parameters,
@@ -99,12 +102,13 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                         FROM charts c
                         WHERE c.song_id IN (:songIds)
                           AND c.is_deleted = FALSE
-                          AND (:chartVersion IS NULL OR c.chart_version = :chartVersion)
-                          AND (:level IS NULL OR c.level = :level)
-                          AND (:difficulty IS NULL OR c.difficulty_code = :difficulty)
-                          AND (:isUpper IS NULL OR c.is_upper = :isUpper)
-                          AND (:hasStrictGauge IS NULL OR c.has_strict_gauge = :hasStrictGauge)
-                          AND (:hasStrictJudgement IS NULL OR c.has_strict_judgement = :hasStrictJudgement)
+                          AND (:includeAllCharts = TRUE OR :chartVersion IS NULL OR c.chart_version = :chartVersion)
+                          AND (:includeAllCharts = TRUE OR :levelMin IS NULL OR c.level >= :levelMin)
+                          AND (:includeAllCharts = TRUE OR :levelMax IS NULL OR c.level <= :levelMax)
+                          AND (:includeAllCharts = TRUE OR :hasDifficulties = FALSE OR c.difficulty_code IN (:difficulties))
+                          AND (:includeAllCharts = TRUE OR :isUpper IS NULL OR c.is_upper = :isUpper)
+                          AND (:includeAllCharts = TRUE OR :hasStrictGauge IS NULL OR c.has_strict_gauge = :hasStrictGauge)
+                          AND (:includeAllCharts = TRUE OR :hasStrictJudgement IS NULL OR c.has_strict_judgement = :hasStrictJudgement)
                         ORDER BY c.song_id, c.difficulty_code, c.is_upper
                         """,
                 parameters,
@@ -202,11 +206,27 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                 .addValue("keywordPattern", normalizedKeyword == null ? null : "%" + normalizedKeyword + "%")
                 .addValue("version", query.version())
                 .addValue("chartVersion", query.chartVersion())
-                .addValue("level", query.level())
-                .addValue("difficulty", query.difficulty())
+                .addValue("levelMin", query.levelMin())
+                .addValue("levelMax", query.levelMax())
+                .addValue("hasDifficulties", query.difficulties() != null)
+                .addValue("difficulties", query.difficulties() == null
+                        ? List.of(-1) : query.difficulties())
                 .addValue("isUpper", query.isUpper())
                 .addValue("hasStrictGauge", query.hasStrictGauge())
-                .addValue("hasStrictJudgement", query.hasStrictJudgement());
+                .addValue("hasStrictJudgement", query.hasStrictJudgement())
+                .addValue("includeAllCharts", query.includeAllCharts());
+    }
+
+    private String orderBy(FindSongsQuery query) {
+        String column = switch (query.sort()) {
+            case VERSION -> "s.version";
+            case TITLE -> "s.song_name";
+            case GENRE -> "s.genre_name";
+            case MAX_LEVEL -> "max_level";
+            case SONG_ID -> "s.song_id";
+        };
+        String direction = query.order() == FindSongsQuery.Order.ASC ? "ASC" : "DESC";
+        return column + " " + direction;
     }
 
     private record SongRow(

@@ -9,11 +9,11 @@ import java.util.List;
 public record FrontendChartResponse(
         long songId,
         String songHash,
-        String genreName,
-        String songName,
-        String artistName,
+        String genre,
+        String title,
+        String artist,
         int version,
-        String jacketUrl,
+        String bannerUrl,
         boolean isUpper,
         List<FrontendChartSummaryResponse> charts
 ) {
