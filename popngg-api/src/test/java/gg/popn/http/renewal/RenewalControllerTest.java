@@ -36,12 +36,29 @@ class RenewalControllerTest {
                 List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
         when(useCase.importPlaydata(argThat(command -> command.rows().getFirst().chartId() == 42
                 && command.rows().getFirst().versionBestScore() == 98000
-                && command.rows().getFirst().artistName().equals("artist"))))
+                && command.rows().getFirst().artistName().equals("artist")
+                && command.profile().displayPopclass() == 170_130)))
                 .thenReturn(new ImportPlaydataResult(7,1,1,1,1,0,List.of()));
 
         var response = controller.renew(principal(), request);
 
         assertThat(response.getData().renewLogId()).isEqualTo(7);
+    }
+
+    @Test
+    void rejectsInvalidProfilePopnClass() {
+        ReflectionTestUtils.setField(controller, "collectorVersion", 1);
+        ReflectionTestUtils.setField(controller, "supportedGame", "popn29");
+        var chart = new RenewalRequest.Chart();
+        chart.setChartId("42"); chart.setTitle("song"); chart.setGenre("genre");
+        chart.setDifficulty("ex"); chart.setMedal("c"); chart.setRank("s"); chart.setScore(99000);
+        var request = new RenewalRequest(1, "popn29", Instant.now(),
+                new RenewalRequest.Profile("1234-5678-9012", "name", null, "unknown"),
+                List.of(chart), List.of(), new RenewalRequest.Stats(1,1,1,1,1,1,100));
+
+        assertThatThrownBy(() -> controller.renew(principal(), request))
+                .isInstanceOf(RenewalException.class)
+                .extracting("code").isEqualTo("INVALID_POPN_CLASS");
     }
 
     @Test

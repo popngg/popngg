@@ -30,7 +30,7 @@ public record ImportPlaydataRequest(
     ) {
         ImportPlaydataCommand.ProfileSnapshot toCommand() {
             return new ImportPlaydataCommand.ProfileSnapshot(userName, characterName,
-                    normalCredit, extraCredit, timePlay10Credit, timePlay16Credit);
+                    normalCredit, extraCredit, timePlay10Credit, timePlay16Credit, null);
         }
     }
 

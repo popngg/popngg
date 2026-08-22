@@ -13,7 +13,8 @@ public record ImportPlaydataCommand(
             Integer normalCredit,
             Integer extraCredit,
             Integer timePlay10Credit,
-            Integer timePlay16Credit
+            Integer timePlay16Credit,
+            Integer displayPopclass
     ) {
     }
 

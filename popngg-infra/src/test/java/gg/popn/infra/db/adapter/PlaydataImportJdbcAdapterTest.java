@@ -87,7 +87,8 @@ class PlaydataImportJdbcAdapterTest {
 
     @Test
     void matchesAllSupportedIdentitiesAndUpdatesProfileSnapshot() {
-        var profile = new ImportPlaydataCommand.ProfileSnapshot("new", "character", 1, 2, 3, 4);
+        var profile = new ImportPlaydataCommand.ProfileSnapshot(
+                "new", "character", 1, 2, 3, 4, 177_000);
         var rows = List.of(
                 row(100L, null, null, null, null, null, null),
                 row(null, 10L, 3, false, null, null, null),
@@ -109,6 +110,8 @@ class PlaydataImportJdbcAdapterTest {
                 .isEqualTo("SUCCESS");
         assertThat(jdbc.queryForObject("SELECT normal_credit FROM user_profiles", Integer.class))
                 .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT display_popclass FROM user_profiles", Integer.class))
+                .isEqualTo(177_000);
     }
 
     @Test
