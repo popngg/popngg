@@ -20,7 +20,7 @@ class PopclassTargetResponseTest {
                 new PopclassTargetResponse(
                         "100", "song", "genre",
                         "https://static.popn.gg/hash.png",
-                        4, 48, 90_000, 13, 13, 29, 2_500));
+                        4, 48, 97_000, 13, 2, 28, 2_500));
         assertThat(response.oldSongs()).hasSize(1);
         assertThat(response.oldSongs().getFirst().medal()).isEqualTo(12);
     }

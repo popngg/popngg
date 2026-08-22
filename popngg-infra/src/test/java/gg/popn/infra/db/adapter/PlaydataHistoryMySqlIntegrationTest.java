@@ -138,7 +138,7 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
                     (user_id, chart_id, current_version, version_score, version_rank_code,
                      all_time_score, all_time_score_version, all_time_rank_code, medal_code,
                      created_at, updated_at)
-                VALUES (1, 100, 29, 90000, 5, 90000, 29, 5, 4, NOW(), NOW())
+                VALUES (1, 100, 29, 0, NULL, 90000, 29, 5, 4, NOW(), NOW())
                 """);
 
         var result = transaction.execute(status -> adapter.recalculate("0000-0000-0000"));

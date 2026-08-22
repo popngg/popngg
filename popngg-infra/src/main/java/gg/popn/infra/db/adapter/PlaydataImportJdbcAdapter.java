@@ -121,9 +121,9 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                 userId);
 
         for (PopclassRow row : rows) {
-            row.versionPopclass = row.playdataVersion == currentVersion
+            row.displayPopclass = row.playdataVersion == currentVersion
                     ? popclassPolicy.newChartPopclass(
-                            row.level, row.versionScore, row.medalCode)
+                            row.level, row.allTimeScore, row.medalCode)
                     : 0;
             row.potentialPopclass = popclassPolicy.newChartPopclass(
                     row.level, row.allTimeScore, row.medalCode);
@@ -134,13 +134,13 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                        SET popclass = ?, is_display_popclass_target = FALSE,
                            popclass_bucket = NULL, popclass_bucket_rank = NULL
                      WHERE playdata_id = ?
-                    """, row.versionPopclass, row.playdataId);
+                    """, row.displayPopclass, row.playdataId);
         }
 
         Comparator<PopclassRow> displayOrder = Comparator
-                .comparingInt((PopclassRow row) -> row.versionPopclass).reversed()
+                .comparingInt((PopclassRow row) -> row.displayPopclass).reversed()
                 .thenComparing(Comparator.comparingInt(
-                        (PopclassRow row) -> row.versionScore).reversed())
+                        (PopclassRow row) -> row.allTimeScore).reversed())
                 .thenComparingLong(row -> row.chartId);
         List<PopclassRow> current = rows.stream()
                 .filter(row -> row.chartVersion == currentVersion)
@@ -153,7 +153,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
 
         int displayPopclass = popclassPolicy.newUserPopclass(
                 java.util.stream.Stream.concat(current.stream(), old.stream())
-                        .map(row -> row.versionPopclass).toList());
+                        .map(row -> row.displayPopclass).toList());
         Comparator<PopclassRow> potentialOrder = Comparator.comparingInt(
                         (PopclassRow row) -> row.potentialPopclass).reversed()
                         .thenComparing(Comparator.comparingInt(
@@ -424,7 +424,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         private final int medalCode;
         private final int level;
         private final int chartVersion;
-        private int versionPopclass;
+        private int displayPopclass;
         private int potentialPopclass;
         private int legacyPopclass;
 

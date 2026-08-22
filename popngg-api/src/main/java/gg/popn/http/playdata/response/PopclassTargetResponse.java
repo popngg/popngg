@@ -21,7 +21,7 @@ public record PopclassTargetResponse(
 
     public static PopclassTargetResponse current(
             PlaydataQueryResults.ChartPlaydata target) {
-        return from(target, target.versionBest());
+        return from(target, target.allTimeBest());
     }
 
     public static PopclassTargetResponse legacy(
