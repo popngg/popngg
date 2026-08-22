@@ -67,10 +67,24 @@ services:
         (migration_key, applied_at) VALUES
         ('popn29-v3-catalog-20260821', CURRENT_TIMESTAMP)";
         fi
+        if ! mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg
+        --batch --skip-column-names
+        --execute="SELECT 1 FROM catalog_data_migrations
+        WHERE migration_key = 'popn29-v4-levels-20260822'" | grep -qx 1; then
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg < /popn29-level-changes.sql;
+        mysql --protocol=TCP --host=mysql --user=popngg
+        --default-character-set=utf8mb4 --show-warnings popngg
+        --execute="INSERT INTO catalog_data_migrations
+        (migration_key, applied_at) VALUES
+        ('popn29-v4-levels-20260822', CURRENT_TIMESTAMP)";
+        fi
     volumes:
       - ./sql/apply_confirmed_deletions.sql:/confirmed-deletions.sql:ro
       - ./sql/apply_existing_song_updates.sql:/existing-song-updates.sql:ro
       - ./sql/apply_new_songs_and_charts.sql:/new-songs-and-charts.sql:ro
+      - ./sql/apply_popn29_level_changes.sql:/popn29-level-changes.sql:ro
     depends_on:
       mysql:
         condition: service_healthy
