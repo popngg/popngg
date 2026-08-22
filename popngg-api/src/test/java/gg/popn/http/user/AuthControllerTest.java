@@ -1,5 +1,6 @@
 package gg.popn.http.user;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gg.popn.application.auth.dto.response.LoginResult;
 import gg.popn.application.auth.port.in.AuthenticateUserUseCase;
 import gg.popn.application.auth.port.in.PasswordResetUseCase;
@@ -57,10 +58,21 @@ class AuthControllerTest {
 
         var response = controller.register(new RegisterRequest(ID, PASSWORD, true), servletResponse);
 
-        assertThat(response.getData().profile().poptomoId()).isEqualTo(ID);
+        assertThat(response.getData().poptomoId()).isEqualTo(ID);
+        assertThat(response.getData().userName()).isEqualTo("name");
+        assertThat(response.getData().avatarUrl()).isNull();
         verify(register).register(argThat(command -> command.hidden() && command.poptomoId().equals(ID)));
         assertThat(servletResponse.getHeader("Set-Cookie"))
                 .contains("access_token=token", "SameSite=None");
+    }
+
+    @Test
+    void registerRequestAcceptsFrontendIsPrivateField() throws Exception {
+        var request = new ObjectMapper().readValue("""
+                {"poptomoId":"1234-5678-9012","password":"%s","isPrivate":true}
+                """.formatted(PASSWORD), RegisterRequest.class);
+
+        assertThat(request.hidden()).isTrue();
     }
 
     @Test

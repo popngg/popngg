@@ -7,7 +7,6 @@ import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.http.user.request.LoginRequest;
 import gg.popn.http.user.request.PasswordResetConfirmRequest;
 import gg.popn.http.user.request.PasswordResetRequest;
-import gg.popn.http.user.response.LoginResponse;
 import gg.popn.http.user.response.AuthSessionResponse;
 import gg.popn.infra.security.CustomUserPrincipal;
 import gg.popn.application.auth.dto.command.LoginCommand;
@@ -68,14 +67,16 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    SuccessResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request,
-                                            HttpServletResponse response) {
+    SuccessResponse<AuthSessionResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                  HttpServletResponse response) {
         var result = registerUser.register(new RegisterCommand(
                 request.poptomoId(), request.password(), request.hidden()));
         setAccessTokenCookie(response, result.accessToken(), result.expiresInSeconds());
-        return SuccessResponse.<LoginResponse>builder()
+        return SuccessResponse.<AuthSessionResponse>builder()
                 .code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS)
-                .data(LoginResponse.from(result)).build();
+                .data(new AuthSessionResponse(
+                        result.profile().poptomoId(), result.profile().userName(), null))
+                .build();
     }
 
     private void setAccessTokenCookie(HttpServletResponse response, String token, long maxAge) {
