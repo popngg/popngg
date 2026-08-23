@@ -49,7 +49,8 @@ public class PopclassPolicy {
         return Math.toIntExact(pointHundredths / 60L * 10L);
     }
 
-    private long newChartPointHundredths(int level, int score, int medalCode) {
+    /** Official per-chart point value after the formula's eight-decimal and point-hundredth floors. */
+    public long newChartPointHundredths(int level, int score, int medalCode) {
         if (score < 50_000) return 0;
         long numerator = level * (3_750L * level + newMedalBonus(medalCode)
                 + score - 50_000L);

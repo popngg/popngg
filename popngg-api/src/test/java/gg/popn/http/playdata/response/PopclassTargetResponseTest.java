@@ -4,6 +4,7 @@ import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,13 +17,14 @@ class PopclassTargetResponseTest {
                 new PlaydataQueryResults.Popclass(
                         "0000", "user", 1, 2, 3, List.of(current, old)));
 
-        assertThat(response.newSongs()).containsExactly(
-                new PopclassTargetResponse(
-                        "100", "song", "genre",
-                        "https://static.popn.gg/hash.png",
-                        4, 48, 90_000, 13, 13, 29, 2_500));
+        assertThat(response.newSongs()).hasSize(1);
+        assertThat(response.newSongs().getFirst().id()).isEqualTo("100");
+        assertThat(response.newSongs().getFirst().score()).isEqualTo(90_000);
         assertThat(response.oldSongs()).hasSize(1);
         assertThat(response.oldSongs().getFirst().medal()).isEqualTo(12);
+        assertThat(response.newSongs().getFirst().value()
+                .add(response.oldSongs().getFirst().value()))
+                .isEqualByComparingTo("556");
     }
 
     @Test
@@ -38,6 +40,21 @@ class PopclassTargetResponseTest {
     }
 
     @Test
+    void makesFrontendSumMatchOfficialFinalFloor() {
+        var first = target("CURRENT_VERSION", 1, 6, 5, 49, 89_752);
+        var second = target("OLD_VERSION", 1, 7, 5, 49, 89_446);
+        var response = PopclassTargetResponse.CurrentTargets.potentialFrom(
+                new PlaydataQueryResults.Popclass(
+                        "0000", "user", 1, 2, 3, List.of(first, second)));
+
+        BigDecimal apiSum = response.newSongs().getFirst().value()
+                .add(response.oldSongs().getFirst().value());
+        assertThat(apiSum).isEqualByComparingTo("595");
+        assertThat(apiSum.divide(BigDecimal.valueOf(100)))
+                .isEqualByComparingTo("5.95");
+    }
+
+    @Test
     void mapsLegacyTargetsFromAllTimeValuesWithoutRemappingMedalCodes() {
         var response = PopclassTargetResponse.legacy(
                 target(null, null, 10, 5));
@@ -50,10 +67,16 @@ class PopclassTargetResponseTest {
 
     private static PlaydataQueryResults.ChartPlaydata target(
             String bucket, Integer bucketRank, int medal, Integer versionRank) {
+        return target(bucket, bucketRank, medal, versionRank, 48, 97_000);
+    }
+
+    private static PlaydataQueryResults.ChartPlaydata target(
+            String bucket, Integer bucketRank, int medal, Integer versionRank,
+            int level, int allTimeScore) {
         return new PlaydataQueryResults.ChartPlaydata(
-                100, "hash", "genre", "song", 4, "EX", 48, 29, false,
+                100, "hash", "genre", "song", 4, "EX", level, 29, false,
                 new PlaydataQueryResults.Best(90_000, versionRank, 29),
-                new PlaydataQueryResults.Best(97_000, 2, 28),
+                new PlaydataQueryResults.Best(allTimeScore, 2, 28),
                 new PlaydataQueryResults.Medal(medal),
                 2_500, bucket, bucketRank);
     }
