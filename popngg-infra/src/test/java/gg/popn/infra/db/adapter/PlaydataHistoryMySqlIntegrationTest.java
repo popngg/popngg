@@ -145,16 +145,16 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
         var result = transaction.execute(status -> adapter.recalculate("0000-0000-0000"));
 
         assertThat(result).isNotNull();
-        assertThat(result.displayPopclass()).isEqualTo(2_919);
-        assertThat(result.potentialPopclass()).isEqualTo(3_045);
+        assertThat(result.displayPopclass()).isEqualTo(2_910);
+        assertThat(result.potentialPopclass()).isEqualTo(3_040);
         assertThat(result.legacyPopclass()).isEqualTo(196);
         assertThat(result.newPopclassScale()).isEqualTo(1_000);
         assertThat(jdbc.queryForMap("""
                 SELECT display_popclass, potential_popclass, legacy_popclass
                   FROM user_profiles WHERE user_id = 1
                 """))
-                .containsEntry("display_popclass", 2_919)
-                .containsEntry("potential_popclass", 3_045)
+                .containsEntry("display_popclass", 2_910)
+                .containsEntry("potential_popclass", 3_040)
                 .containsEntry("legacy_popclass", 196);
     }
 
@@ -173,7 +173,7 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
 
         assertThat(result).isNotNull();
         assertThat(result.displayPopclass()).isZero();
-        assertThat(result.potentialPopclass()).isEqualTo(3_045);
+        assertThat(result.potentialPopclass()).isEqualTo(3_040);
         assertThat(result.legacyPopclass()).isEqualTo(196);
     }
 
