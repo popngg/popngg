@@ -159,7 +159,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                 .filter(row -> row.chartVersion == currentVersion)
                 .sorted(displayOrder).limit(20).toList();
         List<PopclassRow> old = rows.stream()
-                .filter(row -> row.chartVersion < currentVersion)
+                .filter(row -> row.chartVersion != currentVersion)
                 .sorted(displayOrder).limit(40).toList();
         mark(current, "CURRENT_VERSION");
         mark(old, "OLD_VERSION");
@@ -178,7 +178,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                 .filter(row -> row.chartVersion == currentVersion)
                 .sorted(potentialOrder).limit(20).toList();
         List<PopclassRow> potentialOld = rows.stream()
-                .filter(row -> row.chartVersion < currentVersion)
+                .filter(row -> row.chartVersion != currentVersion)
                 .sorted(potentialOrder).limit(40).toList();
         int potentialPopclass = popclassPolicy.newUserPopclass(
                 java.util.stream.Stream.concat(potentialCurrent.stream(), potentialOld.stream())

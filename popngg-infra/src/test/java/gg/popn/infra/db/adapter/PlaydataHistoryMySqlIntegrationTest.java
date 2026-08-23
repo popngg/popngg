@@ -85,7 +85,7 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
         rows.add(row(100, 90_000, 2));
         for (int index = 1; index < 70; index++) {
             long chartId = 100L + index;
-            int chartVersion = index <= 24 ? 29 : 28;
+            int chartVersion = index <= 24 ? 29 : 99;
             boolean upper = index == 24;
             jdbc.update("""
                     INSERT INTO charts

@@ -120,12 +120,12 @@ class PlaydataQueryJdbcAdapterTest {
                     (10, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'genre-a', 'song-a',
                      'artist-a', 29, 'jacket-a'),
                     (11, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'genre-b', 'song-b',
-                     'artist-b', 28, 'jacket-b')
+                     'artist-b', 99, 'jacket-b')
                 """);
         jdbc.update("""
                 INSERT INTO charts VALUES
                     (100, 10, 3, 'EX', 48, 29, FALSE, FALSE),
-                    (101, 11, 2, 'H', 42, 28, FALSE, FALSE)
+                    (101, 11, 2, 'H', 42, 99, FALSE, FALSE)
                 """);
         jdbc.update("""
                 INSERT INTO playdata

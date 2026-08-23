@@ -284,7 +284,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                 .filter(row -> row.chartVersion() == currentVersion)
                 .sorted(order).limit(20).toList(), "CURRENT_VERSION");
         List<PlaydataQueryResults.ChartPlaydata> old = rankedBucket(rows.stream()
-                .filter(row -> row.chartVersion() < currentVersion)
+                .filter(row -> row.chartVersion() != currentVersion)
                 .sorted(order).limit(40).toList(), "OLD_VERSION");
         return new PlaydataQueryResults.Popclass(
                 poptomoId, user.userName(), user.displayPopclass(),
