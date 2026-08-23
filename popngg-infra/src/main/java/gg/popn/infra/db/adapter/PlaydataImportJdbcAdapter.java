@@ -167,7 +167,10 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         int calculatedDisplayPopclass = popclassPolicy.newUserPopclassFromCharts(
                 java.util.stream.Stream.concat(current.stream(), old.stream())
                         .map(row -> new PopclassPolicy.NewChartScore(
-                                row.level, row.versionScore, row.medalCode)).toList());
+                                row.level,
+                                row.playdataVersion == currentVersion && row.versionScoreKnown
+                                        ? row.versionScore : 0,
+                                row.medalCode)).toList());
         int displayPopclass = requestedDisplayPopclass == null
                 ? calculatedDisplayPopclass : requestedDisplayPopclass;
         Comparator<PopclassRow> potentialOrder = Comparator.comparingInt(
