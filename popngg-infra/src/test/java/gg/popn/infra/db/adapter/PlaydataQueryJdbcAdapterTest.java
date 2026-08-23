@@ -75,9 +75,15 @@ class PlaydataQueryJdbcAdapterTest {
                 .containsExactly("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
         assertThat(records.totalItems()).isEqualTo(2);
+        assertThat(records.items()).extracting(row -> row.score())
+                .containsExactly(97_000, 90_000);
+        assertThat(records.items()).extracting(row -> row.rank())
+                .containsExactly(1, 3);
         assertThat(progress.rows()).hasSize(2);
         assertThat(progress.summary().total()).isEqualTo(2);
-        assertThat(progress.summary().averageScore()).isEqualTo(92_500);
+        assertThat(progress.summary().averageScore()).isEqualTo(93_500);
+        assertThat(progress.summary().ranks()).extracting(row -> row.code())
+                .containsExactlyInAnyOrder(1, 3);
         assertThat(popclass.targets()).hasSize(1);
         assertThat(potential.targets()).extracting(row -> row.chartId())
                 .containsExactly(100L, 101L);

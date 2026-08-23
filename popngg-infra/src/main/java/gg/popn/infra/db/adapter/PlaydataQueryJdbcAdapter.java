@@ -99,16 +99,16 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         addBound(where, args, "c.level", "<=", query.levelMax());
         addIn(where, args, "c.difficulty_code", query.difficulties());
         addIn(where, args, "p.medal_code", query.medals());
-        addIn(where, args, "COALESCE(p.version_rank_code, 13)", query.ranks());
-        addBound(where, args, "p.version_score", ">=", query.scoreMin());
-        addBound(where, args, "p.version_score", "<=", query.scoreMax());
+        addIn(where, args, "COALESCE(p.all_time_rank_code, 13)", query.ranks());
+        addBound(where, args, "p.all_time_score", ">=", query.scoreMin());
+        addBound(where, args, "p.all_time_score", "<=", query.scoreMax());
 
         long total = jdbc.queryForObject("SELECT COUNT(*) " + where, Long.class, args.toArray());
-        String sortColumn = query.sort().equals("SCORE") ? "p.version_score" : "c.level";
+        String sortColumn = query.sort().equals("SCORE") ? "p.all_time_score" : "c.level";
         String sql = """
                 SELECT s.song_hash, s.song_name, s.genre_name, s.jacket_url, s.version,
-                       c.difficulty_code, c.level, p.version_score, p.medal_code,
-                       COALESCE(p.version_rank_code, 13) AS rank_code, p.popclass
+                       c.difficulty_code, c.level, p.all_time_score, p.medal_code,
+                       COALESCE(p.all_time_rank_code, 13) AS rank_code, p.popclass
                 """ + where + " ORDER BY " + sortColumn + " " + query.order()
                 + ", p.chart_id ASC LIMIT ? OFFSET ?";
         List<Object> pageArgs = new ArrayList<>(args);
@@ -118,7 +118,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                 required(rs.getString("song_hash")), rs.getString("song_name"),
                 rs.getString("genre_name"), required(rs.getString("jacket_url")),
                 rs.getInt("difficulty_code"), rs.getInt("level"),
-                rs.getInt("version_score"), rs.getInt("medal_code"),
+                rs.getInt("all_time_score"), rs.getInt("medal_code"),
                 rs.getInt("rank_code"), rs.getInt("version"), rs.getInt("popclass")),
                 pageArgs.toArray());
         return new PlaydataQueryResults.UserRecords(
@@ -130,8 +130,8 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         UserSummary user = findUser(poptomoId);
         String groupColumn = by.equals("LEVEL") ? "c.level" : "c.difficulty_code";
         String sql = """
-                SELECT %s AS group_code, p.version_score, p.medal_code,
-                       COALESCE(p.version_rank_code, 13) AS rank_code
+                SELECT %s AS group_code, p.all_time_score, p.medal_code,
+                       COALESCE(p.all_time_rank_code, 13) AS rank_code
                   FROM playdata p
                   JOIN charts c ON c.chart_id = p.chart_id
                  WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
@@ -141,7 +141,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         ProgressAccumulator summary = new ProgressAccumulator();
         jdbc.query(sql, rs -> {
             int key = rs.getInt("group_code");
-            int score = rs.getInt("version_score");
+            int score = rs.getInt("all_time_score");
             int medal = rs.getInt("medal_code");
             int rank = rs.getInt("rank_code");
             rows.computeIfAbsent(key, ignored -> new ProgressAccumulator())
