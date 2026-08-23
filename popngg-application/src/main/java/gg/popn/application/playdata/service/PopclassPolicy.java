@@ -8,7 +8,8 @@ import java.util.Collection;
 public class PopclassPolicy {
     private static final int USER_POPCLASS_DIVISOR = 50;
     public static final int NEW_POPCLASS_SCALE = 1_000;
-    private static final long NEW_POPCLASS_DIVISOR = 3_880_000L;
+    private static final long NEW_POPCLASS_DIVISOR = 3_881_250L;
+    private static final long FORMULA_PRECISION = 100_000_000L;
 
     public int legacyChartPopclass(int level, int score, int medalCode) {
         int medalBonus = medalCode >= 1 && medalCode <= 4
@@ -33,25 +34,41 @@ public class PopclassPolicy {
      * clear medal bonus.
      */
     public int newChartPopclass(int level, int score, int medalCode) {
-        if (score < 50_000) return 0;
-        long value = level * (3_750L * level + newMedalBonus(medalCode)
-                + score - 50_000L);
-        return Math.toIntExact(value * NEW_POPCLASS_SCALE / NEW_POPCLASS_DIVISOR);
+        return Math.toIntExact(newChartPointHundredths(level, score, medalCode)
+                * NEW_POPCLASS_SCALE / 6_000L);
     }
 
     public int newUserPopclass(Collection<Integer> chartPopclasses) {
         return Math.toIntExact(chartPopclasses.stream().mapToLong(Integer::longValue).sum());
     }
 
+    /** Calculates the official total after each chart is floored to hundredths of a point. */
+    public int newUserPopclassFromCharts(Collection<NewChartScore> charts) {
+        long pointHundredths = charts.stream().mapToLong(chart ->
+                newChartPointHundredths(chart.level(), chart.score(), chart.medalCode())).sum();
+        return Math.toIntExact(pointHundredths / 60L * 10L);
+    }
+
+    private long newChartPointHundredths(int level, int score, int medalCode) {
+        if (score < 50_000) return 0;
+        long numerator = level * (3_750L * level + newMedalBonus(medalCode)
+                + score - 50_000L);
+        long valueAtEightDecimals = numerator * FORMULA_PRECISION / NEW_POPCLASS_DIVISOR;
+        return valueAtEightDecimals * 6_000L / FORMULA_PRECISION;
+    }
+
     private static int newMedalBonus(int medalCode) {
         return switch (medalCode) {
-            case 1 -> 21_400;
-            case 2, 3, 4 -> 17_400;
-            case 5, 6, 7 -> 12_400;
-            case 11 -> 6_200;
-            case 12 -> 9_300;
+            case 1 -> 21_250;
+            case 2, 3, 4 -> 17_500;
+            case 5, 6, 7 -> 12_500;
+            case 11 -> 6_250;
+            case 12 -> 10_000;
             default -> 0;
         };
+    }
+
+    public record NewChartScore(int level, int score, int medalCode) {
     }
 
     /** @deprecated use {@link #legacyChartPopclass(int, int, int)}. */

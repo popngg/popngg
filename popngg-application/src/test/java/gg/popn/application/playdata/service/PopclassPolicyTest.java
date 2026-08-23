@@ -41,4 +41,13 @@ class PopclassPolicyTest {
                 .isGreaterThan(policy.newChartPopclass(50, 92_000, 11));
         assertThat(policy.newUserPopclass(List.of(2_982, 3_117))).isEqualTo(6_099);
     }
+
+    @Test
+    void appliesOfficialPerChartAndFinalFlooringOrder() {
+        var charts = List.of(
+                new PopclassPolicy.NewChartScore(49, 89_752, 6),
+                new PopclassPolicy.NewChartScore(49, 89_446, 7));
+
+        assertThat(policy.newUserPopclassFromCharts(charts)).isEqualTo(5_950);
+    }
 }

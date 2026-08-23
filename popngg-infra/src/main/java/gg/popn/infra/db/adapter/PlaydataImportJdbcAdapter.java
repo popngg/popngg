@@ -164,9 +164,10 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         mark(current, "CURRENT_VERSION");
         mark(old, "OLD_VERSION");
 
-        int calculatedDisplayPopclass = popclassPolicy.newUserPopclass(
+        int calculatedDisplayPopclass = popclassPolicy.newUserPopclassFromCharts(
                 java.util.stream.Stream.concat(current.stream(), old.stream())
-                        .map(row -> row.displayPopclass).toList());
+                        .map(row -> new PopclassPolicy.NewChartScore(
+                                row.level, row.versionScore, row.medalCode)).toList());
         int displayPopclass = requestedDisplayPopclass == null
                 ? calculatedDisplayPopclass : requestedDisplayPopclass;
         Comparator<PopclassRow> potentialOrder = Comparator.comparingInt(
@@ -180,9 +181,10 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
         List<PopclassRow> potentialOld = rows.stream()
                 .filter(row -> row.chartVersion != currentVersion)
                 .sorted(potentialOrder).limit(40).toList();
-        int potentialPopclass = popclassPolicy.newUserPopclass(
+        int potentialPopclass = popclassPolicy.newUserPopclassFromCharts(
                 java.util.stream.Stream.concat(potentialCurrent.stream(), potentialOld.stream())
-                        .map(row -> row.potentialPopclass).toList());
+                        .map(row -> new PopclassPolicy.NewChartScore(
+                                row.level, row.allTimeScore, row.medalCode)).toList());
         int legacyPopclass = popclassPolicy.legacyUserPopclass(rows.stream()
                 .sorted(Comparator.comparingInt(
                         (PopclassRow row) -> row.legacyPopclass).reversed()
