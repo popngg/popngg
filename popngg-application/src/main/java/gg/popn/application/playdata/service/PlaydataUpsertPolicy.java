@@ -13,7 +13,12 @@ public class PlaydataUpsertPolicy {
 
         int versionScore;
         Integer versionRank;
-        if (existing.currentVersion() == currentVersion) {
+        if (observed.versionBestScorePresent()) {
+            // The collector reads this value directly from the official version-best table.
+            // It is authoritative even when an older, polluted value is higher.
+            versionScore = observed.effectiveVersionScore();
+            versionRank = observed.rankCode();
+        } else if (existing.currentVersion() == currentVersion) {
             versionScore = Math.max(existing.versionScore(), observed.effectiveVersionScore());
             versionRank = observed.effectiveVersionScore() >= existing.versionScore()
                     ? observed.rankCode() : existing.versionRankCode();

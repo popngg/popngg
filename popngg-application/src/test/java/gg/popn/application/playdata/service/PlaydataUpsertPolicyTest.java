@@ -43,6 +43,18 @@ class PlaydataUpsertPolicyTest {
     }
 
     @Test
+    void authoritativeVersionBestReplacesHigherPollutedScore() {
+        var existing = state(29, 91_490, 5, 91_490, 29, 5, 6);
+        var observed = new PlaydataUpsertPolicy.Observation(
+                91_490, 5, 6, 90_727, true);
+
+        var decision = policy.decide(existing, observed, 29, null);
+
+        assertThat(decision.state()).isEqualTo(state(
+                29, 90_727, 5, 91_490, 29, 5, 6));
+    }
+
+    @Test
     void requiresApprovedTransitionWhenVersionChanges() {
         var existing = state(28, 95_000, 1, 97_000, 28, 1, 2);
 
