@@ -231,13 +231,15 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         UserSummary user = findUser(poptomoId);
         Integer total = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM playdata p
-                  JOIN charts c ON c.chart_id = p.chart_id
+                 JOIN charts c ON c.chart_id = p.chart_id
                  WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                   AND p.is_display_popclass_target = TRUE
                 """, Integer.class, user.userId(), currentVersion);
         Integer unknown = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM playdata p
                   JOIN charts c ON c.chart_id = p.chart_id
                  WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                   AND p.is_display_popclass_target = TRUE
                    AND p.version_score_known = FALSE
                 """, Integer.class, user.userId(), currentVersion);
         if (total == null || total == 0 || unknown == null || unknown > 0) {

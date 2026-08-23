@@ -106,12 +106,19 @@ class PlaydataQueryJdbcAdapterTest {
     }
 
     @Test
-    void rejectsActualTableWhenAnyVersionBestScoreIsUnknown() {
+    void ignoresUnknownVersionBestScoresOutsideActualTargets() {
         jdbc.update("UPDATE playdata SET version_score_known = FALSE WHERE chart_id = 101");
+
+        assertThat(adapter.findPopclass("0000").targets()).hasSize(1);
+        assertThat(adapter.findPotentialPopclass("0000").targets()).hasSize(2);
+    }
+
+    @Test
+    void rejectsActualTableWhenATargetVersionBestScoreIsUnknown() {
+        jdbc.update("UPDATE playdata SET version_score_known = FALSE WHERE chart_id = 100");
 
         assertThatThrownBy(() -> adapter.findPopclass("0000"))
                 .isInstanceOf(ActualPopclassUnavailableException.class);
-        assertThat(adapter.findPotentialPopclass("0000").targets()).hasSize(2);
     }
 
     private void seed() {
