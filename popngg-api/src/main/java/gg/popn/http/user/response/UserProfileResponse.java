@@ -27,8 +27,8 @@ public record UserProfileResponse(
                 result.comment(),
                 result.profileImageUrl(),
                 result.hidden(),
-                result.displayPopclass(),
-                result.potentialPopclass(),
+                result.displayPopclass() / 10,
+                result.potentialPopclass() / 10,
                 result.legacyPopclass(),
                 new CreditsResponse(
                         result.normalCredit(),

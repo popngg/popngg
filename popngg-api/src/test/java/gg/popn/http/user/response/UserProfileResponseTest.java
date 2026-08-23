@@ -11,6 +11,28 @@ import org.junit.jupiter.api.Test;
 class UserProfileResponseTest {
 
     @Test
+    void convertsOnlyCurrentFormulaPopclassesToApiScale() {
+        var response = UserProfileResponse.from(new UserProfileResult(
+                "1234-5678-9012",
+                "ポップ",
+                "character",
+                "comment",
+                null,
+                false,
+                170_130,
+                175_000,
+                9_803,
+                1,
+                2,
+                3,
+                4));
+
+        assertThat(response.displayPopclass()).isEqualTo(17_013);
+        assertThat(response.potentialPopclass()).isEqualTo(17_500);
+        assertThat(response.legacyPopclass()).isEqualTo(9_803);
+    }
+
+    @Test
     void publicResponseContainsNoAccountSecrets() throws Exception {
         var response = UserProfileResponse.from(new UserProfileResult(
                 "1234-5678-9012",
