@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.security.KeyFactory;
 import java.security.Signature;
@@ -64,6 +65,7 @@ public class DiscordInteractionController {
     private final Map<String, PreDraft> preDrafts = new ConcurrentHashMap<>();
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
 
+    @Autowired
     public DiscordInteractionController(ObjectMapper mapper, CreateSongUseCase createSong,
             FindSongsUseCase findSongs,
             JacketStoragePort jacketStorage,

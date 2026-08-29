@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,6 +27,7 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
     private final HttpClient client;
     private final String apiBase;
 
+    @Autowired
     public DiscordCommandRegistrar(
             @Value("${popngg.discord.application-id:}") String applicationId,
             @Value("${popngg.discord.guild-id:}") String guildId,
