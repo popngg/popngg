@@ -9,6 +9,7 @@ import gg.popn.application.playdata.service.PlaydataUpsertPolicy.MissingGameVers
 import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.exception.ActualPopclassUnavailableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -119,6 +120,14 @@ public class BaseExceptionHandler {
                 .body(Map.of(
                         "code", "UNAUTHORIZED",
                         "message", "Invalid credentials"));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(Map.of(
+                "code", "METHOD_NOT_ALLOWED",
+                "message", "The HTTP method is not supported for this endpoint."));
     }
 
     @ExceptionHandler(BaseException.class)
