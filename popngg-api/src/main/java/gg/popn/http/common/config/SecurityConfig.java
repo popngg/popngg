@@ -38,6 +38,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/registrations/**",
                                 "/api/v1/auth/password-reset/**",
+                                "/api/v1/discord/interactions",
                                 "/actuator/health",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"

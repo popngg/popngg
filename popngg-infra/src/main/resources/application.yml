@@ -16,3 +16,16 @@ popngg:
   renewal:
     collector-version: ${RENEWAL_COLLECTOR_VERSION:1}
     game: ${RENEWAL_GAME:popn29}
+  discord:
+    application-id: ${DISCORD_APPLICATION_ID:}
+    public-key: ${DISCORD_PUBLIC_KEY:}
+    bot-token: ${DISCORD_BOT_TOKEN:}
+    guild-id: ${DISCORD_GUILD_ID:}
+    admin-role-id: ${DISCORD_ADMIN_ROLE_ID:}
+    admin-webhook-url: ${DISCORD_ADMIN_WEBHOOK_URL:}
+    error-webhook-url: ${DISCORD_ERROR_WEBHOOK_URL:}
+  jacket:
+    region: ${AWS_REGION:ap-northeast-2}
+    bucket: ${AWS_S3_BUCKET:}
+    prefix: ${AWS_S3_JACKET_PREFIX:static}
+    public-url: ${AWS_CLOUDFRONT_URL:https://static.popn.gg}

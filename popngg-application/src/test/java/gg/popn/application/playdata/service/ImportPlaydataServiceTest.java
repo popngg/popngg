@@ -4,6 +4,8 @@ import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
+import gg.popn.application.playdata.port.out.UnknownChartNotifier;
+import gg.popn.application.playdata.port.out.UnknownChartReportPort;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,10 +15,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 class ImportPlaydataServiceTest {
     private final PlaydataImportPort port = mock(PlaydataImportPort.class);
-    private final ImportPlaydataService service = new ImportPlaydataService(port);
+    private final UnknownChartNotifier notifier = mock(UnknownChartNotifier.class);
+    private final UnknownChartReportPort reportPort = mock(UnknownChartReportPort.class);
+    private final ImportPlaydataService service = new ImportPlaydataService(port, notifier, reportPort);
 
     @Test
     void validatesAndDelegatesImport() {
@@ -75,6 +80,36 @@ class ImportPlaydataServiceTest {
         when(port.execute(command)).thenReturn(expected);
 
         assertThat(service.importPlaydata(command)).isEqualTo(expected);
+    }
+
+    @Test
+    void notifiesOnlyRowsThatWereNotFound() {
+        var first = row(null, null, 3, false, null, "new song", "genre", 1, 1, 1);
+        var second = row(null, null, 4, false, null, "ambiguous", "genre", 1, 1, 1);
+        var command = new ImportPlaydataCommand("id", null, List.of(first, second));
+        var result = new ImportPlaydataResult(9, 2, 0, 0, 0, 2,
+                List.of(new ImportPlaydataResult.UnmatchedRow(0, "CHART_NOT_FOUND"),
+                        new ImportPlaydataResult.UnmatchedRow(1, "AMBIGUOUS_CHART")));
+        when(port.execute(command)).thenReturn(result);
+
+        service.importPlaydata(command);
+
+        verify(notifier).notifyUnknownCharts(9, "id", List.of(first));
+        verify(reportPort).record(9, "id", List.of(first));
+    }
+
+    @Test
+    void doesNotNotifyWhenEveryChartMatches() {
+        var command = command(row(1L, null, null, null, null, null, null, 1, 1, 1));
+        when(port.execute(command)).thenReturn(
+                new ImportPlaydataResult(1, 1, 1, 0, 0, 0, List.of()));
+
+        service.importPlaydata(command);
+
+        verify(notifier, never()).notifyUnknownCharts(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyList());
     }
 
     private static ImportPlaydataCommand.Row rowWithArtist(String artist) {

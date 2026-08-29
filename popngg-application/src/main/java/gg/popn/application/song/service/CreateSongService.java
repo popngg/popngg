@@ -44,7 +44,7 @@ public class CreateSongService implements CreateSongUseCase {
                 SongHashGenerator.generate(command.genreName(), command.songName(),
                         command.artistName(), command.version(), isUpperSong),
                 command.genreName(), command.songName(), command.artistName(), command.version(),
-                command.jacketUrl(), command.charts());
+                command.jacketUrl(), command.createdAt(), command.charts());
         return createSongPort.create(normalizedCommand);
     }
 }

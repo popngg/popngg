@@ -21,10 +21,22 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
+import gg.popn.application.common.ErrorNotificationPort;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @RestControllerAdvice
 public class BaseExceptionHandler {
+    private final ErrorNotificationPort errorNotification;
+
+    public BaseExceptionHandler() {
+        this((method, path, exceptionType, traceId) -> {});
+    }
+
+    @Autowired
+    public BaseExceptionHandler(ErrorNotificationPort errorNotification) {
+        this.errorNotification = errorNotification;
+    }
     @ExceptionHandler(ActualPopclassUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleActualPopclassUnavailable(
             ActualPopclassUnavailableException exception) {
@@ -113,6 +125,7 @@ public class BaseExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleBaseException(HttpServletRequest request, BaseException e) {
         if (e.getCode().getStatusCode() >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
             log.error("BaseException occurred. requestURL={}, method={}", request.getRequestURL(), request.getMethod(), e);
+            notifyError(request, e);
         }
         else {
             log.info("BaseException occurred. requestURL={}, method={}", request.getRequestURL(), request.getMethod(), e);
@@ -121,6 +134,20 @@ public class BaseExceptionHandler {
         return ResponseEntity
                 .status(e.getCode().getStatusCode())
                 .body(toMap(e));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleUnexpected(
+            HttpServletRequest request, Exception exception) {
+        log.error("Unexpected server error. path={}, method={}", request.getRequestURI(), request.getMethod(), exception);
+        notifyError(request, exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "code", "INTERNAL_SERVER_ERROR", "message", "An unexpected server error occurred."));
+    }
+
+    private void notifyError(HttpServletRequest request, Exception exception) {
+        errorNotification.notifyServerError(request.getMethod(), request.getRequestURI(),
+                exception.getClass().getSimpleName(), request.getHeader("X-Request-Id"));
     }
 
     private static Map<String, Object> toMap(BaseException e) {

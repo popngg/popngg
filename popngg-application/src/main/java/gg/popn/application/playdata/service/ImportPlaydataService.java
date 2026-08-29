@@ -5,15 +5,20 @@ import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.port.in.ImportPlaydataUseCase;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
+import gg.popn.application.playdata.port.out.UnknownChartNotifier;
+import gg.popn.application.playdata.port.out.UnknownChartReportPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ImportPlaydataService implements ImportPlaydataUseCase {
     private final PlaydataImportPort importPort;
+    private final UnknownChartNotifier unknownChartNotifier;
+    private final UnknownChartReportPort unknownChartReportPort;
 
     @Override
     public ImportPlaydataResult importPlaydata(ImportPlaydataCommand command) {
@@ -34,7 +39,17 @@ public class ImportPlaydataService implements ImportPlaydataUseCase {
                 throw new DuplicatePlaydataRowIdentityException();
             }
         }
-        return importPort.execute(command);
+        ImportPlaydataResult result = importPort.execute(command);
+        List<ImportPlaydataCommand.Row> unknownRows = result.unmatched().stream()
+                .filter(row -> "CHART_NOT_FOUND".equals(row.reason()))
+                .map(row -> command.rows().get(row.rowIndex()))
+                .toList();
+        if (!unknownRows.isEmpty()) {
+            unknownChartReportPort.record(result.renewLogId(), command.poptomoId(), unknownRows);
+            unknownChartNotifier.notifyUnknownCharts(
+                    result.renewLogId(), command.poptomoId(), unknownRows);
+        }
+        return result;
     }
 
     private static void validateRow(ImportPlaydataCommand.Row row) {

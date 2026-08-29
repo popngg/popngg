@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.Timestamp;
+import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
@@ -36,7 +38,7 @@ public class CreateSongJdbcAdapter implements CreateSongPort {
                             created_at, updated_at
                         ) VALUES (
                             :songHash, :genreName, :songName, :artistName, :version, :jacketUrl,
-                            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                            :createdAt, CURRENT_TIMESTAMP
                         )
                         """,
                 new MapSqlParameterSource()
@@ -45,7 +47,9 @@ public class CreateSongJdbcAdapter implements CreateSongPort {
                         .addValue("songName", command.songName())
                         .addValue("artistName", command.artistName())
                         .addValue("version", command.version())
-                        .addValue("jacketUrl", command.jacketUrl()),
+                        .addValue("jacketUrl", command.jacketUrl())
+                        .addValue("createdAt", Timestamp.from(command.createdAt() == null
+                                ? Instant.now() : command.createdAt())),
                 keyHolder,
                 new String[]{"song_id"});
         return keyHolder.getKey().longValue();
