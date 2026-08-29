@@ -6,6 +6,7 @@ import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.port.out.UnknownChartNotifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,7 @@ public class DiscordUnknownChartNotifier implements UnknownChartNotifier {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
+    @Autowired
     public DiscordUnknownChartNotifier(
             @Value("${popngg.discord.admin-webhook-url:}") String webhookUrl,
             ObjectMapper objectMapper) {
