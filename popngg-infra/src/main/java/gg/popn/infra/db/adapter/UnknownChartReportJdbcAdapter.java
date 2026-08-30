@@ -34,9 +34,39 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
         return jdbc.query("""
                 SELECT report_id,song_name,genre_name,artist_name,occurrences,last_seen_at
                 FROM unknown_chart_reports
-                WHERE resolved=FALSE ORDER BY last_seen_at DESC LIMIT ?
+                WHERE resolved=FALSE
+                  AND NOT EXISTS (
+                      SELECT 1 FROM songs s
+                       WHERE s.song_name=unknown_chart_reports.song_name
+                         AND s.genre_name=unknown_chart_reports.genre_name)
+                ORDER BY last_seen_at DESC LIMIT ?
                 """, (rs, n) -> new Report(rs.getLong("report_id"), rs.getString("song_name"),
                 rs.getString("genre_name"), rs.getString("artist_name"), rs.getInt("occurrences"),
                 rs.getTimestamp("last_seen_at").toInstant()), limit);
+    }
+
+    @Override
+    public List<IncompleteReport> findRecentIncomplete(int limit) {
+        return jdbc.query("""
+                SELECT r.report_id, MIN(s.song_id) AS song_id, r.song_name, r.genre_name,
+                       r.artist_name AS reported_artist_name,
+                       MIN(COALESCE(s.artist_name,'')) AS registered_artist_name,
+                       r.occurrences, r.last_seen_at
+                  FROM unknown_chart_reports r
+                  JOIN songs s ON s.song_name=r.song_name AND s.genre_name=r.genre_name
+                 WHERE r.resolved=FALSE
+                 GROUP BY r.report_id,r.song_name,r.genre_name,r.artist_name,
+                          r.occurrences,r.last_seen_at
+                HAVING COUNT(DISTINCT s.song_id)=1
+                 ORDER BY r.last_seen_at DESC LIMIT ?
+                """, (rs, n) -> new IncompleteReport(rs.getLong("report_id"), rs.getLong("song_id"),
+                rs.getString("song_name"), rs.getString("genre_name"),
+                rs.getString("reported_artist_name"), rs.getString("registered_artist_name"),
+                rs.getInt("occurrences"), rs.getTimestamp("last_seen_at").toInstant()), limit);
+    }
+
+    @Override
+    public void resolve(long reportId) {
+        jdbc.update("UPDATE unknown_chart_reports SET resolved=TRUE WHERE report_id=?", reportId);
     }
 }

@@ -176,6 +176,38 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void opensExistingSongEditorForIncompleteMetadataAndResolvesAfterUpdate() throws Exception {
+        when(unknown.findRecentIncomplete(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.IncompleteReport(8, 12, "old", "genre",
+                        "reported artist", "", 2, Instant.now())));
+        assertThat(content(call(command("정보보완목록"))))
+                .contains("정보 보완", "reported artist", "old");
+
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "incomplete_song_select")
+                .putArray("values").add("8");
+        Map<?, ?> modal = body(call(selection));
+        Map<?, ?> modalData = (Map<?, ?>) modal.get("data");
+        assertThat(modalData.toString()).contains("곡 수정", "old", "genre");
+
+        ObjectNode submit = interaction(5);
+        submit.withObject("data").put("custom_id", modalData.get("custom_id").toString());
+        ArrayNode fields = submit.withObject("data").putArray("components");
+        modalValue(fields, "song", "old"); modalValue(fields, "genre", "genre");
+        modalValue(fields, "artist", "reported artist"); modalValue(fields, "version", "29");
+        modalValue(fields, "charts", "N:30,H:42,EX:48");
+        Map<?, ?> preview = body(call(submit));
+        String confirmId = firstButtonId(preview);
+
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", confirmId);
+        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        verify(unknown).resolve(8);
+    }
+
+    @Test
     void preservesOmittedSongUpdateValuesAndRejectsCreationWithoutCharts() throws Exception {
         SongDetailView before = detail("old", "old-hash");
         when(findDetail.findSong(12)).thenReturn(before);

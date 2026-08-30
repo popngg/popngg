@@ -21,6 +21,10 @@ class UnknownChartReportJdbcAdapterTest {
                 first_seen_at TIMESTAMP,last_seen_at TIMESTAMP,
                 UNIQUE(song_name,genre_name,artist_name))
                 """);
+        jdbc.execute("""
+                CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_name VARCHAR(255),
+                genre_name VARCHAR(255), artist_name VARCHAR(255))
+                """);
         var adapter = new UnknownChartReportJdbcAdapter(jdbc);
         var row = new ImportPlaydataCommand.Row(null, null, 4, false, null,
                 "song", "genre", 1, 1, 1, null, false, null);
@@ -30,5 +34,38 @@ class UnknownChartReportJdbcAdapterTest {
         var reports = adapter.findRecentUnresolved(10);
         assertThat(reports).hasSize(1);
         assertThat(reports.getFirst().occurrences()).isEqualTo(2);
+    }
+
+    @Test
+    void separatesIncompleteMetadataFromTrulyUnknownSongsAndResolvesIt() {
+        JdbcTemplate jdbc = new JdbcTemplate(new DriverManagerDataSource(
+                "jdbc:h2:mem:incomplete-" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", ""));
+        jdbc.execute("""
+                CREATE TABLE unknown_chart_reports(report_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                renew_log_id BIGINT,poptomo_id VARCHAR(64),song_name VARCHAR(255),genre_name VARCHAR(255),
+                artist_name VARCHAR(255),difficulty_code INT,is_upper BOOLEAN,occurrences INT,resolved BOOLEAN,
+                first_seen_at TIMESTAMP,last_seen_at TIMESTAMP,
+                UNIQUE(song_name,genre_name,artist_name))
+                """);
+        jdbc.execute("""
+                CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_name VARCHAR(255),
+                genre_name VARCHAR(255), artist_name VARCHAR(255))
+                """);
+        jdbc.update("INSERT INTO songs VALUES (7,'song','genre',NULL)");
+        var adapter = new UnknownChartReportJdbcAdapter(jdbc);
+        var row = new ImportPlaydataCommand.Row(null, null, 4, false, null,
+                "song", "genre", 1, 1, 1, null, false, "reported artist");
+        adapter.record(1, "user", List.of(row));
+
+        assertThat(adapter.findRecentUnresolved(10)).isEmpty();
+        assertThat(adapter.findRecentIncomplete(10)).singleElement().satisfies(report -> {
+            assertThat(report.songId()).isEqualTo(7);
+            assertThat(report.registeredArtistName()).isEmpty();
+            assertThat(report.reportedArtistName()).isEqualTo("reported artist");
+        });
+
+        long reportId = adapter.findRecentIncomplete(10).getFirst().reportId();
+        adapter.resolve(reportId);
+        assertThat(adapter.findRecentIncomplete(10)).isEmpty();
     }
 }

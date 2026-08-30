@@ -414,12 +414,13 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                     """, row.songHash(), row.difficultyCode(), row.upper());
         }
         if (row.artistName() != null && !row.artistName().isBlank()) {
-            return unique("""
+            Match exact = unique("""
                     SELECT c.chart_id FROM charts c JOIN songs s ON s.song_id = c.song_id
                      WHERE s.song_name = ? AND s.genre_name = ? AND s.artist_name = ?
                        AND c.difficulty_code = ? AND c.is_upper = ? AND c.is_deleted = FALSE
                     """, row.songName(), row.genreName(), row.artistName(),
                     row.difficultyCode(), row.upper());
+            if (exact.chartId() != null || !"CHART_NOT_FOUND".equals(exact.reason())) return exact;
         }
         return unique("""
                 SELECT c.chart_id FROM charts c JOIN songs s ON s.song_id = c.song_id
