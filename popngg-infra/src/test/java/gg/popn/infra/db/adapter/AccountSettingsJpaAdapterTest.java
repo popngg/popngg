@@ -10,6 +10,7 @@ import gg.popn.application.account.exception.AccountSettingsException;
 import gg.popn.infra.db.entity.UserEntity;
 import gg.popn.infra.db.entity.UserProfileEntity;
 import gg.popn.infra.db.jpa.UserJpaRepository;
+import gg.popn.infra.db.jpa.UserProfileJpaRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +18,8 @@ import org.junit.jupiter.api.Test;
 
 class AccountSettingsJpaAdapterTest {
     private final UserJpaRepository users = mock(UserJpaRepository.class);
-    private final AccountSettingsJpaAdapter adapter = new AccountSettingsJpaAdapter(users);
+    private final UserProfileJpaRepository profiles = mock(UserProfileJpaRepository.class);
+    private final AccountSettingsJpaAdapter adapter = new AccountSettingsJpaAdapter(users, profiles);
     private UserEntity user;
 
     @BeforeEach
@@ -40,7 +42,7 @@ class AccountSettingsJpaAdapterTest {
         assertThat(updated.comment()).isEqualTo("new");
         assertThat(updated.privateProfile()).isTrue();
         assertThat(updated.avatarUrl()).isNull();
-        verify(users).save(user);
+        verify(profiles).save(user.getProfile());
     }
 
     @Test
