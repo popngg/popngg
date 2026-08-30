@@ -86,6 +86,19 @@ class DiscordInteractionControllerTest {
         Map<?, ?> modalData = (Map<?, ?>) modal.get("data");
         assertThat((List<?>) modalData.get("components")).hasSize(5);
         assertThat(modalData.toString()).contains("new song", "new genre", "artist");
+
+        ObjectNode submit = interaction(5);
+        submit.withObject("data").put("custom_id", modalData.get("custom_id").toString());
+        ArrayNode fields = submit.withObject("data").putArray("components");
+        modalUpload(fields, "jacket", "unknown-file");
+        modalModernValue(fields, "date", "2026-08-30");
+        modalModernValue(fields, "metadata", "{\"songName\":\"new song\",\"genreName\":\"new genre\",\"artistName\":\"artist\",\"upper\":false}");
+        modalModernValue(fields, "version", "29");
+        modalModernValue(fields, "levels", "N:30,H:42,EX:48");
+        submit.withObject("data").withObject("resolved").withObject("attachments")
+                .putObject("unknown-file").put("size", 100).put("content_type", "image/png")
+                .put("url", "https://cdn.discordapp.com/unknown.png");
+        assertThat(content(call(submit))).contains("곡 등록 JSON", "new song");
     }
 
     @Test
