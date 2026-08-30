@@ -19,6 +19,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -167,6 +168,10 @@ class UserProfileJpaAdapterTest {
             assertThat(user.bestLevels()).extracting(summary -> summary.maxLevel())
                     .containsExactly(49, 48, 48);
         });
+        verify(jdbc).queryForObject(
+                argThat(sql -> sql.startsWith("SELECT COUNT(*) FROM users")
+                        && !sql.contains("ROW_NUMBER") && !sql.contains("playdata")),
+                eq(Long.class), any(Object[].class));
     }
 
     @Test
