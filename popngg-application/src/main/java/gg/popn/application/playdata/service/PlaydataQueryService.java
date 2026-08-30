@@ -42,7 +42,7 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
             throw new IllegalArgumentException("scoreMin must not exceed scoreMax");
         }
         String sort = normalize(query.sort(), "LEVEL", "VERSION", "DIFFICULTY", "TITLE",
-                "GENRE", "SCORE", "MEDAL", "RANK");
+                "GENRE", "SCORE", "MEDAL", "RANK", "POPCLASS");
         String order = normalize(query.order(), "ASC", "DESC");
         return port.findUserRecords(poptomoId, new FindUserRecordsQuery(
                 query.keyword(), query.version(), query.levelMin(), query.levelMax(),

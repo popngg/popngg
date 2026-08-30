@@ -116,12 +116,25 @@ class PlaydataQueryJdbcAdapterTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"LEVEL", "VERSION", "DIFFICULTY", "TITLE", "GENRE", "SCORE", "MEDAL", "RANK"})
+    @ValueSource(strings = {"LEVEL", "VERSION", "DIFFICULTY", "TITLE", "GENRE", "SCORE", "MEDAL", "RANK", "POPCLASS"})
     void sortsUserRecordsByEverySupportedField(String sort) {
         var records = adapter.findUserRecords("0000", new FindUserRecordsQuery(
                 null, null, null, null, null, null, null,
                 null, null, sort, "ASC", 0, 20));
         assertThat(records.items()).hasSize(2);
+    }
+
+    @Test
+    void sortsUserRecordsByPrecalculatedPopclass() {
+        var records = adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                null, null, null, null, null, null, null,
+                null, null, "POPCLASS", "DESC", 0, 20));
+
+        assertThat(records.items()).extracting(row -> row.id())
+                .containsExactly("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        assertThat(records.items()).extracting(row -> row.popnClass())
+                .containsExactly(10_000, 9_000);
     }
 
     @Test
