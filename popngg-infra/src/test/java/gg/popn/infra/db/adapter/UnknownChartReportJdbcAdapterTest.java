@@ -19,7 +19,7 @@ class UnknownChartReportJdbcAdapterTest {
                 renew_log_id BIGINT,poptomo_id VARCHAR(64),song_name VARCHAR(255),genre_name VARCHAR(255),
                 artist_name VARCHAR(255),difficulty_code INT,is_upper BOOLEAN,occurrences INT,resolved BOOLEAN,
                 first_seen_at TIMESTAMP,last_seen_at TIMESTAMP,
-                UNIQUE(song_name,genre_name,artist_name,difficulty_code,is_upper))
+                UNIQUE(song_name,genre_name,artist_name))
                 """);
         var adapter = new UnknownChartReportJdbcAdapter(jdbc);
         var row = new ImportPlaydataCommand.Row(null, null, 4, false, null,

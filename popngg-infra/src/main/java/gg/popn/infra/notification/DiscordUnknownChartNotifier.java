@@ -84,9 +84,8 @@ public class DiscordUnknownChartNotifier implements UnknownChartNotifier {
                                   List<ImportPlaydataCommand.Row> rows) {
         LinkedHashSet<String> items = new LinkedHashSet<>();
         for (ImportPlaydataCommand.Row row : rows) {
-            items.add("- %s / %s / %s / 난이도 %s / UPPER %s".formatted(
-                    safe(row.songName()), safe(row.genreName()), safe(row.artistName()),
-                    safe(row.difficultyCode()), safe(row.upper())));
+            items.add("- %s / %s / %s".formatted(
+                    safe(row.songName()), safe(row.genreName()), safe(row.artistName())));
         }
         List<String> visible = items.stream().limit(MAX_ROWS).toList();
         StringBuilder message = new StringBuilder()

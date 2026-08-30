@@ -21,24 +21,22 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
                 INSERT INTO unknown_chart_reports
                     (renew_log_id,poptomo_id,song_name,genre_name,artist_name,difficulty_code,
                      is_upper,occurrences,resolved,first_seen_at,last_seen_at)
-                VALUES (?,?,?,?,?,?,?,1,FALSE,?,?)
+                VALUES (?,?,?,?,?,NULL,NULL,1,FALSE,?,?)
                 ON DUPLICATE KEY UPDATE renew_log_id=VALUES(renew_log_id),
                     poptomo_id=VALUES(poptomo_id), occurrences=occurrences+1,
                     resolved=FALSE,last_seen_at=VALUES(last_seen_at)
                 """, renewLogId, poptomoId, row.songName(), row.genreName(),
-                row.artistName() == null ? "" : row.artistName(),
-                row.difficultyCode(), row.upper(), Timestamp.from(now), Timestamp.from(now));
+                row.artistName() == null ? "" : row.artistName(), Timestamp.from(now), Timestamp.from(now));
     }
 
     @Override
     public List<Report> findRecentUnresolved(int limit) {
         return jdbc.query("""
-                SELECT report_id,song_name,genre_name,artist_name,difficulty_code,is_upper,
-                       occurrences,last_seen_at FROM unknown_chart_reports
+                SELECT report_id,song_name,genre_name,artist_name,occurrences,last_seen_at
+                FROM unknown_chart_reports
                 WHERE resolved=FALSE ORDER BY last_seen_at DESC LIMIT ?
                 """, (rs, n) -> new Report(rs.getLong("report_id"), rs.getString("song_name"),
-                rs.getString("genre_name"), rs.getString("artist_name"),
-                rs.getInt("difficulty_code"), rs.getBoolean("is_upper"),
-                rs.getInt("occurrences"), rs.getTimestamp("last_seen_at").toInstant()), limit);
+                rs.getString("genre_name"), rs.getString("artist_name"), rs.getInt("occurrences"),
+                rs.getTimestamp("last_seen_at").toInstant()), limit);
     }
 }

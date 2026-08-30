@@ -47,7 +47,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("/api/v1/discord/interactions")
 public class DiscordInteractionController {
     private static final byte[] ED25519_X509_PREFIX = HexFormat.of().parseHex("302a300506032b6570032100");
-    private static final int EPHEMERAL = 64;
 
     private final ObjectMapper mapper;
     private final CreateSongUseCase createSong;
@@ -143,9 +142,9 @@ public class DiscordInteractionController {
             var reports = unknownChartReport.findRecentUnresolved(20);
             if (reports.isEmpty()) return ResponseEntity.ok(message("현재 미등록 곡/채보가 없습니다."));
             String content = reports.stream().map(report ->
-                    "- `#%d` **%s** / %s / 난이도 %d / UPPER %s / %d회".formatted(
+                    "- `#%d` **%s** / %s / %s / %d회".formatted(
                             report.reportId(), report.songName(), report.genreName(),
-                            report.difficultyCode(), report.upper(), report.occurrences()))
+                            report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
             return ResponseEntity.ok(message("**최근 미등록 곡/채보**\n" + content));
         }
@@ -372,7 +371,7 @@ public class DiscordInteractionController {
     }
 
     private static Map<String, Object> editPreview(String id, SongDetailView before, UpdateSongCommand after) {
-        return Map.of("type", 4, "data", Map.of("flags", EPHEMERAL,
+        return Map.of("type", 4, "data", Map.of(
                 "content", "**곡 수정 확인**\n`#%d` %s → **%s**\n장르: %s → %s\n아티스트: %s → %s\n버전: %d → %d\n채보 수정: %d개".formatted(
                         before.song().songId(), before.song().songName(), after.songName(),
                         before.song().genreName(), after.genreName(), before.song().artistName(),
@@ -412,7 +411,7 @@ public class DiscordInteractionController {
         String charts = draft.command().charts().stream()
                 .map(c -> "%d:%d".formatted(c.difficulty(), c.level()))
                 .collect(java.util.stream.Collectors.joining(", "));
-        return Map.of("type", 4, "data", Map.of("flags", EPHEMERAL,
+        return Map.of("type", 4, "data", Map.of(
                 "content", "**등록 확인**\n곡명: %s\n장르: %s\n아티스트: %s\n버전: %d\n채보: %s".formatted(
                         draft.command().songName(), draft.command().genreName(), draft.command().artistName(),
                         draft.command().version(), charts),
@@ -422,7 +421,7 @@ public class DiscordInteractionController {
     }
 
     private static Map<String, Object> message(String content) {
-        return Map.of("type", 4, "data", Map.of("flags", EPHEMERAL, "content", content));
+        return Map.of("type", 4, "data", Map.of("content", content));
     }
 
     private static JsonNode option(JsonNode root, String name) {

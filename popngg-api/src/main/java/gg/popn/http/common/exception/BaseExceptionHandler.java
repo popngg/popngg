@@ -31,7 +31,7 @@ public class BaseExceptionHandler {
     private final ErrorNotificationPort errorNotification;
 
     public BaseExceptionHandler() {
-        this((method, path, exceptionType, traceId) -> {});
+        this((method, path, exceptionType, exceptionMessage, rootCause, traceId) -> {});
     }
 
     @Autowired
@@ -155,8 +155,12 @@ public class BaseExceptionHandler {
     }
 
     private void notifyError(HttpServletRequest request, Exception exception) {
+        Throwable root = exception;
+        while (root.getCause() != null && root.getCause() != root) root = root.getCause();
         errorNotification.notifyServerError(request.getMethod(), request.getRequestURI(),
-                exception.getClass().getSimpleName(), request.getHeader("X-Request-Id"));
+                exception.getClass().getSimpleName(), exception.getMessage(),
+                root == exception ? "-" : root.getClass().getSimpleName() + ": " + root.getMessage(),
+                request.getHeader("X-Request-Id"));
     }
 
     private static Map<String, Object> toMap(BaseException e) {

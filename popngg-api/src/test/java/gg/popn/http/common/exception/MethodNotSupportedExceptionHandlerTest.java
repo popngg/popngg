@@ -13,7 +13,7 @@ class MethodNotSupportedExceptionHandlerTest {
     @Test
     void returnsMethodNotAllowedWithoutSendingServerErrorNotification() {
         AtomicBoolean notified = new AtomicBoolean();
-        ErrorNotificationPort notifier = (method, path, exceptionType, traceId) -> notified.set(true);
+        ErrorNotificationPort notifier = (method, path, exceptionType, message, cause, traceId) -> notified.set(true);
         var handler = new BaseExceptionHandler(notifier);
 
         var response = handler.handleMethodNotSupported(

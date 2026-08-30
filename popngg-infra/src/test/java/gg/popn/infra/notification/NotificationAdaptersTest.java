@@ -22,7 +22,7 @@ class NotificationAdaptersTest {
         ObjectMapper mapper = new ObjectMapper();
         new DiscordAdminNotificationAdapter("", mapper).send("message");
         var errors = new DiscordErrorNotificationAdapter("", mapper);
-        errors.notifyServerError("GET", "/path", "Failure", "trace");
+        errors.notifyServerError("GET", "/path", "Failure", "message", "cause", "trace");
         var unknown = new DiscordUnknownChartNotifier("", mapper, java.net.http.HttpClient.newHttpClient());
         unknown.notifyUnknownCharts(1, "user", List.of(new ImportPlaydataCommand.Row(
                 null, null, 4, false, null, "song", "genre", 1, 1, 1)));
@@ -42,8 +42,8 @@ class NotificationAdaptersTest {
             ObjectMapper mapper = new ObjectMapper();
             new DiscordAdminNotificationAdapter(url, mapper).send("admin");
             var errors = new DiscordErrorNotificationAdapter(url, mapper);
-            errors.notifyServerError("GET", "/x", "Boom", "trace");
-            errors.notifyServerError("GET", "/x", "Boom", "trace");
+            errors.notifyServerError("GET", "/x", "Boom", "message", "cause", "trace");
+            errors.notifyServerError("GET", "/x", "Boom", "message", "cause", "trace");
             new DiscordUnknownChartNotifier(url, mapper, java.net.http.HttpClient.newHttpClient())
                     .notifyUnknownCharts(1, "user", List.of(new ImportPlaydataCommand.Row(
                             null, null, 4, false, null, "song", "genre", 1, 1, 1)));
