@@ -138,6 +138,29 @@ class DiscordInteractionControllerTest {
         verify(admin).send(contains("곡 수정"));
     }
 
+    @Test
+    void preservesOmittedSongUpdateValuesAndRejectsCreationWithoutCharts() throws Exception {
+        SongDetailView before = detail("old", "old-hash");
+        when(findDetail.findSong(12)).thenReturn(before);
+
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "곡명", "metadata only");
+        Map<?, ?> preview = body(call(edit));
+        assertThat((String) ((Map<?, ?>) preview.get("data")).get("content"))
+                .contains("metadata only", "\"version\" : 29", "\"charts\" : [ ]");
+
+        ObjectNode create = command("곡추가");
+        option(create, "자켓", "file"); option(create, "추가일", "2026-08-30");
+        option(create, "곡명", "new"); option(create, "장르", "genre");
+        option(create, "아티스트", "artist"); option(create, "버전", 29);
+        option(create, "upper", "x");
+        create.withObject("data").withObject("resolved").withObject("attachments").putObject("file")
+                .put("size", 100).put("content_type", "image/png")
+                .put("url", "https://cdn.discordapp.com/test.png");
+        assertThat(content(call(create))).contains("하나 이상");
+    }
+
     private SongDetailView detail(String title, String hash) {
         var metadata = new SongMetadataView(12, hash, "genre", title, "artist", 29,
                 "https://static.popn.gg/" + hash + ".png");
