@@ -179,7 +179,7 @@ public class UserProfileJpaAdapter implements UserProfilePort {
             return Map.of();
         }
         String selectedUsers = IntStream.range(0, userIds.size())
-                .mapToObj(index -> "SELECT CAST(? AS BIGINT) AS user_id")
+                .mapToObj(index -> "SELECT CAST(? AS DECIMAL(20,0)) AS user_id")
                 .collect(Collectors.joining(" UNION ALL "));
         List<Object> args = new ArrayList<>(userIds);
         args.add(currentVersion);
