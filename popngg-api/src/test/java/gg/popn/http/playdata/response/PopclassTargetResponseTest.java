@@ -19,7 +19,7 @@ class PopclassTargetResponseTest {
                         "0000", "user", 1, 2, 3, List.of(current, old)));
 
         assertThat(response.newSongs()).hasSize(1);
-        assertThat(response.newSongs().getFirst().id()).isEqualTo("100");
+        assertThat(response.newSongs().getFirst().id()).isEqualTo("hash");
         assertThat(response.newSongs().getFirst().score()).isEqualTo(90_000);
         assertThat(response.oldSongs()).hasSize(1);
         assertThat(response.oldSongs().getFirst().medal()).isEqualTo(12);
