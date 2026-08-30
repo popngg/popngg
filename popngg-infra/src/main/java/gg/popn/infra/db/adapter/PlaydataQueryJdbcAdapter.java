@@ -131,7 +131,8 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                 rs.getString("genre_name"), required(rs.getString("jacket_url")),
                 rs.getInt("difficulty_code"), rs.getInt("level"),
                 rs.getInt("all_time_score"), rs.getInt("medal_code"),
-                rs.getInt("rank_code"), rs.getInt("version"), rs.getInt("popclass")),
+                rs.getInt("rank_code"), rs.getInt("version"), Math.multiplyExact(
+                        rs.getInt("popclass"), PopclassPolicy.CHART_DISPLAY_MULTIPLIER)),
                 pageArgs.toArray());
         return new PlaydataQueryResults.UserRecords(
                 items, total, query.page(), query.size());
