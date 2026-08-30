@@ -1,0 +1,159 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat", "title": "Request Rate", "id": 1,
+      "gridPos": {"h": 4, "w": 5, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "reqps", "decimals": 2}},
+      "targets": [{"refId": "A", "expr": "sum(rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval]))", "legendFormat": "requests/sec"}]
+    },
+    {
+      "type": "stat", "title": "Average Response Time", "id": 2,
+      "gridPos": {"h": 4, "w": 5, "x": 5, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 1}},
+      "targets": [{"refId": "A", "expr": "1000 * sum(rate(http_server_requests_seconds_sum{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])), 1e-9)", "legendFormat": "average"}]
+    },
+    {
+      "type": "stat", "title": "P95 Response Time", "id": 3,
+      "gridPos": {"h": 4, "w": 5, "x": 10, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 1}},
+      "targets": [{"refId": "A", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])))", "legendFormat": "P95"}]
+    },
+    {
+      "type": "stat", "title": "P99 Response Time", "id": 4,
+      "gridPos": {"h": 4, "w": 5, "x": 15, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 1}},
+      "targets": [{"refId": "A", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])))", "legendFormat": "P99"}]
+    },
+    {
+      "type": "stat", "title": "5xx Error Rate", "id": 5,
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "decimals": 2, "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 0.01}]}}},
+      "targets": [{"refId": "A", "expr": "sum(rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\",status=~\"5..\"}[$__rate_interval])) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])), 1e-9)", "legendFormat": "5xx ratio"}]
+    },
+    {
+      "type": "timeseries", "title": "Requests/sec over time", "id": 6,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "targets": [{"refId": "A", "expr": "sum(rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval]))", "legendFormat": "all"}]
+    },
+    {
+      "type": "timeseries", "title": "Average latency over time", "id": 7,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "fieldConfig": {"defaults": {"unit": "ms"}},
+      "targets": [{"refId": "A", "expr": "1000 * sum(rate(http_server_requests_seconds_sum{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])), 1e-9)", "legendFormat": "average"}]
+    },
+    {
+      "type": "timeseries", "title": "P95 / P99 latency over time", "id": 8,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "ms"}},
+      "targets": [
+        {"refId": "A", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])))", "legendFormat": "P95"},
+        {"refId": "B", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])))", "legendFormat": "P99"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "HTTP status distribution", "id": 9,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "targets": [{"refId": "A", "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval]))", "legendFormat": "{{status}}"}]
+    },
+    {
+      "type": "table", "title": "Endpoint Performance", "id": 10,
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 20},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "targets": [
+        {"refId": "Requests", "expr": "sum by (uri) (increase(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__range]))", "format": "table", "instant": true},
+        {"refId": "Avg_ms", "expr": "1000 * sum by (uri) (rate(http_server_requests_seconds_sum{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])) / clamp_min(sum by (uri) (rate(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])), 1e-9)", "format": "table", "instant": true},
+        {"refId": "P95_ms", "expr": "1000 * histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])))", "format": "table", "instant": true},
+        {"refId": "P99_ms", "expr": "1000 * histogram_quantile(0.99, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=\"$job\",uri!~\"/actuator.*\"}[$__rate_interval])))", "format": "table", "instant": true},
+        {"refId": "4xx", "expr": "sum by (uri) (increase(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\",status=~\"4..\"}[$__range]))", "format": "table", "instant": true},
+        {"refId": "5xx", "expr": "sum by (uri) (increase(http_server_requests_seconds_count{job=\"$job\",uri!~\"/actuator.*\",status=~\"5..\"}[$__range]))", "format": "table", "instant": true}
+      ],
+      "transformations": [
+        {"id": "joinByField", "options": {"byField": "uri", "mode": "outer"}},
+        {"id": "organize", "options": {"excludeByName": {"Time": true}, "indexByName": {"uri": 0, "Value #Requests": 1, "Value #Avg_ms": 2, "Value #P95_ms": 3, "Value #P99_ms": 4, "Value #4xx": 5, "Value #5xx": 6}, "renameByName": {"uri": "Endpoint", "Value #Requests": "Requests", "Value #Avg_ms": "Avg (ms)", "Value #P95_ms": "P95 (ms)", "Value #P99_ms": "P99 (ms)", "Value #4xx": "4xx", "Value #5xx": "5xx"}}}
+      ]
+    },
+    {"type": "row", "title": "JVM / Process", "id": 11, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 30}, "collapsed": false, "panels": []},
+    {
+      "type": "timeseries", "title": "JVM Heap Used / Max", "id": 12,
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 31}, "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [
+        {"refId": "A", "expr": "sum(jvm_memory_used_bytes{job=\"$job\",area=\"heap\"})", "legendFormat": "used"},
+        {"refId": "B", "expr": "sum(jvm_memory_max_bytes{job=\"$job\",area=\"heap\"})", "legendFormat": "max"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "JVM Heap Usage", "id": 13,
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 31}, "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}},
+      "targets": [{"refId": "A", "expr": "sum(jvm_memory_used_bytes{job=\"$job\",area=\"heap\"}) / clamp_min(sum(jvm_memory_max_bytes{job=\"$job\",area=\"heap\"}), 1)", "legendFormat": "heap"}]
+    },
+    {
+      "type": "timeseries", "title": "JVM Non-Heap", "id": 14,
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 31}, "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [{"refId": "A", "expr": "sum(jvm_memory_used_bytes{job=\"$job\",area=\"nonheap\"})", "legendFormat": "used"}]
+    },
+    {
+      "type": "timeseries", "title": "GC activity", "id": 15,
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 39},
+      "targets": [
+        {"refId": "A", "expr": "sum(rate(jvm_gc_pause_seconds_count{job=\"$job\"}[$__rate_interval]))", "legendFormat": "pauses/sec"},
+        {"refId": "B", "expr": "sum(rate(jvm_gc_pause_seconds_sum{job=\"$job\"}[$__rate_interval]))", "legendFormat": "pause seconds/sec"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "JVM Threads", "id": 16,
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 39}, "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"refId": "A", "expr": "jvm_threads_live_threads{job=\"$job\"}", "legendFormat": "live"},
+        {"refId": "B", "expr": "jvm_threads_daemon_threads{job=\"$job\"}", "legendFormat": "daemon"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "CPU Usage", "id": 17,
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 39}, "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}},
+      "targets": [
+        {"refId": "A", "expr": "process_cpu_usage{job=\"$job\"}", "legendFormat": "process"},
+        {"refId": "B", "expr": "system_cpu_usage{job=\"$job\"}", "legendFormat": "system"}
+      ]
+    },
+    {"type": "row", "title": "HikariCP", "id": 18, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 47}, "collapsed": false, "panels": []},
+    {
+      "type": "timeseries", "title": "Hikari Connections", "id": 19,
+      "gridPos": {"h": 8, "w": 16, "x": 0, "y": 48}, "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"refId": "A", "expr": "hikaricp_connections_active{job=\"$job\"}", "legendFormat": "active {{pool}}"},
+        {"refId": "B", "expr": "hikaricp_connections_idle{job=\"$job\"}", "legendFormat": "idle {{pool}}"},
+        {"refId": "C", "expr": "hikaricp_connections_pending{job=\"$job\"}", "legendFormat": "pending {{pool}}"},
+        {"refId": "D", "expr": "hikaricp_connections_max{job=\"$job\"}", "legendFormat": "max {{pool}}"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Hikari Connection Acquire Time", "id": 20,
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 48}, "fieldConfig": {"defaults": {"unit": "ms"}},
+      "targets": [
+        {"refId": "A", "expr": "1000 * rate(hikaricp_connections_acquire_seconds_sum{job=\"$job\"}[$__rate_interval]) / clamp_min(rate(hikaricp_connections_acquire_seconds_count{job=\"$job\"}[$__rate_interval]), 1e-9)", "legendFormat": "average {{pool}}"},
+        {"refId": "B", "expr": "1000 * hikaricp_connections_acquire_seconds_max{job=\"$job\"}", "legendFormat": "max {{pool}}"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["popngg", "spring-boot", "production"],
+  "templating": {
+    "list": [
+      {"name": "job", "label": "Prometheus job", "type": "query", "datasource": {"type": "prometheus", "uid": "prometheus"}, "query": {"query": "label_values(up, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "current": {"text": "popngg-api", "value": "popngg-api"}, "refresh": 1}
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "POPN.GG Production Overview",
+  "uid": "popngg-production-overview",
+  "version": 1
+}

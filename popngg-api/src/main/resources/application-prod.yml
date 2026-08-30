@@ -25,15 +25,30 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://popn.gg,https://www.popn.gg}
 
 management:
+  server:
+    port: ${MANAGEMENT_PORT:9091}
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+      discovery:
+        enabled: false
   endpoint:
     health:
       probes:
         enabled: true
       show-details: never
+      group:
+        public:
+          include: "*"
+          additional-path: server:/actuator/health
+          show-details: never
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,1s,2s,5s
 
 logging:
   structured:

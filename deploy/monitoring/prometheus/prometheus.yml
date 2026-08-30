@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: popngg-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["api:9091"]
+        labels:
+          service: popngg-api
+          environment: production
