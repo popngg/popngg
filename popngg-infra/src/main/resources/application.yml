@@ -35,5 +35,6 @@ popngg:
     public-url: ${AWS_CLOUDFRONT_URL:https://static.popn.gg}
   avatar:
     bucket: ${AWS_S3_BUCKET:}
+    storage-root: ${AWS_S3_JACKET_PREFIX:static}
     prefix: ${AWS_S3_AVATAR_PREFIX:avatars}
     public-url: ${AWS_CLOUDFRONT_URL:https://static.popn.gg}
