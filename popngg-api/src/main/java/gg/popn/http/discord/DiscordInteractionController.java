@@ -325,7 +325,8 @@ public class DiscordInteractionController {
                         modernInput("date", "추가일", "YYYY-MM-DD", "", true),
                         modernTextArea("metadata", "곡 기본정보 JSON", metadata),
                         modernInput("version", "버전", "예: 29", "", true),
-                        modernInput("levels", "난이도", "예: L:20,N:30,H:42,EX:48", "", true))));
+                        modernInput("levels", "난이도", "대괄호 안에 숫자 입력, 없으면 공백",
+                                "L:[], N:[], H:[], EX:[]", true))));
     }
 
     private static Map<String, Object> fileInput(String id, String label) {
@@ -530,13 +531,17 @@ public class DiscordInteractionController {
             if (item.isBlank()) continue;
             String[] pair = item.strip().split(":", 2);
             if (pair.length != 2 || pair[1].isBlank()) continue;
+            String level = pair[1].strip();
+            if (level.startsWith("[") && level.endsWith("]"))
+                level = level.substring(1, level.length() - 1).strip();
+            if (level.isBlank()) continue;
             int difficulty = switch (pair[0].strip().toUpperCase()) {
                 case "E", "EASY", "L", "LIGHT" -> 1;
                 case "N" -> 2; case "H" -> 3; case "EX" -> 4;
                 default -> throw new IllegalArgumentException("지원하지 않는 난이도: " + pair[0]);
             };
             charts.add(new CreateSongCommand.CreateChartCommand(difficulty,
-                    Integer.parseInt(pair[1].strip()), version, upper, false, false));
+                    Integer.parseInt(level), version, upper, false, false));
         }
     }
 
@@ -611,9 +616,12 @@ public class DiscordInteractionController {
                         .timeout(java.time.Duration.ofSeconds(10)).GET().build(),
                 HttpResponse.BodyHandlers.ofByteArray()).body();
         if (source.length > 5 * 1024 * 1024) throw new IllegalArgumentException("자켓 이미지는 5MB 이하여야 합니다.");
+        return convertToPng(source);
+    }
+
+    static byte[] convertToPng(byte[] source) throws Exception {
         var image = ImageIO.read(new ByteArrayInputStream(source));
         if (image == null) throw new IllegalArgumentException("올바른 이미지가 아닙니다.");
-        if (image.getWidth() != image.getHeight()) throw new IllegalArgumentException("자켓 이미지는 정사각형이어야 합니다.");
         if ((long) image.getWidth() * image.getHeight() > 16_777_216L) throw new IllegalArgumentException("이미지 해상도가 너무 큽니다.");
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         if (!ImageIO.write(image, "png", output)) throw new IllegalArgumentException("PNG 변환에 실패했습니다.");
