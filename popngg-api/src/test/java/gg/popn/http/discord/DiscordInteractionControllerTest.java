@@ -14,6 +14,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.Signature;
@@ -94,11 +97,24 @@ class DiscordInteractionControllerTest {
         modalModernValue(fields, "date", "2026-08-30");
         modalModernValue(fields, "metadata", "{\"songName\":\"new song\",\"genreName\":\"new genre\",\"artistName\":\"artist\",\"upper\":false}");
         modalModernValue(fields, "version", "29");
-        modalModernValue(fields, "levels", "N:30,H:42,EX:48");
+        modalModernValue(fields, "levels", "L:[], N:[30], H:[42], EX:[48]");
         submit.withObject("data").withObject("resolved").withObject("attachments")
                 .putObject("unknown-file").put("size", 100).put("content_type", "image/png")
                 .put("url", "https://cdn.discordapp.com/unknown.png");
         assertThat(content(call(submit))).contains("곡 등록 JSON", "new song");
+    }
+
+    @Test
+    void acceptsNonSquareJacketImages() throws Exception {
+        BufferedImage image = new BufferedImage(2, 1, BufferedImage.TYPE_INT_ARGB);
+        ByteArrayOutputStream source = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", source);
+
+        byte[] converted = DiscordInteractionController.convertToPng(source.toByteArray());
+
+        BufferedImage result = ImageIO.read(new java.io.ByteArrayInputStream(converted));
+        assertThat(result.getWidth()).isEqualTo(2);
+        assertThat(result.getHeight()).isEqualTo(1);
     }
 
     @Test

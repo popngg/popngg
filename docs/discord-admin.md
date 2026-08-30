@@ -13,7 +13,8 @@ may use the commands.
   preview is shown before confirmation.
 - `/곡조회 검색어:<text>` searches the catalog.
 - `/미등록목록` shows recently unmatched renewal rows. Selecting a row opens the same
-  creation form with song, genre, artist, and UPPER prefilled.
+  creation form with song, genre, artist, and UPPER prefilled. Its compact level field is
+  prefilled as `L:[], N:[], H:[], EX:[]`; put a number inside a bracket or leave it empty.
 
 Chart input uses `N:30,H:42,EX:48`; prefix it with `UPPER` for Upper charts.
 Creation and modification require a preview confirmation. Drafts expire after 15 minutes.
@@ -33,3 +34,4 @@ named `DISCORD_ADMIN_WEBHOOK_URL` containing the administrator-channel webhook U
 Jackets are converted to PNG and stored at
 `s3://${AWS_S3_BUCKET}/${AWS_S3_JACKET_PREFIX}/{songHash}.png`. The database stores the
 CloudFront URL. Existing objects are backed up before replacement.
+Jacket images may be rectangular; their original aspect ratio is preserved during PNG conversion.
