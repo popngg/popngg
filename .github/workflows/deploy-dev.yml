@@ -50,6 +50,9 @@ jobs:
           ssh -i ~/.ssh/dev_deploy \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
+            -o TCPKeepAlive=yes \
             "$DEV_USER@$DEV_HOST" \
             "bash -s -- '$DEPLOY_SHA'" <<'REMOTE'
           set -euo pipefail
