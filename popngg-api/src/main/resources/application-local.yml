@@ -70,7 +70,7 @@ management:
       group:
         public:
           include: "*"
-          additional-path: server:/actuator/health
+          additional-path: server:/health
           show-details: never
   metrics:
     distribution:

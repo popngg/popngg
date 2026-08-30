@@ -33,10 +33,12 @@ jobs:
         DB_PASSWORD: ci-password
         DB_ROOT_PASSWORD: ci-root-password
         JWT_SECRET_KEY: ci-only-secret-key-0123456789abcdefghijklmnopqrstuvwxyz-ABCDE
+        GRAFANA_ADMIN_PASSWORD: ci-only-grafana-password
       run: |
         set -euo pipefail
         bash -n deploy/bin/deploy.sh
         docker compose -f deploy/compose.yml config >/dev/null
+        docker compose -f deploy/compose.yml -f deploy/compose.monitoring.yml config >/dev/null
         python3 - <<'PY'
         import re
         from pathlib import Path

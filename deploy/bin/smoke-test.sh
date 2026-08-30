@@ -4,7 +4,7 @@ set -euo pipefail
 base_url=${BASE_URL:-"http://127.0.0.1:${API_PORT:-8080}"}
 curl_args=(--fail --silent --show-error --connect-timeout 3 --max-time 10)
 
-curl "${curl_args[@]}" "$base_url/actuator/health" | grep -q '"status":"UP"'
+curl "${curl_args[@]}" "$base_url/health" | grep -q '"status":"UP"'
 curl "${curl_args[@]}" "$base_url/api/v1/songs?page=0&size=1" >/dev/null
 curl "${curl_args[@]}" "$base_url/api/v1/users/rankings?page=0&size=1" >/dev/null
 

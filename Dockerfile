@@ -20,5 +20,5 @@ COPY --from=build --chown=popngg:popngg \
 USER 10001
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=6 \
-  CMD ["curl", "--fail", "--silent", "http://127.0.0.1:8080/actuator/health"]
+  CMD ["curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]

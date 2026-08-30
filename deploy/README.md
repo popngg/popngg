@@ -17,7 +17,7 @@ mechanism, not the environment name. Local development uses the separate root-le
 5. Run the idempotent pop'n 29 catalog migrations: confirmed deletions/renames,
    1,953 existing-song v3 metadata updates, then 108 new songs and 432 charts.
 6. Start the API with application Flyway disabled.
-7. Wait for `/actuator/health`, then run smoke tests.
+7. Wait for the internal `/actuator/health`, then run public smoke tests against `/health`.
 
 ```bash
 export IMAGE_REPOSITORY=popngg-api
