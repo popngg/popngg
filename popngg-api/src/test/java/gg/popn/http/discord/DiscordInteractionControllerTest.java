@@ -71,11 +71,13 @@ class DiscordInteractionControllerTest {
         ObjectNode search = command("곡조회");
         option(search, "검색어", "title");
         assertThat(content(call(search))).contains("title", "#3");
+        assertThat(((Map<?, ?>) body(call(search)).get("data")).containsKey("flags")).isFalse();
 
         when(unknown.findRecentUnresolved(20)).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
-                        4, false, 3, Instant.now())));
-        assertThat(content(call(command("미등록목록")))).contains("new song", "3회");
+                        3, Instant.now())));
+        assertThat(content(call(command("미등록목록")))).contains("new song", "3회")
+                .doesNotContain("난이도", "UPPER");
     }
 
     @Test

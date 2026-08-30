@@ -1,0 +1,47 @@
+name: Admin notifications
+
+on:
+  pull_request:
+    types: [opened, reopened, closed]
+  workflow_run:
+    workflows: [CI, Deploy dev]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send administrator event to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_ADMIN_WEBHOOK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_JSON: ${{ toJson(github.event) }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DISCORD_ADMIN_WEBHOOK_URL is not configured; skipping notification."
+            exit 0
+          fi
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            action=$(jq -r '.action' <<<"$EVENT_JSON")
+            merged=$(jq -r '.pull_request.merged' <<<"$EVENT_JSON")
+            number=$(jq -r '.number' <<<"$EVENT_JSON")
+            title=$(jq -r '.pull_request.title' <<<"$EVENT_JSON")
+            url=$(jq -r '.pull_request.html_url' <<<"$EVENT_JSON")
+            actor=$(jq -r '.sender.login' <<<"$EVENT_JSON")
+            state="$action"
+            if [ "$merged" = "true" ]; then state="merged"; fi
+            content="**[GitHub PR]** #${number} ${state}\n제목: ${title}\n작업자: ${actor}\n${url}"
+          else
+            workflow=$(jq -r '.workflow_run.name' <<<"$EVENT_JSON")
+            conclusion=$(jq -r '.workflow_run.conclusion' <<<"$EVENT_JSON")
+            branch=$(jq -r '.workflow_run.head_branch' <<<"$EVENT_JSON")
+            sha=$(jq -r '.workflow_run.head_sha[0:7]' <<<"$EVENT_JSON")
+            url=$(jq -r '.workflow_run.html_url' <<<"$EVENT_JSON")
+            content="**[GitHub Actions]** ${workflow}: ${conclusion}\n브랜치: ${branch}\n커밋: ${sha}\n${url}"
+          fi
+          jq -n --arg content "$content" '{content: $content}' |
+            curl --fail --silent --show-error -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"

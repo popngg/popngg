@@ -9,5 +9,5 @@ public interface UnknownChartReportPort {
     List<Report> findRecentUnresolved(int limit);
 
     record Report(long reportId, String songName, String genreName, String artistName,
-                  int difficultyCode, boolean upper, int occurrences, Instant lastSeenAt) {}
+                  int occurrences, Instant lastSeenAt) {}
 }

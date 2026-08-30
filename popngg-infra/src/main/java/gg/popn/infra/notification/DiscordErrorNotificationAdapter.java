@@ -31,7 +31,8 @@ public class DiscordErrorNotificationAdapter implements ErrorNotificationPort {
     }
 
     @Override
-    public void notifyServerError(String method, String path, String exceptionType, String traceId) {
+    public void notifyServerError(String method, String path, String exceptionType,
+                                  String exceptionMessage, String rootCause, String traceId) {
         if (webhookUrl.isBlank()) return;
         String key = method + ":" + path + ":" + exceptionType;
         Instant now = Instant.now();
@@ -39,8 +40,9 @@ public class DiscordErrorNotificationAdapter implements ErrorNotificationPort {
         if (previous != null && previous.isAfter(now.minusSeconds(300))) return;
         lastSent.entrySet().removeIf(entry -> entry.getValue().isBefore(now.minusSeconds(3600)));
         try {
-            String content = "**[API 5xx]**\n메서드: `%s`\n경로: `%s`\n예외: `%s`\n추적 ID: `%s`".formatted(
-                    safe(method), safe(path), safe(exceptionType), safe(traceId));
+            String content = "**[API 5xx]**\n발생 시각: `%s`\n메서드: `%s`\n경로: `%s`\n예외: `%s`\n메시지: `%s`\n근본 원인: `%s`\n추적 ID: `%s`".formatted(
+                    now, safe(method), safe(path), safe(exceptionType), safe(exceptionMessage),
+                    safe(rootCause), safe(traceId));
             String body = mapper.writeValueAsString(Map.of("content", content));
             HttpRequest request = HttpRequest.newBuilder(URI.create(webhookUrl)).timeout(Duration.ofSeconds(3))
                     .header("Content-Type", "application/json")

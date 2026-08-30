@@ -22,6 +22,11 @@ errors use `DISCORD_ERROR_WEBHOOK_URL`; identical method, path, and exception co
 are suppressed for five minutes. Request bodies, cookies, authorization values, and query
 strings are never included in error notifications.
 
+Command responses are public in the Discord channel. Unknown-song reports only display
+metadata available from the renewal page; they do not claim a difficulty or UPPER state.
+GitHub PR, merge, CI, and deployment notifications require an Actions repository secret
+named `DISCORD_ADMIN_WEBHOOK_URL` containing the administrator-channel webhook URL.
+
 Jackets are converted to PNG and stored at
 `s3://${AWS_S3_BUCKET}/${AWS_S3_JACKET_PREFIX}/{songHash}.png`. The database stores the
 CloudFront URL. Existing objects are backed up before replacement.
