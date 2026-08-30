@@ -1,6 +1,7 @@
 package gg.popn.infra.db.adapter;
 
 import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
+import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.application.playdata.exception.ActualPopclassUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,6 +98,66 @@ class PlaydataQueryJdbcAdapterTest {
                 .containsExactly("0000", "1111");
         assertThat(rankings.allTime()).extracting(row -> row.poptomoId())
                 .containsExactly("1111", "0000");
+    }
+
+    @Test
+    void countsUnplayedChartsAsNoneWithoutUsingPlaydataCurrentVersion() {
+        jdbc.update("INSERT INTO charts VALUES (102, 10, 1, 'LIGHT', 48, 29, FALSE, FALSE)");
+        jdbc.update("UPDATE playdata SET current_version = 28 WHERE user_id = 1 AND chart_id = 100");
+
+        var progress = adapter.findProgress("0000", "LEVEL");
+        var level48 = progress.rows().stream()
+                .filter(row -> row.key() == 48)
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(level48.total()).isEqualTo(2);
+        assertThat(level48.averageScore()).isEqualTo(48_500);
+        assertThat(level48.medals()).containsExactlyInAnyOrder(
+                new PlaydataQueryResults.CodeCount(2, 1),
+                new PlaydataQueryResults.CodeCount(13, 1));
+        assertThat(level48.ranks()).containsExactlyInAnyOrder(
+                new PlaydataQueryResults.CodeCount(1, 1),
+                new PlaydataQueryResults.CodeCount(13, 1));
+        assertThat(progress.summary().total()).isEqualTo(3);
+        assertThat(progress.summary().averageScore()).isEqualTo(62_333);
+        assertThat(progress.summary().medals()).containsExactlyInAnyOrder(
+                new PlaydataQueryResults.CodeCount(2, 1),
+                new PlaydataQueryResults.CodeCount(4, 1),
+                new PlaydataQueryResults.CodeCount(13, 1));
+        assertThat(progress.summary().ranks()).containsExactlyInAnyOrder(
+                new PlaydataQueryResults.CodeCount(1, 1),
+                new PlaydataQueryResults.CodeCount(3, 1),
+                new PlaydataQueryResults.CodeCount(13, 1));
+    }
+
+    @Test
+    void excludesDeletedChartsFromProgress() {
+        jdbc.update("INSERT INTO charts VALUES (102, 10, 1, 'LIGHT', 50, 29, FALSE, TRUE)");
+
+        var progress = adapter.findProgress("0000", "LEVEL");
+
+        assertThat(progress.rows()).extracting(row -> row.key())
+                .doesNotContain(50);
+        assertThat(progress.summary().total()).isEqualTo(2);
+    }
+
+    @Test
+    void countsUnplayedChartsAsNoneByDifficulty() {
+        jdbc.update("INSERT INTO charts VALUES (102, 10, 1, 'LIGHT', 48, 29, FALSE, FALSE)");
+
+        var progress = adapter.findProgress("0000", "DIFFICULTY");
+        var light = progress.rows().stream()
+                .filter(row -> row.key() == 1)
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(light.total()).isEqualTo(1);
+        assertThat(light.averageScore()).isZero();
+        assertThat(light.medals()).containsExactly(
+                new PlaydataQueryResults.CodeCount(13, 1));
+        assertThat(light.ranks()).containsExactly(
+                new PlaydataQueryResults.CodeCount(13, 1));
     }
 
     @Test
