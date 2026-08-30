@@ -107,12 +107,24 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         String direction = query.order().name();
         String keywordClause = query.keyword() == null || query.keyword().isBlank()
                 ? "" : " WHERE ranked.user_name LIKE ? OR ranked.poptomo_id LIKE ?";
+        String directKeywordClause = query.keyword() == null || query.keyword().isBlank()
+                ? "" : " AND (p.user_name LIKE ? OR u.poptomo_id LIKE ?)";
         List<Object> args = new ArrayList<>();
         if (!keywordClause.isEmpty()) {
             String keyword = "%" + query.keyword().trim() + "%";
             args.add(keyword);
             args.add(keyword);
         }
+        boolean needsClearLevel = query.sort() == FindUsersQuery.Sort.CLEAR_LEVEL;
+        String clearLevel = needsClearLevel ? """
+                       COALESCE((
+                           SELECT MAX(c.level)
+                             FROM playdata pd JOIN charts c ON c.chart_id = pd.chart_id
+                            WHERE pd.user_id = u.user_id
+                              AND pd.current_version = ? AND c.is_deleted = FALSE
+                              AND pd.medal_code IN (1,2,3,4,5,6,7,11,12)
+                       ), 0) AS clear_level
+                """ : "0 AS clear_level";
         String base = """
                 SELECT u.user_id, u.poptomo_id, p.user_name, p.profile_image_url,
                        p.comment,
@@ -125,18 +137,12 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                                          ELSE p.display_popclass END DESC,
                                     u.poptomo_id ASC
                        ) AS ranking,
-                       COALESCE((
-                           SELECT MAX(c.level)
-                             FROM playdata pd JOIN charts c ON c.chart_id = pd.chart_id
-                            WHERE pd.user_id = u.user_id
-                              AND pd.current_version = ? AND c.is_deleted = FALSE
-                              AND pd.medal_code IN (1,2,3,4,5,6,7,11,12)
-                       ), 0) AS clear_level
+                       %s
                   FROM users u JOIN user_profiles p ON p.user_id = u.user_id
                  WHERE p.is_hidden = FALSE
-                """;
+                """.formatted(clearLevel);
         List<Object> baseArgs = new ArrayList<>();
-        baseArgs.add(currentVersion);
+        if (needsClearLevel) baseArgs.add(currentVersion);
         baseArgs.addAll(args);
         String sql = "SELECT * FROM (" + base + ") ranked" + keywordClause
                 + " ORDER BY " + sortColumn + " " + direction
@@ -149,12 +155,10 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                 rs.getString("comment"), rs.getInt("effective_popclass"),
                 rs.getTimestamp("updated_at").toLocalDateTime(),
                 rs.getInt("ranking")), baseArgs.toArray());
-        List<Object> countArgs = new ArrayList<>();
-        countArgs.add(currentVersion);
-        countArgs.addAll(args);
         Long total = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM (" + base + ") ranked" + keywordClause,
-                Long.class, countArgs.toArray());
+                "SELECT COUNT(*) FROM users u JOIN user_profiles p ON p.user_id = u.user_id "
+                        + "WHERE p.is_hidden = FALSE" + directKeywordClause,
+                Long.class, args.toArray());
         Map<Long, List<UserProfileResult.MedalSummary>> summariesByUser = medalSummaries(
                 rows.stream().map(UserListRow::userId).toList());
         return new UserListResult(rows.stream().map(row -> new UserListResult.Item(
