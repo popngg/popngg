@@ -73,33 +73,33 @@ class DiscordInteractionControllerTest {
         assertThat(content(call(search))).contains("title", "#3");
         assertThat(((Map<?, ?>) body(call(search)).get("data")).containsKey("flags")).isFalse();
 
-        when(unknown.findRecentUnresolved(20)).thenReturn(List.of(
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
                         3, Instant.now())));
         assertThat(content(call(command("미등록목록")))).contains("new song", "3회")
                 .doesNotContain("난이도", "UPPER");
+
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("7");
+        Map<?, ?> modal = body(call(selection));
+        Map<?, ?> modalData = (Map<?, ?>) modal.get("data");
+        assertThat((List<?>) modalData.get("components")).hasSize(5);
+        assertThat(modalData.toString()).contains("new song", "new genre", "artist");
     }
 
     @Test
-    void opensCreateModalAndValidatesInputs() throws Exception {
+    void previewsAndCreatesSongFromSingleCommand() throws Exception {
         ObjectNode create = command("곡추가");
-        Map<?, ?> modal = body(call(create));
-        assertThat(modal.get("type")).isEqualTo(9);
-        String modalId = (String) ((Map<?, ?>) modal.get("data")).get("custom_id");
-
-        ObjectNode submit = interaction(5);
-        submit.withObject("data").put("custom_id", modalId);
-        ArrayNode fields = submit.withObject("data").putArray("components");
-        modalUpload(fields, "jacket", "file"); modalModernValue(fields, "date", "2026-08-30");
-        modalModernValue(fields, "song", "new song"); modalModernValue(fields, "genre", "genre");
-        modalModernValue(fields, "artist", "artist"); modalModernValue(fields, "version", "29");
-        modalModernValue(fields, "level_l", ""); modalModernValue(fields, "level_n", "30");
-        modalModernValue(fields, "level_h", "42"); modalModernValue(fields, "level_ex", "48");
-        modalModernValue(fields, "upper", "x");
-        submit.withObject("data").withObject("resolved").withObject("attachments").putObject("file")
+        option(create, "자켓", "file"); option(create, "추가일", "2026-08-30");
+        option(create, "곡명", "new song"); option(create, "장르", "genre");
+        option(create, "아티스트", "artist"); option(create, "버전", 29);
+        option(create, "upper", "x"); option(create, "n", 30);
+        option(create, "h", 42); option(create, "ex", 48);
+        create.withObject("data").withObject("resolved").withObject("attachments").putObject("file")
                 .put("size", 100).put("content_type", "image/png")
                 .put("url", "https://cdn.discordapp.com/test.png");
-        Map<?, ?> preview = body(call(submit));
+        Map<?, ?> preview = body(call(create));
         assertThat((String) ((Map<?, ?>) preview.get("data")).get("content"))
                 .contains("```json", "new song", "\"N\" : 30");
         String confirmId = firstButtonId(preview);
@@ -118,21 +118,15 @@ class DiscordInteractionControllerTest {
         ObjectNode edit = command("곡수정");
         option(edit, "song_id", 12);
         option(edit, "자켓", "edit-file");
+        option(edit, "곡명", "changed"); option(edit, "장르", "genre");
+        option(edit, "아티스트", "artist"); option(edit, "버전", 29);
+        option(edit, "upper", "x"); option(edit, "n", 30); option(edit, "h", 42);
         edit.withObject("data").withObject("resolved").withObject("attachments")
                 .putObject("edit-file").put("size", 100).put("content_type", "image/png")
                 .put("url", "https://cdn.discordapp.com/edit.png");
-        Map<?, ?> modal = body(call(edit));
-        String modalId = (String) ((Map<?, ?>) modal.get("data")).get("custom_id");
-
-        ObjectNode submit = interaction(5);
-        submit.withObject("data").put("custom_id", modalId);
-        ArrayNode components = submit.withObject("data").putArray("components");
-        modalValue(components, "song", "changed");
-        modalValue(components, "genre", "genre");
-        modalValue(components, "artist", "artist");
-        modalValue(components, "version", "29");
-        modalValue(components, "charts", "N:30,H:42");
-        Map<?, ?> preview = body(call(submit));
+        Map<?, ?> preview = body(call(edit));
+        assertThat((String) ((Map<?, ?>) preview.get("data")).get("content"))
+                .contains("```json", "changed");
         String confirmId = firstButtonId(preview);
 
         when(updateSong.execute(any())).thenReturn(detail("changed", "new-hash"));

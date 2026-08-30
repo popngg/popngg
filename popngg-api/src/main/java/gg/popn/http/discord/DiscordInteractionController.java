@@ -109,9 +109,14 @@ public class DiscordInteractionController {
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
         if (type == 2 && "곡추가".equals(root.path("data").path("name").asText())) {
-            String id = UUID.randomUUID().toString();
-            preDrafts.put(id, new PreDraft(new Prefill("", "", "", false), Instant.now()));
-            return ResponseEntity.ok(songModal(id, preDrafts.get(id).prefill()));
+            try {
+                Draft draft = createDraftFromOptions(root);
+                String id = UUID.randomUUID().toString();
+                drafts.put(id, draft);
+                return ResponseEntity.ok(preview(id, draft));
+            } catch (RuntimeException exception) {
+                return ResponseEntity.ok(message("곡 추가 입력 오류: " + exception.getMessage()));
+            }
         }
         if (type == 2 && "곡조회".equals(root.path("data").path("name").asText())) {
             String keyword = root.path("data").path("options").path(0).path("value").asText();
@@ -150,28 +155,18 @@ public class DiscordInteractionController {
             String id = UUID.randomUUID().toString();
             Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(), false);
             preDrafts.put(id, new PreDraft(prefill, Instant.now()));
-            return ResponseEntity.ok(songModal(id, prefill));
+            return ResponseEntity.ok(unknownSongModal(id, prefill));
         }
         if (type == 2 && "곡수정".equals(root.path("data").path("name").asText())) {
             try {
                 long songId = option(root, "song_id").path("value").asLong();
                 SongDetailView current = findSongDetail.findSong(songId);
-                JsonNode dateOption = optionalOption(root, "추가일");
-                Instant createdAt = dateOption == null ? null : LocalDate.parse(dateOption.path("value").asText())
-                        .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
-                String attachmentUrl = null;
-                JsonNode jacketOption = optionalOption(root, "자켓");
-                if (jacketOption != null) {
-                    JsonNode attachment = root.path("data").path("resolved").path("attachments")
-                            .path(jacketOption.path("value").asText());
-                    if (attachment.path("size").asLong() > 5 * 1024 * 1024L
-                            || !attachment.path("content_type").asText().startsWith("image/"))
-                        return ResponseEntity.ok(message("자켓은 5MB 이하 이미지여야 합니다."));
-                    attachmentUrl = attachment.path("url").asText();
-                }
+                Instant createdAt = optionalDate(root, "추가일");
+                String attachmentUrl = optionalAttachmentUrl(root, "자켓");
+                UpdateSongCommand command = updateCommandFromOptions(root, current, createdAt);
                 String id = UUID.randomUUID().toString();
-                editDrafts.put(id, new EditDraft(current, null, attachmentUrl, createdAt, Instant.now()));
-                return ResponseEntity.ok(editModal(id, current));
+                editDrafts.put(id, new EditDraft(current, command, attachmentUrl, createdAt, Instant.now()));
+                return ResponseEntity.ok(editPreview(id, current, command));
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(message("곡을 찾을 수 없거나 추가일 형식이 올바르지 않습니다."));
             }
@@ -315,20 +310,22 @@ public class DiscordInteractionController {
         return false;
     }
 
-    private static Map<String, Object> songModal(String id, Prefill prefill) {
+    private Map<String, Object> unknownSongModal(String id, Prefill prefill) {
+        String metadata;
+        try {
+            metadata = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of(
+                    "songName", prefill.song(), "genreName", prefill.genre(),
+                    "artistName", prefill.artist(), "upper", prefill.upper()));
+        } catch (Exception exception) {
+            throw new IllegalStateException("미등록 곡 정보를 만들 수 없습니다.", exception);
+        }
         return Map.of("type", 9, "data", Map.of("custom_id", "song_create:" + id, "title", "곡 추가",
                 "components", List.of(
                         fileInput("jacket", "자켓"),
                         modernInput("date", "추가일", "YYYY-MM-DD", "", true),
-                        modernInput("song", "곡명", "곡명을 입력하세요", prefill.song(), true),
-                        modernInput("genre", "장르", "장르를 입력하세요", prefill.genre(), true),
-                        modernInput("artist", "아티스트", "아티스트를 입력하세요", prefill.artist(), true),
+                        modernTextArea("metadata", "곡 기본정보 JSON", metadata),
                         modernInput("version", "버전", "예: 29", "", true),
-                        modernInput("level_l", "L", "없으면 공백", "", false),
-                        modernInput("level_n", "N", "없으면 공백", "", false),
-                        modernInput("level_h", "H", "없으면 공백", "", false),
-                        modernInput("level_ex", "EX", "없으면 공백", "", false),
-                        modernInput("upper", "UPPER (o/x)", "o 또는 x", prefill.upper() ? "o" : "x", true))));
+                        modernInput("levels", "난이도", "예: L:20,N:30,H:42,EX:48", "", true))));
     }
 
     private static Map<String, Object> fileInput(String id, String label) {
@@ -343,6 +340,11 @@ public class DiscordInteractionController {
         component.put("required", required); component.put("placeholder", placeholder);
         if (value != null && !value.isBlank()) component.put("value", value);
         return Map.of("type", 18, "label", label, "component", component);
+    }
+
+    private static Map<String, Object> modernTextArea(String id, String label, String value) {
+        return Map.of("type", 18, "label", label, "component", Map.of(
+                "type", 4, "custom_id", id, "style", 2, "required", true, "value", value));
     }
 
     private static Map<String, Object> input(String id, String label, String placeholder) {
@@ -395,12 +397,104 @@ public class DiscordInteractionController {
                         chart.hasStrictGauge(), chart.hasStrictJudgement())).toList();
     }
 
-    private static Map<String, Object> editPreview(String id, SongDetailView before, UpdateSongCommand after) {
+    private Draft createDraftFromOptions(JsonNode root) {
+        int version = option(root, "버전").path("value").asInt();
+        boolean upper = "o".equalsIgnoreCase(option(root, "upper").path("value").asText());
+        List<CreateSongCommand.CreateChartCommand> charts = new ArrayList<>();
+        String[] names = {"l", "n", "h", "ex"};
+        for (int i = 0; i < names.length; i++) {
+            JsonNode level = optionalOption(root, names[i]);
+            if (level != null) charts.add(new CreateSongCommand.CreateChartCommand(i + 1,
+                    level.path("value").asInt(), version, upper, false, false));
+        }
+        if (charts.isEmpty()) throw new IllegalArgumentException("L/N/H/EX 중 하나 이상 입력해 주세요.");
+        Instant date = LocalDate.parse(option(root, "추가일").path("value").asText())
+                .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        String attachmentUrl = requiredAttachmentUrl(root, "자켓");
+        var command = new CreateSongCommand(null, optionText(root, "장르"), optionText(root, "곡명"),
+                optionText(root, "아티스트"), version, null, date, List.copyOf(charts));
+        return new Draft(command, attachmentUrl, Instant.now());
+    }
+
+    private UpdateSongCommand updateCommandFromOptions(JsonNode root, SongDetailView current, Instant date) {
+        String genre = optionalText(root, "장르", current.song().genreName());
+        String song = optionalText(root, "곡명", current.song().songName());
+        String artist = optionalText(root, "아티스트", current.song().artistName());
+        JsonNode versionOption = optionalOption(root, "버전");
+        int version = versionOption == null ? current.song().version() : versionOption.path("value").asInt();
+        JsonNode upperOption = optionalOption(root, "upper");
+        Boolean upper = upperOption == null ? null : "o".equalsIgnoreCase(upperOption.path("value").asText());
+        Map<Integer, Integer> requestedLevels = new java.util.HashMap<>();
+        String[] names = {"l", "n", "h", "ex"};
+        for (int i = 0; i < names.length; i++) {
+            JsonNode level = optionalOption(root, names[i]);
+            if (level != null) requestedLevels.put(i + 1, level.path("value").asInt());
+        }
+        for (Integer difficulty : requestedLevels.keySet()) {
+            if (current.charts().stream().noneMatch(chart -> chart.difficulty().code() == difficulty && !chart.isDeleted()))
+                throw new IllegalArgumentException("현재 존재하지 않는 난이도 채보는 곡수정으로 추가할 수 없습니다.");
+        }
+        List<UpdateSongCommand.ChartUpdate> charts = current.charts().stream()
+                .filter(chart -> !chart.isDeleted()
+                        && (requestedLevels.containsKey(chart.difficulty().code()) || upper != null))
+                .map(chart -> new UpdateSongCommand.ChartUpdate(chart.chartId(),
+                        requestedLevels.getOrDefault(chart.difficulty().code(), chart.level()),
+                        chart.chartVersion(), upper == null ? chart.isUpper() : upper,
+                        chart.hasStrictGauge(), chart.hasStrictJudgement())).toList();
+        return new UpdateSongCommand(current.song().songId(), genre, song, artist, version,
+                null, date, charts);
+    }
+
+    private String requiredAttachmentUrl(JsonNode root, String name) {
+        return attachmentUrl(root, option(root, name).path("value").asText());
+    }
+
+    private String optionalAttachmentUrl(JsonNode root, String name) {
+        JsonNode selected = optionalOption(root, name);
+        return selected == null ? null : attachmentUrl(root, selected.path("value").asText());
+    }
+
+    private static String attachmentUrl(JsonNode root, String id) {
+        JsonNode attachment = root.path("data").path("resolved").path("attachments").path(id);
+        if (!attachment.path("content_type").asText().startsWith("image/")
+                || attachment.path("size").asLong() > 5 * 1024 * 1024L)
+            throw new IllegalArgumentException("자켓은 5MB 이하 이미지여야 합니다.");
+        String url = attachment.path("url").asText();
+        if (url.isBlank()) throw new IllegalArgumentException("자켓 파일을 찾을 수 없습니다.");
+        return url;
+    }
+
+    private static Instant optionalDate(JsonNode root, String name) {
+        JsonNode value = optionalOption(root, name);
+        return value == null ? null : LocalDate.parse(value.path("value").asText())
+                .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+    }
+
+    private static String optionText(JsonNode root, String name) {
+        String value = option(root, name).path("value").asText().strip();
+        if (value.isBlank()) throw new IllegalArgumentException(name + "은(는) 비워둘 수 없습니다.");
+        return value;
+    }
+
+    private static String optionalText(JsonNode root, String name, String fallback) {
+        JsonNode value = optionalOption(root, name);
+        return value == null ? fallback : value.path("value").asText().strip();
+    }
+
+    private Map<String, Object> editPreview(String id, SongDetailView before, UpdateSongCommand after) {
+        Map<String, Object> json = new java.util.LinkedHashMap<>();
+        json.put("songId", after.songId()); json.put("songName", after.songName());
+        json.put("genreName", after.genreName()); json.put("artistName", after.artistName());
+        json.put("version", after.version());
+        if (after.createdAt() != null)
+            json.put("date", after.createdAt().atZone(ZoneId.of("Asia/Seoul")).toLocalDate().toString());
+        json.put("charts", after.charts().stream().map(chart -> Map.of(
+                "chartId", chart.chartId(), "level", chart.level(), "upper", chart.isUpper())).toList());
+        String preview;
+        try { preview = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json); }
+        catch (Exception exception) { throw new IllegalStateException("JSON 미리보기를 만들 수 없습니다.", exception); }
         return Map.of("type", 4, "data", Map.of(
-                "content", "**곡 수정 확인**\n`#%d` %s → **%s**\n장르: %s → %s\n아티스트: %s → %s\n버전: %d → %d\n채보 수정: %d개".formatted(
-                        before.song().songId(), before.song().songName(), after.songName(),
-                        before.song().genreName(), after.genreName(), before.song().artistName(),
-                        after.artistName(), before.song().version(), after.version(), after.charts().size()),
+                "content", "**곡 수정 JSON 확인**\n```json\n" + preview + "\n```",
                 "components", List.of(Map.of("type", 1, "components", List.of(
                         Map.of("type", 2, "style", 3, "label", "수정 확정", "custom_id", "song_edit_confirm:" + id),
                         Map.of("type", 2, "style", 4, "label", "취소", "custom_id", "song_cancel"))))));
@@ -409,17 +503,12 @@ public class DiscordInteractionController {
     private Draft draft(JsonNode root, PreDraft preDraft) {
         Map<String, String> values = modalValues(root);
         int version = Integer.parseInt(values.get("version"));
-        String upperValue = values.getOrDefault("upper", "x").toLowerCase();
-        if (!upperValue.equals("o") && !upperValue.equals("x"))
-            throw new IllegalArgumentException("UPPER는 o 또는 x로 입력해 주세요.");
-        boolean upper = upperValue.equals("o");
+        JsonNode metadata;
+        try { metadata = mapper.readTree(values.get("metadata")); }
+        catch (Exception exception) { throw new IllegalArgumentException("곡 기본정보 JSON이 올바르지 않습니다."); }
+        boolean upper = metadata.path("upper").asBoolean(false);
         List<CreateSongCommand.CreateChartCommand> charts = new ArrayList<>();
-        String[] ids = {"level_l", "level_n", "level_h", "level_ex"};
-        for (int i = 0; i < ids.length; i++) {
-            String level = values.getOrDefault(ids[i], "");
-            if (!level.isBlank()) charts.add(new CreateSongCommand.CreateChartCommand(i + 1,
-                    Integer.parseInt(level), version, upper, false, false));
-        }
+        parseLevels(values.get("levels"), version, upper, charts);
         if (charts.isEmpty()) throw new IllegalArgumentException("L/N/H/EX 중 하나 이상 입력해 주세요.");
         JsonNode upload = findModalComponent(root, "jacket");
         String attachmentId = upload.path("values").path(0).asText();
@@ -429,9 +518,32 @@ public class DiscordInteractionController {
             throw new IllegalArgumentException("자켓은 5MB 이하 이미지여야 합니다.");
         Instant createdAt = LocalDate.parse(values.get("date"))
                 .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
-        return new Draft(new CreateSongCommand(null, values.get("genre"), values.get("song"),
-                values.get("artist"), version, null, createdAt, List.copyOf(charts)),
+        return new Draft(new CreateSongCommand(null, requiredText(metadata, "genreName"),
+                requiredText(metadata, "songName"), requiredText(metadata, "artistName"),
+                version, null, createdAt, List.copyOf(charts)),
                 attachment.path("url").asText(), Instant.now());
+    }
+
+    private static void parseLevels(String spec, int version, boolean upper,
+                                    List<CreateSongCommand.CreateChartCommand> charts) {
+        for (String item : spec.split(",")) {
+            if (item.isBlank()) continue;
+            String[] pair = item.strip().split(":", 2);
+            if (pair.length != 2 || pair[1].isBlank()) continue;
+            int difficulty = switch (pair[0].strip().toUpperCase()) {
+                case "E", "EASY", "L", "LIGHT" -> 1;
+                case "N" -> 2; case "H" -> 3; case "EX" -> 4;
+                default -> throw new IllegalArgumentException("지원하지 않는 난이도: " + pair[0]);
+            };
+            charts.add(new CreateSongCommand.CreateChartCommand(difficulty,
+                    Integer.parseInt(pair[1].strip()), version, upper, false, false));
+        }
+    }
+
+    private static String requiredText(JsonNode node, String field) {
+        String value = node.path(field).asText().strip();
+        if (value.isBlank()) throw new IllegalArgumentException(field + "은(는) 비워둘 수 없습니다.");
+        return value;
     }
 
     private Map<String, Object> preview(String id, Draft draft) {
@@ -443,7 +555,7 @@ public class DiscordInteractionController {
         Map<String, Integer> levels = new java.util.LinkedHashMap<>();
         String[] names = {"L", "N", "H", "EX"};
         draft.command().charts().forEach(chart -> levels.put(names[chart.difficulty() - 1], chart.level()));
-        json.put("levels", levels); json.put("jacket", draft.attachmentUrl());
+        json.put("levels", levels); json.put("jacket", "첨부됨");
         String preview;
         try { preview = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json); }
         catch (Exception exception) { throw new IllegalStateException("JSON 미리보기를 만들 수 없습니다.", exception); }
