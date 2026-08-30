@@ -16,7 +16,7 @@ Spring Boot API :9091/actuator/prometheus (Compose network only)
 ```
 
 The API's main port remains bound to host loopback for Nginx. Only the detail-free
-`/actuator/health` endpoint remains on that port. The complete Actuator surface, including
+`/health` endpoint remains on that port. The complete Actuator surface, including
 Prometheus, listens on container port 9091 and is not published to the host. Prometheus and
 Grafana bind their host ports to `127.0.0.1`; do not add them to Nginx or change those binds
 to `0.0.0.0` without adding a separately reviewed authentication layer.
@@ -36,8 +36,16 @@ GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=a-long-unique-random-password
 ```
 
-Build/deploy the API normally, then start the optional monitoring services with the same
-Compose project and environment file:
+When `GRAFANA_ADMIN_PASSWORD` is set, the normal deployment script starts the optional
+monitoring services after the API passes its smoke tests. A monitoring startup failure is
+reported as a warning and does not fail or roll back the healthy API deployment:
+
+```bash
+./deploy/bin/deploy.sh
+```
+
+To start or repair only the monitoring services manually, use the same Compose project and
+environment file:
 
 ```bash
 docker compose --env-file .env \
@@ -82,6 +90,9 @@ ssh -L 9090:127.0.0.1:9090 ubuntu@your-server
 
 Open `http://127.0.0.1:9090/targets` and confirm that `popngg-api` is `UP`. Prometheus has
 no built-in login, so never expose this tunnel to other network interfaces.
+
+External uptime monitoring should use `https://api.popn.gg/health`. The previous
+`/actuator/health` URL is now available only on the internal management port.
 
 ## What the dashboard means
 

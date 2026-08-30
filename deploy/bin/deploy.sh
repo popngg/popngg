@@ -31,4 +31,20 @@ compose=(docker compose "${compose_env[@]}" -f "$repo_root/deploy/compose.yml")
 "${compose[@]}" run --rm --no-deps catalog-migration
 "${compose[@]}" up -d --no-deps --wait api
 "$repo_root/deploy/bin/smoke-test.sh"
-echo "deployment image=$IMAGE_REPOSITORY:$IMAGE_TAG status=healthy"
+
+monitoring_status=skipped
+if [[ -n "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
+  monitoring=(docker compose "${compose_env[@]}"
+    -f "$repo_root/deploy/compose.yml"
+    -f "$repo_root/deploy/compose.monitoring.yml")
+  if "${monitoring[@]}" up -d --wait prometheus grafana; then
+    monitoring_status=healthy
+  else
+    monitoring_status=failed
+    echo "warning: monitoring failed to start; API remains healthy" >&2
+  fi
+else
+  echo "warning: monitoring skipped because GRAFANA_ADMIN_PASSWORD is not set" >&2
+fi
+
+echo "deployment image=$IMAGE_REPOSITORY:$IMAGE_TAG status=healthy monitoring=$monitoring_status"
