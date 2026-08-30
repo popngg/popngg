@@ -1,5 +1,6 @@
 package gg.popn.infra.security.adapter;
 
+import gg.popn.domain.user.model.AuthPrincipal;
 import gg.popn.domain.user.model.field.PoptomoId;
 import gg.popn.domain.user.model.field.UserRole;
 import gg.popn.infra.security.CustomUserPrincipal;
@@ -37,6 +38,24 @@ class SecurityContextCurrentPrincipalAdapterTest {
 
     @Test
     void returnsEmptyWhenUnauthenticated() {
+        assertThat(adapter.get()).isEmpty();
+    }
+
+    @Test
+    void returnsExistingAuthPrincipal() {
+        var principal = AuthPrincipal.of(
+                PoptomoId.of("1234-5678-9012"), UserRole.of("USER"));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null));
+
+        assertThat(adapter.get()).contains(principal);
+    }
+
+    @Test
+    void returnsEmptyForUnknownPrincipal() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("anonymous", null));
+
         assertThat(adapter.get()).isEmpty();
     }
 }
