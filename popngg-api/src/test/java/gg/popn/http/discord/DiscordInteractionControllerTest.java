@@ -139,6 +139,14 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void reportsExpiredUnknownSongSelection() throws Exception {
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("999");
+        assertThat(content(call(selection))).contains("찾을 수 없습니다");
+    }
+
+    @Test
     void preservesOmittedSongUpdateValuesAndRejectsCreationWithoutCharts() throws Exception {
         SongDetailView before = detail("old", "old-hash");
         when(findDetail.findSong(12)).thenReturn(before);
