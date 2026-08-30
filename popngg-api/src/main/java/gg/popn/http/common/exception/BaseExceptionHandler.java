@@ -24,6 +24,10 @@ import java.util.HashMap;
 import java.util.Map;
 import gg.popn.application.common.ErrorNotificationPort;
 import org.springframework.beans.factory.annotation.Autowired;
+import gg.popn.application.account.exception.AccountSettingsException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 @Slf4j
 @RestControllerAdvice
@@ -37,6 +41,33 @@ public class BaseExceptionHandler {
     @Autowired
     public BaseExceptionHandler(ErrorNotificationPort errorNotification) {
         this.errorNotification = errorNotification;
+    }
+
+    @ExceptionHandler(AccountSettingsException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountSettings(AccountSettingsException exception) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", exception.code());
+        body.put("data", null);
+        body.put("message", exception.getMessage());
+        return ResponseEntity.status(exception.status()).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleAvatarTooLarge() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", "AVATAR_TOO_LARGE");
+        body.put("data", null);
+        body.put("message", "Avatar must not exceed 2 MiB.");
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler({MultipartException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<Map<String, Object>> handleMalformedRequest() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", "BAD_REQUEST");
+        body.put("data", null);
+        body.put("message", "The request body or multipart form is invalid.");
+        return ResponseEntity.badRequest().body(body);
     }
     @ExceptionHandler(ActualPopclassUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleActualPopclassUnavailable(
