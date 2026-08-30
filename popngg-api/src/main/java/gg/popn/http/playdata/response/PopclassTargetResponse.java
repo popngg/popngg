@@ -87,30 +87,13 @@ public record PopclassTargetResponse(
         private static List<PopclassTargetResponse> currentFormulaTargets(
                 List<PlaydataQueryResults.ChartPlaydata> targets, boolean potential) {
             if (targets.isEmpty()) return List.of();
-            List<Long> pointHundredths = targets.stream().map(target -> {
-                var best = potential ? target.allTimeBest() : target.versionBest();
-                return POPCLASS_POLICY.newChartPointHundredths(
-                        target.level(), best.score(), target.medal().code());
-            }).toList();
-            long officialTotalHundredths = pointHundredths.stream()
-                    .mapToLong(Long::longValue).sum() / 60L;
-            List<BigDecimal> values = pointHundredths.stream()
-                    .map(value -> BigDecimal.valueOf(value)
-                            .divide(BigDecimal.valueOf(60), 10, RoundingMode.DOWN))
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-            BigDecimal sum = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal desired = BigDecimal.valueOf(officialTotalHundredths);
-            BigDecimal adjustment = desired.subtract(sum)
-                    .divide(BigDecimal.valueOf(values.size()), 10, RoundingMode.DOWN);
-            values.replaceAll(value -> value.add(adjustment));
-            BigDecimal adjustedSum = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-            values.set(0, values.getFirst().add(desired.subtract(adjustedSum)));
-
             List<PopclassTargetResponse> responses = new ArrayList<>(targets.size());
-            for (int index = 0; index < targets.size(); index++) {
-                var target = targets.get(index);
+            for (var target : targets) {
                 var best = potential ? target.allTimeBest() : target.versionBest();
-                responses.add(PopclassTargetResponse.from(target, best, values.get(index)));
+                BigDecimal value = BigDecimal.valueOf(POPCLASS_POLICY.newChartPointHundredths(
+                                target.level(), best.score(), target.medal().code()))
+                        .divide(BigDecimal.valueOf(60), 10, RoundingMode.DOWN);
+                responses.add(PopclassTargetResponse.from(target, best, value));
             }
             return List.copyOf(responses);
         }

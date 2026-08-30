@@ -1,6 +1,7 @@
 package gg.popn.http.playdata.response;
 
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
+import gg.popn.application.playdata.service.PopclassPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -22,9 +23,11 @@ class PopclassTargetResponseTest {
         assertThat(response.newSongs().getFirst().score()).isEqualTo(90_000);
         assertThat(response.oldSongs()).hasSize(1);
         assertThat(response.oldSongs().getFirst().medal()).isEqualTo(12);
-        assertThat(response.newSongs().getFirst().value()
-                .add(response.oldSongs().getFirst().value()))
-                .isEqualByComparingTo("556");
+        var policy = new PopclassPolicy();
+        assertThat(response.newSongs().getFirst().value()).isEqualByComparingTo(
+                chartValue(policy, 48, 90_000, 13));
+        assertThat(response.oldSongs().getFirst().value()).isEqualByComparingTo(
+                chartValue(policy, 48, 90_000, 12));
     }
 
     @Test
@@ -40,18 +43,32 @@ class PopclassTargetResponseTest {
     }
 
     @Test
-    void makesFrontendSumMatchOfficialFinalFloor() {
+    void returnsEachChartValueWithoutRedistributingTheTotalRemainder() {
         var first = target("CURRENT_VERSION", 1, 6, 5, 49, 89_752);
         var second = target("OLD_VERSION", 1, 7, 5, 49, 89_446);
         var response = PopclassTargetResponse.CurrentTargets.potentialFrom(
                 new PlaydataQueryResults.Popclass(
                         "0000", "user", 1, 2, 3, List.of(first, second)));
 
-        BigDecimal apiSum = response.newSongs().getFirst().value()
-                .add(response.oldSongs().getFirst().value());
-        assertThat(apiSum).isEqualByComparingTo("595");
-        assertThat(apiSum.divide(BigDecimal.valueOf(100)))
-                .isEqualByComparingTo("5.95");
+        var policy = new PopclassPolicy();
+        assertThat(response.newSongs().getFirst().value()).isEqualByComparingTo(
+                chartValue(policy, 49, 89_752, 6));
+        assertThat(response.oldSongs().getFirst().value()).isEqualByComparingTo(
+                chartValue(policy, 49, 89_446, 7));
+    }
+
+    @Test
+    void keepsSameScoreValueStableWhenAnotherChartsAllTimeScoreChanges() {
+        var stable = targetWithScores(100, "CURRENT_VERSION", 49, 5, 89_752, 89_752);
+        var changed = targetWithScores(101, "OLD_VERSION", 49, 5, 90_000, 95_000);
+        var popclass = new PlaydataQueryResults.Popclass(
+                "0000", "user", 1, 2, 3, List.of(stable, changed));
+
+        var current = PopclassTargetResponse.CurrentTargets.from(popclass);
+        var potential = PopclassTargetResponse.CurrentTargets.potentialFrom(popclass);
+
+        assertThat(current.newSongs().getFirst().value())
+                .isEqualByComparingTo(potential.newSongs().getFirst().value());
     }
 
     @Test
@@ -79,5 +96,22 @@ class PopclassTargetResponseTest {
                 new PlaydataQueryResults.Best(allTimeScore, 2, 28),
                 new PlaydataQueryResults.Medal(medal),
                 2_500, bucket, bucketRank);
+    }
+
+    private static PlaydataQueryResults.ChartPlaydata targetWithScores(
+            long chartId, String bucket, int level, int medal,
+            int versionScore, int allTimeScore) {
+        return new PlaydataQueryResults.ChartPlaydata(
+                chartId, "hash", "genre", "song", 4, "EX", level, 29, false,
+                new PlaydataQueryResults.Best(versionScore, 2, 29),
+                new PlaydataQueryResults.Best(allTimeScore, 2, 28),
+                new PlaydataQueryResults.Medal(medal),
+                2_500, bucket, 1);
+    }
+
+    private static BigDecimal chartValue(
+            PopclassPolicy policy, int level, int score, int medal) {
+        return BigDecimal.valueOf(policy.newChartPointHundredths(level, score, medal))
+                .divide(BigDecimal.valueOf(60), 10, java.math.RoundingMode.DOWN);
     }
 }
