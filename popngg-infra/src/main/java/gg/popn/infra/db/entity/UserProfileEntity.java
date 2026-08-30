@@ -87,4 +87,14 @@ public class UserProfileEntity {
         }
         this.updatedAt = updatedAt;
     }
+
+    public void updateSettings(String comment, boolean hidden, String profileImageUrl,
+            boolean avatarChanged, LocalDateTime updatedAt) {
+        this.comment = comment;
+        this.hidden = hidden;
+        if (avatarChanged) {
+            this.profileImageUrl = profileImageUrl;
+        }
+        this.updatedAt = updatedAt;
+    }
 }
