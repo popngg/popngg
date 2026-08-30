@@ -83,12 +83,6 @@ class DiscordInteractionControllerTest {
     @Test
     void opensCreateModalAndValidatesInputs() throws Exception {
         ObjectNode create = command("곡추가");
-        option(create, "자켓", "file");
-        option(create, "추가일", "2026-08-30");
-        ObjectNode attachment = create.withObject("data").withObject("resolved")
-                .withObject("attachments").putObject("file");
-        attachment.put("size", 100).put("content_type", "image/png")
-                .put("url", "https://cdn.discordapp.com/test.png");
         Map<?, ?> modal = body(call(create));
         assertThat(modal.get("type")).isEqualTo(9);
         String modalId = (String) ((Map<?, ?>) modal.get("data")).get("custom_id");
@@ -96,19 +90,25 @@ class DiscordInteractionControllerTest {
         ObjectNode submit = interaction(5);
         submit.withObject("data").put("custom_id", modalId);
         ArrayNode fields = submit.withObject("data").putArray("components");
-        modalValue(fields, "song", "new song"); modalValue(fields, "genre", "genre");
-        modalValue(fields, "artist", "artist"); modalValue(fields, "version", "29");
-        modalValue(fields, "charts", "N:30,H:42,EX:48");
-        String confirmId = firstButtonId(body(call(submit)));
+        modalUpload(fields, "jacket", "file"); modalModernValue(fields, "date", "2026-08-30");
+        modalModernValue(fields, "song", "new song"); modalModernValue(fields, "genre", "genre");
+        modalModernValue(fields, "artist", "artist"); modalModernValue(fields, "version", "29");
+        modalModernValue(fields, "level_l", ""); modalModernValue(fields, "level_n", "30");
+        modalModernValue(fields, "level_h", "42"); modalModernValue(fields, "level_ex", "48");
+        modalModernValue(fields, "upper", "x");
+        submit.withObject("data").withObject("resolved").withObject("attachments").putObject("file")
+                .put("size", 100).put("content_type", "image/png")
+                .put("url", "https://cdn.discordapp.com/test.png");
+        Map<?, ?> preview = body(call(submit));
+        assertThat((String) ((Map<?, ?>) preview.get("data")).get("content"))
+                .contains("```json", "new song", "\"N\" : 30");
+        String confirmId = firstButtonId(preview);
         when(jackets.uploadPng(anyString(), any())).thenReturn("https://static.popn.gg/hash.png");
         when(createSong.execute(any())).thenReturn(new CreateSongResult(99, List.of(1L, 2L, 3L)));
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", confirmId);
         assertThat(content(call(confirm))).contains("곡 등록 완료", "99");
         verify(admin).send(contains("곡 추가"));
-
-        option(create, "추가일", "bad-date");
-        assertThat(content(call(create))).contains("YYYY-MM-DD");
     }
 
     @Test
@@ -179,6 +179,16 @@ class DiscordInteractionControllerTest {
     private void modalValue(ArrayNode rows, String id, String value) {
         rows.addObject().putArray("components").addObject()
                 .put("custom_id", id).put("value", value);
+    }
+
+    private void modalModernValue(ArrayNode rows, String id, String value) {
+        rows.addObject().put("type", 18).putObject("component")
+                .put("type", 4).put("custom_id", id).put("value", value);
+    }
+
+    private void modalUpload(ArrayNode rows, String id, String attachmentId) {
+        rows.addObject().put("type", 18).putObject("component")
+                .put("type", 19).put("custom_id", id).putArray("values").add(attachmentId);
     }
 
     private org.springframework.http.ResponseEntity<?> call(ObjectNode payload) throws Exception {

@@ -34,14 +34,16 @@ jobs:
             actor=$(jq -r '.sender.login' <<<"$EVENT_JSON")
             state="$action"
             if [ "$merged" = "true" ]; then state="merged"; fi
-            content="**[GitHub PR]** #${number} ${state}\n제목: ${title}\n작업자: ${actor}\n${url}"
+            printf -v content '**[GitHub PR]** #%s %s\n제목: %s\n작업자: %s\n%s' \
+              "$number" "$state" "$title" "$actor" "$url"
           else
             workflow=$(jq -r '.workflow_run.name' <<<"$EVENT_JSON")
             conclusion=$(jq -r '.workflow_run.conclusion' <<<"$EVENT_JSON")
             branch=$(jq -r '.workflow_run.head_branch' <<<"$EVENT_JSON")
             sha=$(jq -r '.workflow_run.head_sha[0:7]' <<<"$EVENT_JSON")
             url=$(jq -r '.workflow_run.html_url' <<<"$EVENT_JSON")
-            content="**[GitHub Actions]** ${workflow}: ${conclusion}\n브랜치: ${branch}\n커밋: ${sha}\n${url}"
+            printf -v content '**[GitHub Actions]** %s: %s\n브랜치: %s\n커밋: %s\n%s' \
+              "$workflow" "$conclusion" "$branch" "$sha" "$url"
           fi
           jq -n --arg content "$content" '{content: $content}' |
             curl --fail --silent --show-error -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"

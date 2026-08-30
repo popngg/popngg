@@ -109,23 +109,9 @@ public class DiscordInteractionController {
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
         if (type == 2 && "곡추가".equals(root.path("data").path("name").asText())) {
-            try {
-                JsonNode attachmentOption = option(root, "자켓");
-                String attachmentId = attachmentOption.path("value").asText();
-                JsonNode attachment = root.path("data").path("resolved").path("attachments").path(attachmentId);
-                if (attachment.path("size").asLong() > 5 * 1024 * 1024L) {
-                    return ResponseEntity.ok(message("자켓 이미지는 5MB 이하여야 합니다."));
-                }
-                String contentType = attachment.path("content_type").asText();
-                if (!contentType.startsWith("image/")) return ResponseEntity.ok(message("이미지 파일만 첨부할 수 있습니다."));
-                Instant createdAt = LocalDate.parse(option(root, "추가일").path("value").asText())
-                        .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
-                String id = UUID.randomUUID().toString();
-                preDrafts.put(id, new PreDraft(attachment.path("url").asText(), createdAt, Instant.now()));
-                return ResponseEntity.ok(songModal(id));
-            } catch (RuntimeException exception) {
-                return ResponseEntity.ok(message("추가일은 YYYY-MM-DD 형식으로 입력해 주세요."));
-            }
+            String id = UUID.randomUUID().toString();
+            preDrafts.put(id, new PreDraft(new Prefill("", "", "", false), Instant.now()));
+            return ResponseEntity.ok(songModal(id, preDrafts.get(id).prefill()));
         }
         if (type == 2 && "곡조회".equals(root.path("data").path("name").asText())) {
             String keyword = root.path("data").path("options").path(0).path("value").asText();
@@ -146,7 +132,25 @@ public class DiscordInteractionController {
                             report.reportId(), report.songName(), report.genreName(),
                             report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
-            return ResponseEntity.ok(message("**최근 미등록 곡/채보**\n" + content));
+            List<Map<String, Object>> choices = reports.stream().limit(25).map(report -> Map.<String, Object>of(
+                    "label", truncate(report.songName(), 100), "description", truncate(report.genreName(), 100),
+                    "value", Long.toString(report.reportId()))).toList();
+            return ResponseEntity.ok(Map.of("type", 4, "data", Map.of(
+                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 선택하면 곡 추가 창이 열립니다.",
+                    "components", List.of(Map.of("type", 1, "components", List.of(Map.of(
+                            "type", 3, "custom_id", "unknown_song_select", "placeholder", "추가할 곡 선택",
+                            "min_values", 1, "max_values", 1, "options", choices)))))));
+        }
+        if (type == 3 && "unknown_song_select".equals(root.path("data").path("custom_id").asText())) {
+            long reportId = root.path("data").path("values").path(0).asLong();
+            var selected = unknownChartReport.findRecentUnresolved(100).stream()
+                    .filter(report -> report.reportId() == reportId).findFirst();
+            if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
+            var report = selected.get();
+            String id = UUID.randomUUID().toString();
+            Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(), false);
+            preDrafts.put(id, new PreDraft(prefill, Instant.now()));
+            return ResponseEntity.ok(songModal(id, prefill));
         }
         if (type == 2 && "곡수정".equals(root.path("data").path("name").asText())) {
             try {
@@ -311,13 +315,34 @@ public class DiscordInteractionController {
         return false;
     }
 
-    private static Map<String, Object> songModal(String id) {
+    private static Map<String, Object> songModal(String id, Prefill prefill) {
         return Map.of("type", 9, "data", Map.of("custom_id", "song_create:" + id, "title", "곡 추가",
-                "components", List.of(input("song", "곡명", "곡명을 입력하세요"),
-                        input("genre", "장르", "장르를 입력하세요"),
-                        input("artist", "아티스트", "아티스트를 입력하세요"),
-                        input("version", "버전", "예: 29"),
-                        input("charts", "채보", "예: N:30,H:42,EX:48 또는 UPPER H:45,EX:50"))));
+                "components", List.of(
+                        fileInput("jacket", "자켓"),
+                        modernInput("date", "추가일", "YYYY-MM-DD", "", true),
+                        modernInput("song", "곡명", "곡명을 입력하세요", prefill.song(), true),
+                        modernInput("genre", "장르", "장르를 입력하세요", prefill.genre(), true),
+                        modernInput("artist", "아티스트", "아티스트를 입력하세요", prefill.artist(), true),
+                        modernInput("version", "버전", "예: 29", "", true),
+                        modernInput("level_l", "L", "없으면 공백", "", false),
+                        modernInput("level_n", "N", "없으면 공백", "", false),
+                        modernInput("level_h", "H", "없으면 공백", "", false),
+                        modernInput("level_ex", "EX", "없으면 공백", "", false),
+                        modernInput("upper", "UPPER (o/x)", "o 또는 x", prefill.upper() ? "o" : "x", true))));
+    }
+
+    private static Map<String, Object> fileInput(String id, String label) {
+        return Map.of("type", 18, "label", label, "component", Map.of(
+                "type", 19, "custom_id", id, "min_values", 1, "max_values", 1, "required", true));
+    }
+
+    private static Map<String, Object> modernInput(String id, String label, String placeholder,
+                                                    String value, boolean required) {
+        Map<String, Object> component = new java.util.LinkedHashMap<>();
+        component.put("type", 4); component.put("custom_id", id); component.put("style", 1);
+        component.put("required", required); component.put("placeholder", placeholder);
+        if (value != null && !value.isBlank()) component.put("value", value);
+        return Map.of("type", 18, "label", label, "component", component);
     }
 
     private static Map<String, Object> input(String id, String label, String placeholder) {
@@ -346,7 +371,7 @@ public class DiscordInteractionController {
     private static Map<String, String> modalValues(JsonNode root) {
         Map<String, String> values = new java.util.HashMap<>();
         for (JsonNode row : root.path("data").path("components")) {
-            JsonNode component = row.path("components").path(0);
+            JsonNode component = row.has("component") ? row.path("component") : row.path("components").path(0);
             values.put(component.path("custom_id").asText(), component.path("value").asText().strip());
         }
         return values;
@@ -382,39 +407,48 @@ public class DiscordInteractionController {
     }
 
     private Draft draft(JsonNode root, PreDraft preDraft) {
-        Map<String, String> values = new java.util.HashMap<>();
-        for (JsonNode row : root.path("data").path("components")) {
-            JsonNode component = row.path("components").path(0);
-            values.put(component.path("custom_id").asText(), component.path("value").asText().strip());
-        }
+        Map<String, String> values = modalValues(root);
         int version = Integer.parseInt(values.get("version"));
-        String spec = values.get("charts");
-        boolean upper = spec.toUpperCase().startsWith("UPPER ");
-        if (upper) spec = spec.substring(6).strip();
+        String upperValue = values.getOrDefault("upper", "x").toLowerCase();
+        if (!upperValue.equals("o") && !upperValue.equals("x"))
+            throw new IllegalArgumentException("UPPER는 o 또는 x로 입력해 주세요.");
+        boolean upper = upperValue.equals("o");
         List<CreateSongCommand.CreateChartCommand> charts = new ArrayList<>();
-        for (String item : spec.split(",")) {
-            String[] pair = item.strip().split(":", 2);
-            int difficulty = switch (pair[0].strip().toUpperCase()) {
-                case "E", "EASY", "L", "LIGHT" -> 1; case "N" -> 2;
-                case "H" -> 3; case "EX" -> 4;
-                default -> throw new IllegalArgumentException("지원하지 않는 난이도: " + pair[0]);
-            };
-            charts.add(new CreateSongCommand.CreateChartCommand(difficulty,
-                    Integer.parseInt(pair[1].strip()), version, upper, false, false));
+        String[] ids = {"level_l", "level_n", "level_h", "level_ex"};
+        for (int i = 0; i < ids.length; i++) {
+            String level = values.getOrDefault(ids[i], "");
+            if (!level.isBlank()) charts.add(new CreateSongCommand.CreateChartCommand(i + 1,
+                    Integer.parseInt(level), version, upper, false, false));
         }
+        if (charts.isEmpty()) throw new IllegalArgumentException("L/N/H/EX 중 하나 이상 입력해 주세요.");
+        JsonNode upload = findModalComponent(root, "jacket");
+        String attachmentId = upload.path("values").path(0).asText();
+        JsonNode attachment = root.path("data").path("resolved").path("attachments").path(attachmentId);
+        if (!attachment.path("content_type").asText().startsWith("image/")
+                || attachment.path("size").asLong() > 5 * 1024 * 1024L)
+            throw new IllegalArgumentException("자켓은 5MB 이하 이미지여야 합니다.");
+        Instant createdAt = LocalDate.parse(values.get("date"))
+                .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
         return new Draft(new CreateSongCommand(null, values.get("genre"), values.get("song"),
-                values.get("artist"), version, null, preDraft.createdAt(), List.copyOf(charts)),
-                preDraft.attachmentUrl(), Instant.now());
+                values.get("artist"), version, null, createdAt, List.copyOf(charts)),
+                attachment.path("url").asText(), Instant.now());
     }
 
-    private static Map<String, Object> preview(String id, Draft draft) {
-        String charts = draft.command().charts().stream()
-                .map(c -> "%d:%d".formatted(c.difficulty(), c.level()))
-                .collect(java.util.stream.Collectors.joining(", "));
+    private Map<String, Object> preview(String id, Draft draft) {
+        Map<String, Object> json = new java.util.LinkedHashMap<>();
+        json.put("songName", draft.command().songName()); json.put("genreName", draft.command().genreName());
+        json.put("artistName", draft.command().artistName()); json.put("version", draft.command().version());
+        json.put("date", draft.command().createdAt().atZone(ZoneId.of("Asia/Seoul")).toLocalDate().toString());
+        json.put("upper", draft.command().charts().getFirst().isUpper());
+        Map<String, Integer> levels = new java.util.LinkedHashMap<>();
+        String[] names = {"L", "N", "H", "EX"};
+        draft.command().charts().forEach(chart -> levels.put(names[chart.difficulty() - 1], chart.level()));
+        json.put("levels", levels); json.put("jacket", draft.attachmentUrl());
+        String preview;
+        try { preview = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json); }
+        catch (Exception exception) { throw new IllegalStateException("JSON 미리보기를 만들 수 없습니다.", exception); }
         return Map.of("type", 4, "data", Map.of(
-                "content", "**등록 확인**\n곡명: %s\n장르: %s\n아티스트: %s\n버전: %d\n채보: %s".formatted(
-                        draft.command().songName(), draft.command().genreName(), draft.command().artistName(),
-                        draft.command().version(), charts),
+                "content", "**곡 등록 JSON 확인**\n```json\n" + preview + "\n```",
                 "components", List.of(Map.of("type", 1, "components", List.of(
                         Map.of("type", 2, "style", 3, "label", "등록", "custom_id", "song_confirm:" + id),
                         Map.of("type", 2, "style", 4, "label", "취소", "custom_id", "song_cancel"))))));
@@ -436,6 +470,19 @@ public class DiscordInteractionController {
             if (name.equals(option.path("name").asText())) return option;
         }
         return null;
+    }
+
+    private static JsonNode findModalComponent(JsonNode root, String id) {
+        for (JsonNode row : root.path("data").path("components")) {
+            JsonNode component = row.has("component") ? row.path("component") : row.path("components").path(0);
+            if (id.equals(component.path("custom_id").asText())) return component;
+        }
+        throw new IllegalArgumentException("입력 항목이 없습니다: " + id);
+    }
+
+    private static String truncate(String value, int length) {
+        if (value == null || value.isBlank()) return "-";
+        return value.length() <= length ? value : value.substring(0, length - 1) + "…";
     }
 
     private static String actorId(JsonNode root) {
@@ -463,7 +510,8 @@ public class DiscordInteractionController {
         return png;
     }
 
-    private record PreDraft(String attachmentUrl, Instant createdAt, Instant requestedAt) {}
+    private record Prefill(String song, String genre, String artist, boolean upper) {}
+    private record PreDraft(Prefill prefill, Instant requestedAt) {}
     private record Draft(CreateSongCommand command, String attachmentUrl, Instant createdAt) {}
     private record EditDraft(SongDetailView current, UpdateSongCommand command, String attachmentUrl,
                              Instant requestedCreatedAt, Instant requestedAt) {}
