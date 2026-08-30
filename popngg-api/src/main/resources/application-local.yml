@@ -53,3 +53,28 @@ jwt:
 app:
   cors:
     allowed-origins: "http://localhost:3000,http://127.0.0.1:3000"
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:9091}
+    address: 127.0.0.1
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      show-details: never
+      group:
+        public:
+          include: "*"
+          additional-path: server:/actuator/health
+          show-details: never
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,1s,2s,5s

@@ -122,13 +122,14 @@ services:
       AWS_CLOUDFRONT_URL: ${AWS_CLOUDFRONT_URL:-https://static.popn.gg}
       SERVER_MAX_SWALLOW_SIZE: ${SERVER_MAX_SWALLOW_SIZE:-4MB}
       SERVER_FORWARD_HEADERS_STRATEGY: ${SERVER_FORWARD_HEADERS_STRATEGY:-framework}
+      MANAGEMENT_PORT: 9091
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8080"
     depends_on:
       catalog-migration:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:9091/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 5s
       timeout: 3s
       retries: 20

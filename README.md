@@ -72,6 +72,13 @@ proxy. Cookie-authenticated frontend requests must set `credentials: include`.
 In managed hosting, inject the variables from the platform's secret manager instead of
 creating an `.env` file. See `deploy/README.md` for migration and rollback details.
 
+## Monitoring
+
+An optional Prometheus and Grafana stack collects Spring Boot HTTP histograms, JVM metrics,
+and HikariCP pool metrics. It is isolated from the API lifecycle and binds its administration
+ports to host loopback only. See [deploy/monitoring/README.md](deploy/monitoring/README.md)
+for setup, SSH access, dashboard definitions, retention, and troubleshooting.
+
 ## Technology
 
 - Java 21
