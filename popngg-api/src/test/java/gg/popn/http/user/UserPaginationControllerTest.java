@@ -54,6 +54,7 @@ class UserPaginationControllerTest {
         assertThat(page.items()).singleElement().satisfies(user -> {
             assertThat(user.id()).isEqualTo("1234-5678-9012");
             assertThat(user.name()).isEqualTo("name");
+            assertThat(user.popnClass()).isEqualTo(17700);
             assertThat(user.bestLevels().get(1).maxLevel()).isNull();
         });
         assertThat(page.totalPages()).isEqualTo(2);

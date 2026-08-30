@@ -11,10 +11,16 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class UserProfileJpaAdapterTest {
@@ -27,7 +33,7 @@ class UserProfileJpaAdapterTest {
         var source = new DriverManagerDataSource(
                 "jdbc:h2:mem:user-profile;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
                 "sa", "");
-        jdbc = new JdbcTemplate(source);
+        jdbc = spy(new JdbcTemplate(source));
         jdbc.execute("DROP ALL OBJECTS");
         jdbc.execute("""
                 CREATE TABLE users(
@@ -155,6 +161,31 @@ class UserProfileJpaAdapterTest {
             assertThat(user.bestLevels()).extracting(summary -> summary.maxLevel())
                     .containsExactly(49, 48, 48);
         });
+    }
+
+    @Test
+    void loadsMedalSummariesForThePageInOneQuery() {
+        jdbc.update("INSERT INTO users VALUES (10, '1234-5678-9012'), (20, '9999-9999-9999')");
+        jdbc.update("""
+                INSERT INTO user_profiles VALUES
+                  (10, 'alpha', NULL, 'first', 177000, FALSE, TIMESTAMP '2026-08-22 10:00:00'),
+                  (20, 'beta', NULL, 'second', 176000, FALSE, TIMESTAMP '2026-08-22 11:00:00')
+                """);
+        jdbc.update("""
+                INSERT INTO playdata(user_id, chart_id, current_version, medal_code) VALUES
+                  (10, 1, 29, 1), (20, 3, 29, 5)
+                """);
+
+        var result = adapter.findUsers(new FindUsersQuery(
+                null, FindUsersQuery.Sort.RANK,
+                FindUsersQuery.Order.ASC, 0, 20));
+
+        assertThat(result.users()).hasSize(2);
+        assertThat(result.users().get(0).bestLevels().get(0).maxLevel()).isEqualTo(48);
+        assertThat(result.users().get(1).bestLevels().get(0).maxLevel()).isEqualTo(49);
+        verify(jdbc, times(2)).query(
+                anyString(), org.mockito.ArgumentMatchers.<RowMapper<Object>>any(),
+                any(Object[].class));
     }
 
     private static UserEntity user(Long id, String poptomoId, LocalDateTime updatedAt) {

@@ -12,10 +12,14 @@ import gg.popn.infra.db.jpa.UserJpaRepository;
 import gg.popn.infra.db.jpa.UserProfileJpaRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -136,9 +140,11 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         Long total = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM (" + base + ") ranked" + keywordClause,
                 Long.class, countArgs.toArray());
+        Map<Long, List<UserProfileResult.MedalSummary>> summariesByUser = medalSummaries(
+                rows.stream().map(UserListRow::userId).toList());
         return new UserListResult(rows.stream().map(row -> new UserListResult.Item(
                 row.poptomoId(), row.userName(), row.profileImageUrl(), row.comment(),
-                row.rank(), row.displayPopclass(), medalSummaries(row.userId()),
+                row.rank(), row.displayPopclass(), summariesByUser.get(row.userId()),
                 row.updatedAt())).toList(), query.page(), query.size(),
                 total == null ? 0 : total);
     }
@@ -164,8 +170,21 @@ public class UserProfileJpaAdapter implements UserProfilePort {
     }
 
     private List<UserProfileResult.MedalSummary> medalSummaries(Long userId) {
-        List<LevelMedalCounts> levels = jdbc.query("""
-                SELECT c.level,
+        return medalSummaries(List.of(userId)).get(userId);
+    }
+
+    private Map<Long, List<UserProfileResult.MedalSummary>> medalSummaries(
+            List<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        String selectedUsers = IntStream.range(0, userIds.size())
+                .mapToObj(index -> "SELECT CAST(? AS BIGINT) AS user_id")
+                .collect(Collectors.joining(" UNION ALL "));
+        List<Object> args = new ArrayList<>(userIds);
+        args.add(currentVersion);
+        List<UserLevelMedalCounts> levels = jdbc.query("""
+                SELECT selected_users.user_id, c.level,
                        COUNT(*) AS total_count,
                        SUM(CASE WHEN p.medal_code IN (1,2,3,4,5,6,7,11,12)
                                 THEN 1 ELSE 0 END) AS clear_count,
@@ -173,21 +192,37 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                                 THEN 1 ELSE 0 END) AS full_combo_count,
                        SUM(CASE WHEN p.medal_code = 1
                                 THEN 1 ELSE 0 END) AS perfect_count
-                  FROM charts c
+                  FROM (%s) selected_users
+                 CROSS JOIN charts c
                   LEFT JOIN playdata p
                     ON p.chart_id = c.chart_id
-                   AND p.user_id = ?
+                   AND p.user_id = selected_users.user_id
                    AND p.current_version = ?
                  WHERE c.is_deleted = FALSE
-                 GROUP BY c.level
-                 ORDER BY c.level
-                """, (rs, rowNum) -> new LevelMedalCounts(
+                 GROUP BY selected_users.user_id, c.level
+                 ORDER BY selected_users.user_id, c.level
+                """.formatted(selectedUsers), (rs, rowNum) -> new UserLevelMedalCounts(
+                        rs.getLong("user_id"),
                         rs.getInt("level"),
                         rs.getLong("total_count"),
                         rs.getLong("clear_count"),
                         rs.getLong("full_combo_count"),
                         rs.getLong("perfect_count")),
-                userId, currentVersion);
+                args.toArray());
+        Map<Long, List<LevelMedalCounts>> levelsByUser = new HashMap<>();
+        for (UserLevelMedalCounts level : levels) {
+            levelsByUser.computeIfAbsent(level.userId(), ignored -> new ArrayList<>())
+                    .add(level.counts());
+        }
+        Map<Long, List<UserProfileResult.MedalSummary>> summariesByUser = new HashMap<>();
+        for (Long userId : userIds) {
+            summariesByUser.put(userId, summaries(
+                    levelsByUser.getOrDefault(userId, List.of())));
+        }
+        return summariesByUser;
+    }
+
+    private List<UserProfileResult.MedalSummary> summaries(List<LevelMedalCounts> levels) {
         return List.of(
                 summary("clear", levels, LevelMedalCounts::clear),
                 summary("full-combo", levels, LevelMedalCounts::fullCombo),
@@ -213,6 +248,19 @@ public class UserProfileJpaAdapter implements UserProfilePort {
             long fullCombo,
             long perfect
     ) {
+    }
+
+    private record UserLevelMedalCounts(
+            long userId,
+            int level,
+            long total,
+            long clear,
+            long fullCombo,
+            long perfect
+    ) {
+        private LevelMedalCounts counts() {
+            return new LevelMedalCounts(level, total, clear, fullCombo, perfect);
+        }
     }
 
     private record UserListRow(
