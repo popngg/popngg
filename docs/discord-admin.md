@@ -6,11 +6,13 @@ may use the commands.
 
 ## Commands
 
-- `/곡추가 자켓:<image> 추가일:<YYYY-MM-DD>` creates a song and its charts.
+- `/곡추가` opens one form containing jacket, date, song/genre/artist/version,
+  optional L/N/H/EX levels, and an `o`/`x` UPPER field. Submission shows a JSON preview.
 - `/곡수정 song_id:<id> [자켓:<image>] [추가일:<YYYY-MM-DD>]` updates a song without
   deleting omitted charts.
 - `/곡조회 검색어:<text>` searches the catalog.
-- `/미등록목록` shows recently unmatched renewal rows.
+- `/미등록목록` shows recently unmatched renewal rows. Selecting a row opens the same
+  creation form with song, genre, artist, and UPPER prefilled.
 
 Chart input uses `N:30,H:42,EX:48`; prefix it with `UPPER` for Upper charts.
 Creation and modification require a preview confirmation. Drafts expire after 15 minutes.

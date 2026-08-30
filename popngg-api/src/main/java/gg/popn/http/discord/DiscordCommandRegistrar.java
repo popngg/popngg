@@ -55,10 +55,7 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
         }
         try {
             String body = mapper.writeValueAsString(List.of(
-                    Map.of("name", "곡추가", "description", "관리자 전용 곡과 채보 등록", "type", 1,
-                            "options", List.of(
-                                    Map.of("type", 11, "name", "자켓", "description", "자켓 이미지", "required", true),
-                                    Map.of("type", 3, "name", "추가일", "description", "YYYY-MM-DD", "required", true))),
+                    Map.of("name", "곡추가", "description", "관리자 전용 곡과 채보 등록", "type", 1),
                     Map.of("name", "곡조회", "description", "등록된 곡 검색", "type", 1,
                             "options", List.of(Map.of("type", 3, "name", "검색어",
                                     "description", "곡명, 장르 또는 아티스트", "required", true))),
