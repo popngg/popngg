@@ -8,6 +8,7 @@ import java.util.Collection;
 public class PopclassPolicy {
     private static final int USER_POPCLASS_DIVISOR = 50;
     public static final int NEW_POPCLASS_SCALE = 1_000;
+    public static final int CHART_DISPLAY_MULTIPLIER = 6;
     private static final long NEW_POPCLASS_DIVISOR = 3_881_250L;
     private static final long FORMULA_PRECISION = 100_000_000L;
 

@@ -86,7 +86,7 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(records.items()).extracting(row -> row.rank())
                 .containsExactly(1, 3);
         assertThat(records.items()).extracting(row -> row.popnClass())
-                .containsExactly(12_000, 11_000);
+                .containsExactly(72_000, 66_000);
         assertThat(progress.rows()).hasSize(2);
         assertThat(progress.summary().total()).isEqualTo(2);
         assertThat(progress.summary().averageScore()).isEqualTo(93_500);
@@ -200,7 +200,7 @@ class PlaydataQueryJdbcAdapterTest {
                 .containsExactly("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
         assertThat(records.items()).extracting(row -> row.popnClass())
-                .containsExactly(12_000, 11_000);
+                .containsExactly(72_000, 66_000);
     }
 
     @Test
