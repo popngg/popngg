@@ -13,6 +13,7 @@ import gg.popn.application.account.dto.ProfileUpdate;
 import gg.popn.application.account.exception.AccountSettingsException;
 import gg.popn.application.account.port.out.AccountSettingsPort;
 import gg.popn.application.account.port.out.AvatarStoragePort;
+import gg.popn.application.account.port.out.AvatarProcessingException;
 import gg.popn.application.auth.port.out.CurrentPrincipalPort;
 import gg.popn.application.auth.port.out.PasswordHasherPort;
 import gg.popn.application.auth.port.out.PasswordVerificationPort;
@@ -73,6 +74,22 @@ class AccountSettingsServiceTest {
                 new ProfileUpdate.Avatar(new byte[2 * 1024 * 1024 + 1], "image/png"), false)),
                 "AVATAR_TOO_LARGE");
         verify(avatars, never()).upload(anyString(), org.mockito.ArgumentMatchers.any(), anyString());
+    }
+
+    @Test
+    void reportsAnUndecodableImageAsInvalidAvatar() {
+        byte[] pngHeader = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10};
+        when(accounts.find(anyString())).thenReturn(
+                new AccountSettings(null, "", false));
+        when(avatars.upload(anyString(), org.mockito.ArgumentMatchers.any(), anyString()))
+                .thenThrow(new AvatarProcessingException("decode failed"));
+
+        assertCode(() -> service.updateProfile(new ProfileUpdate("ok", false,
+                new ProfileUpdate.Avatar(pngHeader, "image/png"), false)),
+                "INVALID_AVATAR_TYPE");
+        verify(accounts, never()).updateProfile(anyString(), anyString(),
+                org.mockito.ArgumentMatchers.anyBoolean(), anyString(),
+                org.mockito.ArgumentMatchers.anyBoolean());
     }
 
     @Test
