@@ -47,7 +47,7 @@ public record PopclassTargetResponse(
             PlaydataQueryResults.Best best,
             BigDecimal value) {
         return new PopclassTargetResponse(
-                Long.toString(target.chartId()),
+                target.songHash(),
                 target.songName(),
                 target.genreName(),
                 BANNER_BASE_URL + target.songHash() + ".png",
