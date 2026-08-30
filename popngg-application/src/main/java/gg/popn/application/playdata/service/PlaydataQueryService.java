@@ -41,7 +41,8 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
                 && query.scoreMin() > query.scoreMax()) {
             throw new IllegalArgumentException("scoreMin must not exceed scoreMax");
         }
-        String sort = normalize(query.sort(), "LEVEL", "SCORE");
+        String sort = normalize(query.sort(), "LEVEL", "VERSION", "DIFFICULTY", "TITLE",
+                "GENRE", "SCORE", "MEDAL", "RANK");
         String order = normalize(query.order(), "ASC", "DESC");
         return port.findUserRecords(poptomoId, new FindUserRecordsQuery(
                 query.keyword(), query.version(), query.levelMin(), query.levelMax(),
@@ -78,10 +79,10 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
         return port.findChartRankings(chartId, limit);
     }
 
-    private static String normalize(String value, String first, String second) {
+    private static String normalize(String value, String... supported) {
         if (value == null) throw new IllegalArgumentException("Query option is required.");
         String normalized = value.toUpperCase();
-        if (!normalized.equals(first) && !normalized.equals(second)) {
+        if (java.util.Arrays.stream(supported).noneMatch(normalized::equals)) {
             throw new IllegalArgumentException("Unsupported query option.");
         }
         return normalized;

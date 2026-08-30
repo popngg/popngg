@@ -4,6 +4,8 @@ import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.application.playdata.port.out.PlaydataQueryPort;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -66,6 +68,27 @@ class PlaydataQueryServiceTest {
 
         assertThat(service.findUserRecords("0000", query)).isSameAs(records);
         assertThat(service.findProgress("0000", "difficulty")).isSameAs(progress);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"level", "version", "difficulty", "title", "genre", "score", "medal", "rank"})
+    void acceptsEveryUserRecordSort(String sort) {
+        var query = new FindUserRecordsQuery(null, null, null, null, null, null, null,
+                null, null, sort, "asc", 0, 20);
+        var normalized = new FindUserRecordsQuery(null, null, null, null, null, null, null,
+                null, null, sort.toUpperCase(), "ASC", 0, 20);
+        var records = new PlaydataQueryResults.UserRecords(List.of(), 0, 0, 20);
+        when(port.findUserRecords("0000", normalized)).thenReturn(records);
+
+        assertThat(service.findUserRecords("0000", query)).isSameAs(records);
+    }
+
+    @Test
+    void rejectsUnsupportedUserRecordSort() {
+        var query = new FindUserRecordsQuery(null, null, null, null, null, null, null,
+                null, null, "artist", "asc", 0, 20);
+        assertThatThrownBy(() -> service.findUserRecords("0000", query))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
