@@ -18,7 +18,7 @@ public record UserListResponse(
     public static UserListResponse from(UserListResult.Item item) {
         return new UserListResponse(
                 item.poptomoId(), item.userName(), item.profileImageUrl(), item.comment(),
-                item.rank(), item.displayPopclass(), item.bestLevels().stream()
+                item.rank(), item.displayPopclass() / 10, item.bestLevels().stream()
                         .map(summary -> new BestLevelResponse(
                                 summary.kind(), summary.maxLevel() == 0
                                         ? null : summary.maxLevel()))
