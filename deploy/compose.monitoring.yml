@@ -27,7 +27,13 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_ANONYMOUS_HIDE_VERSION: "true"
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN:-grafana.popn.gg}
+      GF_SERVER_ROOT_URL: https://${GRAFANA_DOMAIN:-grafana.popn.gg}
+      GF_SERVER_ENFORCE_DOMAIN: "true"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: strict
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -37,7 +43,7 @@ services:
     mem_limit: 512m
     cpus: 0.50
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:3000/api/health"]
+      test: ["CMD-SHELL", "wget --header='Host: ${GRAFANA_DOMAIN:-grafana.popn.gg}' --spider --quiet http://127.0.0.1:3000/api/health"]
       interval: 15s
       timeout: 5s
       retries: 10
