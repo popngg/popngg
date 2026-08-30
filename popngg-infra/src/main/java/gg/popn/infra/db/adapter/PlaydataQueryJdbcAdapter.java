@@ -113,6 +113,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
             case "SCORE" -> "p.all_time_score";
             case "MEDAL" -> "p.medal_code";
             case "RANK" -> "COALESCE(p.all_time_rank_code, 13)";
+            case "POPCLASS" -> "p.popclass";
             default -> throw new IllegalArgumentException("Unsupported record sort.");
         };
         String sql = """

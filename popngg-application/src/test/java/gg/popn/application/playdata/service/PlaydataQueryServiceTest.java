@@ -71,7 +71,7 @@ class PlaydataQueryServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"level", "version", "difficulty", "title", "genre", "score", "medal", "rank"})
+    @ValueSource(strings = {"level", "version", "difficulty", "title", "genre", "score", "medal", "rank", "popclass"})
     void acceptsEveryUserRecordSort(String sort) {
         var query = new FindUserRecordsQuery(null, null, null, null, null, null, null,
                 null, null, sort, "asc", 0, 20);
