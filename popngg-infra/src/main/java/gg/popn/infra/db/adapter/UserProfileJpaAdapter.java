@@ -75,7 +75,12 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         List<UserEntity> users = entityManager.createQuery(
                         "select u from UserEntity u join fetch u.profile p "
                                 + "where p.hidden = false "
-                                + "order by p." + sortProperty + " desc, u.poptomoId asc",
+                                + "order by "
+                                + (query.sort() == UserRankingQuery.Sort.DISPLAY_POPCLASS
+                                    ? "case when p.displayPopclass = 0 then p.potentialPopclass "
+                                      + "else p.displayPopclass end"
+                                    : "p." + sortProperty)
+                                + " desc, u.poptomoId asc",
                         UserEntity.class)
                 .setFirstResult(query.page() * query.size())
                 .setMaxResults(query.size())
@@ -84,7 +89,11 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                         "select count(u) from UserEntity u join u.profile p where p.hidden = false",
                         Long.class)
                 .getSingleResult();
-        return new RankingPage(users.stream().map(this::toResult).toList(), total);
+        Map<Long, List<UserProfileResult.MedalSummary>> summariesByUser = medalSummaries(
+                users.stream().map(UserEntity::getId).toList());
+        return new RankingPage(users.stream()
+                .map(user -> rankingResult(user, summariesByUser.get(user.getId())))
+                .toList(), total);
     }
 
     @Override
@@ -106,9 +115,15 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         }
         String base = """
                 SELECT u.user_id, u.poptomo_id, p.user_name, p.profile_image_url,
-                       p.comment, p.display_popclass, p.updated_at,
+                       p.comment,
+                       CASE WHEN p.display_popclass = 0 THEN p.potential_popclass
+                            ELSE p.display_popclass END AS effective_popclass,
+                       p.updated_at,
                        ROW_NUMBER() OVER (
-                           ORDER BY p.display_popclass DESC, u.poptomo_id ASC
+                           ORDER BY CASE WHEN p.display_popclass = 0
+                                             THEN p.potential_popclass
+                                         ELSE p.display_popclass END DESC,
+                                    u.poptomo_id ASC
                        ) AS ranking,
                        COALESCE((
                            SELECT MAX(c.level)
@@ -131,7 +146,7 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         List<UserListRow> rows = jdbc.query(sql, (rs, rowNum) -> new UserListRow(
                 rs.getLong("user_id"), rs.getString("poptomo_id"),
                 rs.getString("user_name"), rs.getString("profile_image_url"),
-                rs.getString("comment"), rs.getInt("display_popclass"),
+                rs.getString("comment"), rs.getInt("effective_popclass"),
                 rs.getTimestamp("updated_at").toLocalDateTime(),
                 rs.getInt("ranking")), baseArgs.toArray());
         List<Object> countArgs = new ArrayList<>();
@@ -150,6 +165,24 @@ public class UserProfileJpaAdapter implements UserProfilePort {
     }
 
     private UserProfileResult toResult(UserEntity user) {
+        return toResult(user, medalSummaries(user.getId()));
+    }
+
+    private UserProfileResult rankingResult(
+            UserEntity user, List<UserProfileResult.MedalSummary> medalSummaries) {
+        UserProfileResult result = toResult(user, medalSummaries);
+        if (result.displayPopclass() != 0) return result;
+        return new UserProfileResult(
+                result.poptomoId(), result.userName(), result.characterName(),
+                result.comment(), result.profileImageUrl(), result.hidden(),
+                result.potentialPopclass(), result.potentialPopclass(),
+                result.legacyPopclass(), result.normalCredit(), result.extraCredit(),
+                result.timePlay10Credit(), result.timePlay16Credit(),
+                result.medalSummaries(), result.updatedAt());
+    }
+
+    private UserProfileResult toResult(
+            UserEntity user, List<UserProfileResult.MedalSummary> medalSummaries) {
         var profile = user.getProfile();
         return new UserProfileResult(
                 user.getPoptomoId(),
@@ -165,7 +198,7 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                 profile.getExtraCredit(),
                 profile.getTimePlay10Credit(),
                 profile.getTimePlay16Credit(),
-                medalSummaries(user.getId()),
+                medalSummaries,
                 profile.getUpdatedAt());
     }
 

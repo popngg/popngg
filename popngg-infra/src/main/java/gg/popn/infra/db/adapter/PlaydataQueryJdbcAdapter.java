@@ -40,7 +40,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
     @Override
     public PlaydataQueryResults.UserPlaydata findUserPlaydata(String poptomoId) {
         UserSummary user = findUser(poptomoId);
-        List<PlaydataQueryResults.ChartPlaydata> rows = queryPlaydata("""
+        List<PlaydataQueryResults.ChartPlaydata> rows = queryPlaydata(true, """
                 SELECT p.*, c.level, c.difficulty_code, c.difficulty_label,
                        c.chart_version, c.is_upper,
                        s.song_hash, s.genre_name, s.song_name
@@ -113,13 +113,14 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
             case "SCORE" -> "p.all_time_score";
             case "MEDAL" -> "p.medal_code";
             case "RANK" -> "COALESCE(p.all_time_rank_code, 13)";
-            case "POPCLASS" -> "p.popclass";
+            case "POPCLASS" -> "p.potential_popclass";
             default -> throw new IllegalArgumentException("Unsupported record sort.");
         };
         String sql = """
                 SELECT s.song_hash, s.song_name, s.genre_name, s.jacket_url, s.version,
                        c.difficulty_code, c.level, p.all_time_score, p.medal_code,
-                       COALESCE(p.all_time_rank_code, 13) AS rank_code, p.popclass
+                       COALESCE(p.all_time_rank_code, 13) AS rank_code,
+                       p.potential_popclass AS popclass
                 """ + where + " ORDER BY " + sortColumn + " " + query.order()
                 + ", p.chart_id ASC LIMIT ? OFFSET ?";
         List<Object> pageArgs = new ArrayList<>(args);
@@ -376,6 +377,11 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
     }
 
     private List<PlaydataQueryResults.ChartPlaydata> queryPlaydata(String sql, Object... args) {
+        return queryPlaydata(false, sql, args);
+    }
+
+    private List<PlaydataQueryResults.ChartPlaydata> queryPlaydata(
+            boolean potential, String sql, Object... args) {
         return jdbc.query(sql, (rs, rowNum) -> new PlaydataQueryResults.ChartPlaydata(
                 rs.getLong("chart_id"), rs.getString("song_hash"),
                 rs.getString("genre_name"), rs.getString("song_name"),
@@ -388,7 +394,8 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                         rs.getInt("all_time_score"), integer(rs, "all_time_rank_code"),
                         rs.getInt("all_time_score_version")),
                 new PlaydataQueryResults.Medal(rs.getInt("medal_code")),
-                rs.getInt("popclass"), rs.getString("popclass_bucket"),
+                rs.getInt(potential ? "potential_popclass" : "popclass"),
+                rs.getString("popclass_bucket"),
                 integer(rs, "popclass_bucket_rank")), args);
     }
 

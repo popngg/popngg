@@ -3,9 +3,11 @@ package gg.popn.infra.db.adapter;
 import gg.popn.infra.db.entity.UserEntity;
 import gg.popn.infra.db.entity.UserProfileEntity;
 import gg.popn.application.user.dto.query.FindUsersQuery;
+import gg.popn.application.user.dto.query.UserRankingQuery;
 import gg.popn.infra.db.jpa.UserJpaRepository;
 import gg.popn.infra.db.jpa.UserProfileJpaRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +19,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -26,6 +29,7 @@ import static org.mockito.Mockito.when;
 class UserProfileJpaAdapterTest {
     private UserJpaRepository userRepository;
     private JdbcTemplate jdbc;
+    private EntityManager entityManager;
     private UserProfileJpaAdapter adapter;
 
     @BeforeEach
@@ -43,7 +47,8 @@ class UserProfileJpaAdapterTest {
                 CREATE TABLE user_profiles(
                   user_id BIGINT PRIMARY KEY, user_name VARCHAR(64),
                   profile_image_url VARCHAR(512), comment VARCHAR(255),
-                  display_popclass INT, is_hidden BOOLEAN, updated_at TIMESTAMP)
+                  display_popclass INT, potential_popclass INT DEFAULT 0,
+                  is_hidden BOOLEAN, updated_at TIMESTAMP)
                 """);
         jdbc.execute("""
                 CREATE TABLE charts(
@@ -63,10 +68,11 @@ class UserProfileJpaAdapterTest {
                 """);
 
         userRepository = mock(UserJpaRepository.class);
+        entityManager = mock(EntityManager.class);
         adapter = new UserProfileJpaAdapter(
                 userRepository,
                 mock(UserProfileJpaRepository.class),
-                mock(EntityManager.class),
+                entityManager,
                 jdbc,
                 29);
     }
@@ -141,8 +147,8 @@ class UserProfileJpaAdapterTest {
         jdbc.update("INSERT INTO users VALUES (10, '1234-5678-9012'), (20, '9999-9999-9999')");
         jdbc.update("""
                 INSERT INTO user_profiles VALUES
-                  (10, 'alpha', NULL, 'first', 177000, FALSE, TIMESTAMP '2026-08-22 10:00:00'),
-                  (20, 'hidden', NULL, 'second', 200000, TRUE, TIMESTAMP '2026-08-22 11:00:00')
+                  (10, 'alpha', NULL, 'first', 0, 180000, FALSE, TIMESTAMP '2026-08-22 10:00:00'),
+                  (20, 'hidden', NULL, 'second', 200000, 201000, TRUE, TIMESTAMP '2026-08-22 11:00:00')
                 """);
         jdbc.update("""
                 INSERT INTO playdata(user_id, chart_id, current_version, medal_code) VALUES
@@ -157,7 +163,7 @@ class UserProfileJpaAdapterTest {
         assertThat(result.users()).singleElement().satisfies(user -> {
             assertThat(user.poptomoId()).isEqualTo("1234-5678-9012");
             assertThat(user.rank()).isEqualTo(1);
-            assertThat(user.displayPopclass()).isEqualTo(177000);
+            assertThat(user.displayPopclass()).isEqualTo(180000);
             assertThat(user.bestLevels()).extracting(summary -> summary.maxLevel())
                     .containsExactly(49, 48, 48);
         });
@@ -168,8 +174,8 @@ class UserProfileJpaAdapterTest {
         jdbc.update("INSERT INTO users VALUES (10, '1234-5678-9012'), (20, '9999-9999-9999')");
         jdbc.update("""
                 INSERT INTO user_profiles VALUES
-                  (10, 'alpha', NULL, 'first', 177000, FALSE, TIMESTAMP '2026-08-22 10:00:00'),
-                  (20, 'beta', NULL, 'second', 176000, FALSE, TIMESTAMP '2026-08-22 11:00:00')
+                  (10, 'alpha', NULL, 'first', 177000, 180000, FALSE, TIMESTAMP '2026-08-22 10:00:00'),
+                  (20, 'beta', NULL, 'second', 176000, 179000, FALSE, TIMESTAMP '2026-08-22 11:00:00')
                 """);
         jdbc.update("""
                 INSERT INTO playdata(user_id, chart_id, current_version, medal_code) VALUES
@@ -188,7 +194,38 @@ class UserProfileJpaAdapterTest {
                 any(Object[].class));
     }
 
+    @Test
+    void loadsRankingMedalSummariesOnceForTheRequestedPage() {
+        var first = user(10L, "1234-5678-9012", LocalDateTime.now());
+        var second = user(20L, "9999-9999-9999", LocalDateTime.now(), 0, 200);
+        @SuppressWarnings("unchecked")
+        TypedQuery<UserEntity> usersQuery = mock(TypedQuery.class);
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(UserEntity.class))).thenReturn(usersQuery);
+        when(usersQuery.setFirstResult(0)).thenReturn(usersQuery);
+        when(usersQuery.setMaxResults(20)).thenReturn(usersQuery);
+        when(usersQuery.getResultList()).thenReturn(java.util.List.of(first, second));
+        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(2L);
+
+        var result = adapter.findRankings(new UserRankingQuery(
+                UserRankingQuery.Sort.DISPLAY_POPCLASS, 0, 20));
+
+        assertThat(result.users()).hasSize(2);
+        assertThat(result.totalElements()).isEqualTo(2);
+        assertThat(result.users().get(1).displayPopclass()).isEqualTo(200);
+        verify(jdbc, times(1)).query(
+                anyString(), org.mockito.ArgumentMatchers.<RowMapper<Object>>any(),
+                any(Object[].class));
+    }
+
     private static UserEntity user(Long id, String poptomoId, LocalDateTime updatedAt) {
+        return user(id, poptomoId, updatedAt, 100, 200);
+    }
+
+    private static UserEntity user(Long id, String poptomoId, LocalDateTime updatedAt,
+                                   int displayPopclass, int potentialPopclass) {
         var profile = UserProfileEntity.builder()
                 .userId(id)
                 .userName("name")
@@ -196,8 +233,8 @@ class UserProfileJpaAdapterTest {
                 .comment("comment")
                 .profileImageUrl(null)
                 .hidden(false)
-                .displayPopclass(100)
-                .potentialPopclass(200)
+                .displayPopclass(displayPopclass)
+                .potentialPopclass(potentialPopclass)
                 .legacyPopclass(300)
                 .normalCredit(1)
                 .extraCredit(2)

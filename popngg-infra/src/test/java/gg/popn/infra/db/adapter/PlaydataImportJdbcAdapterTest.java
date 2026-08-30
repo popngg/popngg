@@ -54,6 +54,7 @@ class PlaydataImportJdbcAdapterTest {
                   version_score_known BOOLEAN DEFAULT FALSE,
                   version_rank_code INT, all_time_score INT, all_time_score_version INT,
                   all_time_rank_code INT, medal_code INT, popclass INT,
+                  potential_popclass INT DEFAULT 0,
                   is_display_popclass_target BOOLEAN, popclass_bucket VARCHAR(20),
                   popclass_bucket_rank INT, last_renew_log_id BIGINT,
                   created_at TIMESTAMP, updated_at TIMESTAMP,
@@ -113,6 +114,8 @@ class PlaydataImportJdbcAdapterTest {
                 .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT display_popclass FROM user_profiles", Integer.class))
                 .isEqualTo(177_000);
+        assertThat(jdbc.queryForObject("SELECT potential_popclass FROM playdata", Integer.class))
+                .isPositive();
     }
 
     @Test

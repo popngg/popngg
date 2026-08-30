@@ -49,6 +49,7 @@ class PlaydataQueryJdbcAdapterTest {
                   version_score_known BOOLEAN DEFAULT TRUE,
                   version_rank_code INT, all_time_score INT, all_time_score_version INT,
                   all_time_rank_code INT, medal_code INT, popclass INT,
+                  potential_popclass INT DEFAULT 0,
                   is_display_popclass_target BOOLEAN, popclass_bucket VARCHAR(20),
                   popclass_bucket_rank INT)
                 """);
@@ -72,6 +73,8 @@ class PlaydataQueryJdbcAdapterTest {
 
         assertThat(user.playdata()).hasSize(2);
         assertThat(user.playdata().getFirst().versionBest().score()).isEqualTo(95_000);
+        assertThat(user.playdata()).extracting(row -> row.popclass())
+                .containsExactly(12_000, 11_000);
         assertThat(levelRank.groups()).hasSize(2);
         assertThat(difficultyMedal.groups()).hasSize(2);
         assertThat(records.items()).extracting(row -> row.id())
@@ -82,6 +85,8 @@ class PlaydataQueryJdbcAdapterTest {
                 .containsExactly(97_000, 90_000);
         assertThat(records.items()).extracting(row -> row.rank())
                 .containsExactly(1, 3);
+        assertThat(records.items()).extracting(row -> row.popnClass())
+                .containsExactly(12_000, 11_000);
         assertThat(progress.rows()).hasSize(2);
         assertThat(progress.summary().total()).isEqualTo(2);
         assertThat(progress.summary().averageScore()).isEqualTo(93_500);
@@ -195,7 +200,7 @@ class PlaydataQueryJdbcAdapterTest {
                 .containsExactly("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
         assertThat(records.items()).extracting(row -> row.popnClass())
-                .containsExactly(10_000, 9_000);
+                .containsExactly(12_000, 11_000);
     }
 
     @Test
@@ -229,14 +234,15 @@ class PlaydataQueryJdbcAdapterTest {
                 INSERT INTO playdata
                     (user_id, chart_id, current_version, version_score, version_rank_code,
                      all_time_score, all_time_score_version, all_time_rank_code, medal_code,
-                     popclass, is_display_popclass_target, popclass_bucket, popclass_bucket_rank)
+                     popclass, potential_popclass, is_display_popclass_target,
+                     popclass_bucket, popclass_bucket_rank)
                 VALUES
                     (1, 100, 29, 95000, 2, 97000, 28, 1, 2,
-                     10000, TRUE, 'CURRENT_VERSION', 1),
+                     10000, 12000, TRUE, 'CURRENT_VERSION', 1),
                     (1, 101, 29, 90000, 3, 90000, 29, 3, 4,
-                     9000, FALSE, NULL, NULL),
+                     9000, 11000, FALSE, NULL, NULL),
                     (2, 100, 29, 94000, 3, 99000, 28, 1, 3,
-                     9800, FALSE, NULL, NULL)
+                     9800, 13000, FALSE, NULL, NULL)
                 """);
     }
 }

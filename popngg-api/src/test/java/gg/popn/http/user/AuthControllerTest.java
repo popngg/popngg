@@ -41,7 +41,7 @@ class AuthControllerTest {
 
         assertThat(response.getData()).isNull();
         assertThat(servletResponse.getHeader("Set-Cookie"))
-                .contains("access_token=token", "Max-Age=3600", "HttpOnly", "Secure", "SameSite=None");
+                .contains("access_token=token", "Max-Age=3600", "HttpOnly", "Secure", "SameSite=Lax");
     }
 
     @Test
@@ -63,7 +63,7 @@ class AuthControllerTest {
         assertThat(response.getData().avatarUrl()).isNull();
         verify(register).register(argThat(command -> command.hidden() && command.poptomoId().equals(ID)));
         assertThat(servletResponse.getHeader("Set-Cookie"))
-                .contains("access_token=token", "SameSite=None");
+                .contains("access_token=token", "SameSite=Lax");
     }
 
     @Test
@@ -106,7 +106,7 @@ class AuthControllerTest {
 
         assertThat(response.getData()).isNull();
         assertThat(servletResponse.getHeader("Set-Cookie"))
-                .contains("access_token=", "Max-Age=0", "HttpOnly", "Secure", "SameSite=None", "Path=/");
+                .contains("access_token=", "Max-Age=0", "HttpOnly", "Secure", "SameSite=Lax", "Path=/");
     }
 
     private static LoginResult loginResult() {

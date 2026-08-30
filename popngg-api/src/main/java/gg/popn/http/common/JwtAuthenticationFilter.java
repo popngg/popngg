@@ -26,6 +26,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Value("${popngg.auth.cookie-secure:true}")
     private boolean cookieSecure = true;
 
+    @Value("${popngg.auth.cookie-same-site:Lax}")
+    private String cookieSameSite = "Lax";
+
     private final TokenPort tokenPort; // 🔹 포트만 의존 (jjwt 모름)
 
     @Override
@@ -65,7 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             var renewed = tokenPort.issueAccessToken(authPrincipal);
             response.addHeader("Set-Cookie", org.springframework.http.ResponseCookie
                     .from("access_token", renewed.value()).httpOnly(true).secure(cookieSecure)
-                    .sameSite("None").path("/").maxAge(renewed.expiresInSeconds())
+                    .sameSite(cookieSameSite).path("/").maxAge(renewed.expiresInSeconds())
                     .build().toString());
         }
 
