@@ -17,12 +17,14 @@ public class S3AvatarStorageAdapter implements AvatarStoragePort {
     private final String storagePrefix;
     private final String publicPrefix;
     private final String publicUrl;
+    private final AvatarImageProcessor imageProcessor;
 
     public S3AvatarStorageAdapter(S3Client s3,
             @Value("${popngg.avatar.bucket:}") String bucket,
             @Value("${popngg.avatar.storage-root:static}") String storageRoot,
             @Value("${popngg.avatar.prefix:avatars}") String publicPrefix,
-            @Value("${popngg.avatar.public-url:https://static.popn.gg}") String publicUrl) {
+            @Value("${popngg.avatar.public-url:https://static.popn.gg}") String publicUrl,
+            AvatarImageProcessor imageProcessor) {
         this.s3 = s3;
         this.bucket = bucket;
         String normalizedRoot = storageRoot.replaceAll("^/+|/+$", "");
@@ -31,23 +33,19 @@ public class S3AvatarStorageAdapter implements AvatarStoragePort {
                 ? this.publicPrefix
                 : normalizedRoot + "/" + this.publicPrefix;
         this.publicUrl = publicUrl.replaceAll("/+$", "");
+        this.imageProcessor = imageProcessor;
     }
 
     @Override
     public String upload(String poptomoId, byte[] bytes, String contentType) {
         if (bucket.isBlank()) throw new IllegalStateException("AWS_S3_BUCKET is not configured.");
-        String extension = switch (contentType) {
-            case "image/png" -> "png";
-            case "image/jpeg" -> "jpg";
-            case "image/webp" -> "webp";
-            default -> throw new IllegalArgumentException("Unsupported avatar content type.");
-        };
-        String objectPath = poptomoId + "/" + UUID.randomUUID() + "." + extension;
+        byte[] thumbnail = imageProcessor.thumbnail(bytes);
+        String objectPath = poptomoId + "/" + UUID.randomUUID() + ".png";
         String relativePath = publicPrefix + "/" + objectPath;
         String key = storagePrefix + "/" + objectPath;
-        s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType)
+        s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType("image/png")
                         .cacheControl("public,max-age=31536000,immutable").build(),
-                RequestBody.fromBytes(bytes));
+                RequestBody.fromBytes(thumbnail));
         return publicUrl + "/" + relativePath;
     }
 

@@ -16,20 +16,23 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class S3AvatarStorageAdapterTest {
     private final S3Client s3 = mock(S3Client.class);
+    private final AvatarImageProcessor imageProcessor = mock(AvatarImageProcessor.class);
     private final S3AvatarStorageAdapter storage = new S3AvatarStorageAdapter(
-            s3, "bucket", "/static/", "/avatars/", "https://static.popn.gg/");
+            s3, "bucket", "/static/", "/avatars/", "https://static.popn.gg/",
+            imageProcessor);
 
     @Test
     void uploadsVersionedImmutableObjectAndReturnsPublicUrl() {
         when(s3.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(null);
+        when(imageProcessor.thumbnail(any())).thenReturn(new byte[]{2});
 
         String url = storage.upload("1234-5678-9012", new byte[]{1}, "image/webp");
 
         var request = ArgumentCaptor.forClass(PutObjectRequest.class);
         verify(s3).putObject(request.capture(), any(RequestBody.class));
         assertThat(request.getValue().bucket()).isEqualTo("bucket");
-        assertThat(request.getValue().key()).startsWith("static/avatars/1234-5678-9012/").endsWith(".webp");
-        assertThat(request.getValue().contentType()).isEqualTo("image/webp");
+        assertThat(request.getValue().key()).startsWith("static/avatars/1234-5678-9012/").endsWith(".png");
+        assertThat(request.getValue().contentType()).isEqualTo("image/png");
         assertThat(request.getValue().cacheControl()).isEqualTo("public,max-age=31536000,immutable");
         assertThat(url).isEqualTo("https://static.popn.gg/"
                 + request.getValue().key().substring("static/".length()));

@@ -6,6 +6,7 @@ import gg.popn.application.account.exception.AccountSettingsException;
 import gg.popn.application.account.port.in.AccountSettingsUseCase;
 import gg.popn.application.account.port.out.AccountSettingsPort;
 import gg.popn.application.account.port.out.AvatarStoragePort;
+import gg.popn.application.account.port.out.AvatarProcessingException;
 import gg.popn.application.auth.port.out.CurrentPrincipalPort;
 import gg.popn.application.auth.port.out.PasswordHasherPort;
 import gg.popn.application.auth.port.out.PasswordVerificationPort;
@@ -56,7 +57,11 @@ public class AccountSettingsService implements AccountSettingsUseCase {
         String avatarUrl = previous.avatarUrl();
         boolean avatarChanged = false;
         if (update.avatar() != null) {
-            avatarUrl = avatars.upload(id, update.avatar().bytes(), update.avatar().contentType());
+            try {
+                avatarUrl = avatars.upload(id, update.avatar().bytes(), update.avatar().contentType());
+            } catch (AvatarProcessingException exception) {
+                fail(400, "INVALID_AVATAR_TYPE", "Avatar image could not be decoded.");
+            }
             avatarChanged = true;
         } else if (update.removeAvatar()) {
             avatarUrl = null;
