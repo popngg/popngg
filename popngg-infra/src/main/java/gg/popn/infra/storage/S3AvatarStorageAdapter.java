@@ -14,16 +14,22 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 public class S3AvatarStorageAdapter implements AvatarStoragePort {
     private final S3Client s3;
     private final String bucket;
-    private final String prefix;
+    private final String storagePrefix;
+    private final String publicPrefix;
     private final String publicUrl;
 
     public S3AvatarStorageAdapter(S3Client s3,
             @Value("${popngg.avatar.bucket:}") String bucket,
-            @Value("${popngg.avatar.prefix:avatars}") String prefix,
+            @Value("${popngg.avatar.storage-root:static}") String storageRoot,
+            @Value("${popngg.avatar.prefix:avatars}") String publicPrefix,
             @Value("${popngg.avatar.public-url:https://static.popn.gg}") String publicUrl) {
         this.s3 = s3;
         this.bucket = bucket;
-        this.prefix = prefix.replaceAll("^/+|/+$", "");
+        String normalizedRoot = storageRoot.replaceAll("^/+|/+$", "");
+        this.publicPrefix = publicPrefix.replaceAll("^/+|/+$", "");
+        this.storagePrefix = normalizedRoot.isBlank()
+                ? this.publicPrefix
+                : normalizedRoot + "/" + this.publicPrefix;
         this.publicUrl = publicUrl.replaceAll("/+$", "");
     }
 
@@ -36,19 +42,22 @@ public class S3AvatarStorageAdapter implements AvatarStoragePort {
             case "image/webp" -> "webp";
             default -> throw new IllegalArgumentException("Unsupported avatar content type.");
         };
-        String key = prefix + "/" + poptomoId + "/" + UUID.randomUUID() + "." + extension;
+        String objectPath = poptomoId + "/" + UUID.randomUUID() + "." + extension;
+        String relativePath = publicPrefix + "/" + objectPath;
+        String key = storagePrefix + "/" + objectPath;
         s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType)
                         .cacheControl("public,max-age=31536000,immutable").build(),
                 RequestBody.fromBytes(bytes));
-        return publicUrl + "/" + key;
+        return publicUrl + "/" + relativePath;
     }
 
     @Override
     public void deleteIfManaged(String url) {
-        String expected = publicUrl + "/" + prefix + "/";
+        String expected = publicUrl + "/" + publicPrefix + "/";
         if (url == null || !url.startsWith(expected)) return;
-        String key = URI.create(url).getPath().replaceFirst("^/", "");
-        if (!key.startsWith(prefix + "/")) return;
+        String relativePath = URI.create(url).getPath().replaceFirst("^/", "");
+        if (!relativePath.startsWith(publicPrefix + "/")) return;
+        String key = storagePrefix + relativePath.substring(publicPrefix.length());
         s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
     }
 }

@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 class S3AvatarStorageAdapterTest {
     private final S3Client s3 = mock(S3Client.class);
     private final S3AvatarStorageAdapter storage = new S3AvatarStorageAdapter(
-            s3, "bucket", "/avatars/", "https://static.popn.gg/");
+            s3, "bucket", "/static/", "/avatars/", "https://static.popn.gg/");
 
     @Test
     void uploadsVersionedImmutableObjectAndReturnsPublicUrl() {
@@ -28,10 +28,11 @@ class S3AvatarStorageAdapterTest {
         var request = ArgumentCaptor.forClass(PutObjectRequest.class);
         verify(s3).putObject(request.capture(), any(RequestBody.class));
         assertThat(request.getValue().bucket()).isEqualTo("bucket");
-        assertThat(request.getValue().key()).startsWith("avatars/1234-5678-9012/").endsWith(".webp");
+        assertThat(request.getValue().key()).startsWith("static/avatars/1234-5678-9012/").endsWith(".webp");
         assertThat(request.getValue().contentType()).isEqualTo("image/webp");
         assertThat(request.getValue().cacheControl()).isEqualTo("public,max-age=31536000,immutable");
-        assertThat(url).isEqualTo("https://static.popn.gg/" + request.getValue().key());
+        assertThat(url).isEqualTo("https://static.popn.gg/"
+                + request.getValue().key().substring("static/".length()));
     }
 
     @Test
@@ -42,6 +43,6 @@ class S3AvatarStorageAdapterTest {
         storage.deleteIfManaged("https://static.popn.gg/avatars/1234/file.png");
         var request = ArgumentCaptor.forClass(DeleteObjectRequest.class);
         verify(s3).deleteObject(request.capture());
-        assertThat(request.getValue().key()).isEqualTo("avatars/1234/file.png");
+        assertThat(request.getValue().key()).isEqualTo("static/avatars/1234/file.png");
     }
 }
