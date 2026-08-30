@@ -4,15 +4,18 @@ import gg.popn.application.account.dto.AccountSettings;
 import gg.popn.application.account.exception.AccountSettingsException;
 import gg.popn.application.account.port.out.AccountSettingsPort;
 import gg.popn.infra.db.jpa.UserJpaRepository;
+import gg.popn.infra.db.jpa.UserProfileJpaRepository;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AccountSettingsJpaAdapter implements AccountSettingsPort {
     private final UserJpaRepository users;
+    private final UserProfileJpaRepository profiles;
 
-    public AccountSettingsJpaAdapter(UserJpaRepository users) {
+    public AccountSettingsJpaAdapter(UserJpaRepository users, UserProfileJpaRepository profiles) {
         this.users = users;
+        this.profiles = profiles;
     }
 
     @Override
@@ -26,7 +29,7 @@ public class AccountSettingsJpaAdapter implements AccountSettingsPort {
             String avatarUrl, boolean avatarChanged) {
         var user = user(poptomoId);
         user.getProfile().updateSettings(comment, privateProfile, avatarUrl, avatarChanged, LocalDateTime.now());
-        users.save(user);
+        profiles.save(user.getProfile());
         return new AccountSettings(user.getProfile().getProfileImageUrl(), user.getProfile().getComment(),
                 user.getProfile().isHidden());
     }
