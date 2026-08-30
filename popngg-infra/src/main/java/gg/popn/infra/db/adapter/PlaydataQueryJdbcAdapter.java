@@ -141,11 +141,14 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         UserSummary user = findUser(poptomoId);
         String groupColumn = by.equals("LEVEL") ? "c.level" : "c.difficulty_code";
         String sql = """
-                SELECT %s AS group_code, p.all_time_score, p.medal_code,
+                SELECT %s AS group_code, COALESCE(p.all_time_score, 0) AS all_time_score,
+                       COALESCE(p.medal_code, 13) AS medal_code,
                        COALESCE(p.all_time_rank_code, 13) AS rank_code
-                  FROM playdata p
-                  JOIN charts c ON c.chart_id = p.chart_id
-                 WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
+                  FROM charts c
+                  LEFT JOIN playdata p
+                    ON p.chart_id = c.chart_id
+                   AND p.user_id = ?
+                 WHERE c.is_deleted = FALSE
                  ORDER BY %s
                 """.formatted(groupColumn, groupColumn);
         Map<Integer, ProgressAccumulator> rows = new LinkedHashMap<>();
@@ -158,7 +161,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
             rows.computeIfAbsent(key, ignored -> new ProgressAccumulator())
                     .add(score, medal, rank);
             summary.add(score, medal, rank);
-        }, user.userId(), currentVersion);
+        }, user.userId());
         var resultRows = rows.entrySet().stream()
                 .map(entry -> entry.getValue().toRow(entry.getKey()))
                 .toList();
