@@ -236,6 +236,10 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
             case SONG_ID -> "s.song_id";
         };
         String direction = query.order() == FindSongsQuery.Order.ASC ? "ASC" : "DESC";
+        if (query.sort() == FindSongsQuery.Sort.VERSION) {
+            return "CASE WHEN s.version = 99 THEN 1 ELSE 0 END ASC, "
+                    + column + " " + direction;
+        }
         return column + " " + direction;
     }
 

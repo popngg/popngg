@@ -4,6 +4,8 @@ import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import gg.popn.application.playdata.exception.ActualPopclassUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -111,6 +113,15 @@ class PlaydataQueryJdbcAdapterTest {
 
         assertThat(adapter.findPopclass("0000").targets()).hasSize(1);
         assertThat(adapter.findPotentialPopclass("0000").targets()).hasSize(2);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LEVEL", "VERSION", "DIFFICULTY", "TITLE", "GENRE", "SCORE", "MEDAL", "RANK"})
+    void sortsUserRecordsByEverySupportedField(String sort) {
+        var records = adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                null, null, null, null, null, null, null,
+                null, null, sort, "ASC", 0, 20));
+        assertThat(records.items()).hasSize(2);
     }
 
     @Test

@@ -47,13 +47,15 @@ class SongCatalogJdbcAdapterTest {
         jdbcTemplate.update("""
                 INSERT INTO songs VALUES
                 (1, 'hash-1', 'High☆Cheers', 'Moon Child', 'Artist', 20, '/jacket/1'),
-                (2, 'hash-2', 'Other', 'Another Song', NULL, 28, NULL)
+                (2, 'hash-2', 'Other', 'Another Song', NULL, 28, NULL),
+                (3, 'hash-3', 'Other', 'Misc Song', NULL, 99, NULL)
                 """);
         jdbcTemplate.update("""
                 INSERT INTO charts VALUES
                 (10, 1, 1, 'EASY', 45, 28, TRUE, FALSE, FALSE, FALSE),
                 (11, 1, 4, 'EX', 49, 20, FALSE, TRUE, TRUE, FALSE),
-                (20, 2, 2, 'NORMAL', 30, 28, FALSE, FALSE, FALSE, FALSE)
+                (20, 2, 2, 'NORMAL', 30, 28, FALSE, FALSE, FALSE, FALSE),
+                (30, 3, 2, 'NORMAL', 31, 99, FALSE, FALSE, FALSE, FALSE)
                 """);
         jdbcTemplate.update("""
                 INSERT INTO song_search_tags VALUES
@@ -110,7 +112,18 @@ class SongCatalogJdbcAdapterTest {
                 FindSongsQuery.Order.DESC, true, 0, 20);
 
         assertThat(adapter.findPage(query)).extracting(song -> song.songId())
-                .containsExactly(2L, 1L);
+                .containsExactly(2L, 1L, 3L);
+    }
+
+    @Test
+    void frontendKeepsMiscVersionLastWhenSortingAscending() {
+        FindSongsQuery query = new FindSongsQuery(
+                null, null, null, null, null, null,
+                null, null, null, FindSongsQuery.Sort.VERSION,
+                FindSongsQuery.Order.ASC, true, 0, 20);
+
+        assertThat(adapter.findPage(query)).extracting(song -> song.songId())
+                .containsExactly(1L, 2L, 3L);
     }
 
     @Test

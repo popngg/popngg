@@ -104,7 +104,17 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         addBound(where, args, "p.all_time_score", "<=", query.scoreMax());
 
         long total = jdbc.queryForObject("SELECT COUNT(*) " + where, Long.class, args.toArray());
-        String sortColumn = query.sort().equals("SCORE") ? "p.all_time_score" : "c.level";
+        String sortColumn = switch (query.sort()) {
+            case "LEVEL" -> "c.level";
+            case "VERSION" -> "s.version";
+            case "DIFFICULTY" -> "c.difficulty_code";
+            case "TITLE" -> "s.song_name";
+            case "GENRE" -> "s.genre_name";
+            case "SCORE" -> "p.all_time_score";
+            case "MEDAL" -> "p.medal_code";
+            case "RANK" -> "COALESCE(p.all_time_rank_code, 13)";
+            default -> throw new IllegalArgumentException("Unsupported record sort.");
+        };
         String sql = """
                 SELECT s.song_hash, s.song_name, s.genre_name, s.jacket_url, s.version,
                        c.difficulty_code, c.level, p.all_time_score, p.medal_code,
