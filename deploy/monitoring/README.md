@@ -110,6 +110,12 @@ Open `https://grafana.popn.gg` and sign in with `GRAFANA_ADMIN_USER` and
 validation is enforced, and the session cookie is HTTPS-only with SameSite Strict. The
 provisioned dashboard is in **Dashboards > POPN.GG > POPN.GG Production Overview**.
 
+The provisioned production dashboard is editable in the Grafana UI. Use a panel's
+**Edit** action and **Save dashboard** to persist changes in the Grafana data volume.
+A later deployment that changes the provisioned dashboard JSON may replace UI changes,
+so export important edits as JSON and commit them back to
+`deploy/monitoring/grafana/dashboards/`.
+
 For stronger protection, place a Cloudflare Access self-hosted application in front of
 `grafana.popn.gg` and allow only administrator email addresses. Keep Grafana's own login
 enabled as a second layer. Do not enable Grafana auth-proxy unless its trusted-header and

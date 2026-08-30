@@ -164,6 +164,19 @@ class PlaydataImportJdbcAdapterTest {
     }
 
     @Test
+    void fallsBackToUniqueTitleGenreChartWhenMigratedArtistIsMissing() {
+        jdbc.update("UPDATE songs SET artist_name=NULL WHERE song_id=10");
+        var row = new ImportPlaydataCommand.Row(null, null, 3, false, null,
+                "song", "genre", 90_000, 2, 3, null, false, "reported artist");
+
+        var result = adapter.execute(command(row));
+
+        assertThat(result.matchedCount()).isEqualTo(1);
+        assertThat(result.skippedCount()).isZero();
+        assertThat(jdbc.queryForObject("SELECT chart_id FROM playdata", Long.class)).isEqualTo(100L);
+    }
+
+    @Test
     void updatesHigherScoresRanksMedalAndRenewLogWithoutDuplicateRows() {
         adapter.execute(command(rowWithValues(100L, 90_000, 4, 2)));
 

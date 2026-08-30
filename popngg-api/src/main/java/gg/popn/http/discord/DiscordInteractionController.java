@@ -146,6 +146,36 @@ public class DiscordInteractionController {
                             "type", 3, "custom_id", "unknown_song_select", "placeholder", "추가할 곡 선택",
                             "min_values", 1, "max_values", 1, "options", choices)))))));
         }
+        if (type == 2 && "정보보완목록".equals(root.path("data").path("name").asText())) {
+            var reports = unknownChartReport.findRecentIncomplete(20);
+            if (reports.isEmpty()) return ResponseEntity.ok(message("현재 정보 보완이 필요한 곡이 없습니다."));
+            String content = reports.stream().map(report ->
+                    "- `#%d` **%s** / %s / 등록: %s / 감지: %s / %d회".formatted(
+                            report.reportId(), report.songName(), report.genreName(),
+                            truncate(report.registeredArtistName(), 60),
+                            truncate(report.reportedArtistName(), 60), report.occurrences()))
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            List<Map<String, Object>> choices = reports.stream().limit(25).map(report -> Map.<String, Object>of(
+                    "label", truncate(report.songName(), 100),
+                    "description", truncate("등록: " + report.registeredArtistName() + " / 감지: "
+                            + report.reportedArtistName(), 100),
+                    "value", Long.toString(report.reportId()))).toList();
+            return ResponseEntity.ok(Map.of("type", 4, "data", Map.of(
+                    "content", "**곡 정보 보완 목록**\n" + content + "\n아래에서 선택하면 기존 곡 수정 창이 열립니다.",
+                    "components", List.of(Map.of("type", 1, "components", List.of(Map.of(
+                            "type", 3, "custom_id", "incomplete_song_select", "placeholder", "보완할 곡 선택",
+                            "min_values", 1, "max_values", 1, "options", choices)))))));
+        }
+        if (type == 3 && "incomplete_song_select".equals(root.path("data").path("custom_id").asText())) {
+            long reportId = root.path("data").path("values").path(0).asLong();
+            var selected = unknownChartReport.findRecentIncomplete(100).stream()
+                    .filter(report -> report.reportId() == reportId).findFirst();
+            if (selected.isEmpty()) return ResponseEntity.ok(message("정보 보완 항목을 찾을 수 없습니다."));
+            SongDetailView current = findSongDetail.findSong(selected.get().songId());
+            String id = UUID.randomUUID().toString();
+            editDrafts.put(id, new EditDraft(current, null, null, null, Instant.now(), reportId));
+            return ResponseEntity.ok(editModal(id, current));
+        }
         if (type == 3 && "unknown_song_select".equals(root.path("data").path("custom_id").asText())) {
             long reportId = root.path("data").path("values").path(0).asLong();
             var selected = unknownChartReport.findRecentUnresolved(100).stream()
@@ -165,7 +195,7 @@ public class DiscordInteractionController {
                 String attachmentUrl = optionalAttachmentUrl(root, "자켓");
                 UpdateSongCommand command = updateCommandFromOptions(root, current, createdAt);
                 String id = UUID.randomUUID().toString();
-                editDrafts.put(id, new EditDraft(current, command, attachmentUrl, createdAt, Instant.now()));
+                editDrafts.put(id, new EditDraft(current, command, attachmentUrl, createdAt, Instant.now(), null));
                 return ResponseEntity.ok(editPreview(id, current, command));
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(message("곡을 찾을 수 없거나 추가일 형식이 올바르지 않습니다."));
@@ -183,7 +213,7 @@ public class DiscordInteractionController {
                         null, stored.requestedCreatedAt(), charts);
                 String confirmId = UUID.randomUUID().toString();
                 editDrafts.put(confirmId, new EditDraft(stored.current(), command, stored.attachmentUrl(),
-                        stored.requestedCreatedAt(), Instant.now()));
+                        stored.requestedCreatedAt(), Instant.now(), stored.reportId()));
                 return ResponseEntity.ok(editPreview(confirmId, stored.current(), command));
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(message("수정 입력 오류: " + exception.getMessage()));
@@ -217,6 +247,7 @@ public class DiscordInteractionController {
                 }
                 try {
                     SongDetailView updated = updateSong.execute(command);
+                    if (edit.reportId() != null) unknownChartReport.resolve(edit.reportId());
                     adminNotification.send("**[곡 수정]** 관리자: `<@%s>` / songId: `%d` / 곡명: **%s** / songHash: `%s`".formatted(
                             actorId(root), updated.song().songId(), updated.song().songName(), updated.song().songHash()));
                     return ResponseEntity.ok(message("곡 수정 완료: `#%d` **%s**\n새 songHash: `%s`".formatted(
@@ -634,6 +665,6 @@ public class DiscordInteractionController {
     private record PreDraft(Prefill prefill, Instant requestedAt) {}
     private record Draft(CreateSongCommand command, String attachmentUrl, Instant createdAt) {}
     private record EditDraft(SongDetailView current, UpdateSongCommand command, String attachmentUrl,
-                             Instant requestedCreatedAt, Instant requestedAt) {}
+                             Instant requestedCreatedAt, Instant requestedAt, Long reportId) {}
     @FunctionalInterface interface JacketDownloader { byte[] download(String url) throws Exception; }
 }
