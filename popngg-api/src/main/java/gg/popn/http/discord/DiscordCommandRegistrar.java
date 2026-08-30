@@ -55,15 +55,13 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
         }
         try {
             String body = mapper.writeValueAsString(List.of(
-                    Map.of("name", "곡추가", "description", "관리자 전용 곡과 채보 등록", "type", 1),
+                    Map.of("name", "곡추가", "description", "관리자 전용 곡과 채보 등록", "type", 1,
+                            "options", createOptions()),
                     Map.of("name", "곡조회", "description", "등록된 곡 검색", "type", 1,
                             "options", List.of(Map.of("type", 3, "name", "검색어",
                                     "description", "곡명, 장르 또는 아티스트", "required", true))),
                     Map.of("name", "곡수정", "description", "기존 곡과 채보 수정", "type", 1,
-                            "options", List.of(
-                                    Map.of("type", 4, "name", "song_id", "description", "수정할 songId", "required", true),
-                                    Map.of("type", 11, "name", "자켓", "description", "교체할 자켓 이미지", "required", false),
-                                    Map.of("type", 3, "name", "추가일", "description", "변경할 날짜 YYYY-MM-DD", "required", false))),
+                            "options", updateOptions()),
                     Map.of("name", "미등록목록", "description", "최근 미등록 곡과 채보 조회", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")
@@ -83,5 +81,37 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
         } catch (Exception exception) {
             log.warn("Could not register Discord guild commands.", exception);
         }
+    }
+
+    private static List<Map<String, Object>> createOptions() {
+        return List.of(
+                option(11, "자켓", "자켓 이미지", true), option(3, "추가일", "YYYY-MM-DD", true),
+                option(3, "곡명", "곡명", true), option(3, "장르", "장르", true),
+                option(3, "아티스트", "아티스트", true), option(4, "버전", "예: 29", true),
+                upperOption(true), option(4, "l", "L 레벨 (없으면 생략)", false),
+                option(4, "n", "N 레벨 (없으면 생략)", false),
+                option(4, "h", "H 레벨 (없으면 생략)", false),
+                option(4, "ex", "EX 레벨 (없으면 생략)", false));
+    }
+
+    private static List<Map<String, Object>> updateOptions() {
+        return List.of(
+                option(4, "song_id", "수정할 songId", true),
+                option(11, "자켓", "교체할 자켓 이미지", false),
+                option(3, "추가일", "변경할 날짜 YYYY-MM-DD", false),
+                option(3, "곡명", "변경할 곡명", false), option(3, "장르", "변경할 장르", false),
+                option(3, "아티스트", "변경할 아티스트", false), option(4, "버전", "변경할 버전", false),
+                upperOption(false), option(4, "l", "변경할 L 레벨", false),
+                option(4, "n", "변경할 N 레벨", false), option(4, "h", "변경할 H 레벨", false),
+                option(4, "ex", "변경할 EX 레벨", false));
+    }
+
+    private static Map<String, Object> option(int type, String name, String description, boolean required) {
+        return Map.of("type", type, "name", name, "description", description, "required", required);
+    }
+
+    private static Map<String, Object> upperOption(boolean required) {
+        return Map.of("type", 3, "name", "upper", "description", "UPPER 여부 o/x", "required", required,
+                "choices", List.of(Map.of("name", "o", "value", "o"), Map.of("name", "x", "value", "x")));
     }
 }
