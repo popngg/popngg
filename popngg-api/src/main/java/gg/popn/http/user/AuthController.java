@@ -41,6 +41,9 @@ public class AuthController {
     @Value("${popngg.auth.cookie-secure:true}")
     private boolean cookieSecure = true;
 
+    @Value("${popngg.auth.cookie-same-site:Lax}")
+    private String cookieSameSite = "Lax";
+
     private final AuthenticateUserUseCase authenticateUser;
     private final PasswordResetUseCase passwordReset;
     private final RegisterUserUseCase registerUser;
@@ -81,7 +84,7 @@ public class AuthController {
 
     private void setAccessTokenCookie(HttpServletResponse response, String token, long maxAge) {
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", token)
-                .httpOnly(true).secure(cookieSecure).sameSite("None").path("/")
+                .httpOnly(true).secure(cookieSecure).sameSite(cookieSameSite).path("/")
                 .maxAge(maxAge).build().toString());
     }
 
@@ -127,7 +130,7 @@ public class AuthController {
     @PostMapping("/logout")
     SuccessResponse<Void> logout(HttpServletResponse response) {
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("access_token", "")
-                .httpOnly(true).secure(cookieSecure).sameSite("None").path("/")
+                .httpOnly(true).secure(cookieSecure).sameSite(cookieSameSite).path("/")
                 .maxAge(0).build().toString());
         return SuccessResponse.<Void>builder()
                 .code(ResponseCode.SUCCESS)

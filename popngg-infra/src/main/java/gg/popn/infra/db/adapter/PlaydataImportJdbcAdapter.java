@@ -144,10 +144,11 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                     row.level, row.allTimeScore, row.medalCode);
             jdbc.update("""
                     UPDATE playdata
-                       SET popclass = ?, is_display_popclass_target = FALSE,
+                       SET popclass = ?, potential_popclass = ?,
+                           is_display_popclass_target = FALSE,
                            popclass_bucket = NULL, popclass_bucket_rank = NULL
                      WHERE playdata_id = ?
-                    """, row.displayPopclass, row.playdataId);
+                    """, row.displayPopclass, row.potentialPopclass, row.playdataId);
         }
 
         Comparator<PopclassRow> displayOrder = Comparator

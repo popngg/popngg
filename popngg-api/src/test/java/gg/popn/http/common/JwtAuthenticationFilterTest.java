@@ -64,7 +64,7 @@ class JwtAuthenticationFilterTest {
         filter.doFilterInternal(request, response, new MockFilterChain());
 
         assertThat(response.getHeader("Set-Cookie"))
-                .contains("access_token=renewed", "Max-Age=120", "HttpOnly", "Secure", "SameSite=None");
+                .contains("access_token=renewed", "Max-Age=120", "HttpOnly", "Secure", "SameSite=Lax");
     }
 
     @Test

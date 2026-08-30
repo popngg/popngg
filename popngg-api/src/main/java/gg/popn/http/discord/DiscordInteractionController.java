@@ -28,7 +28,7 @@ import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -441,7 +441,7 @@ public class DiscordInteractionController {
         }
         if (charts.isEmpty()) throw new IllegalArgumentException("L/N/H/EX 중 하나 이상 입력해 주세요.");
         Instant date = LocalDate.parse(option(root, "추가일").path("value").asText())
-                .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+                .atStartOfDay(ZoneOffset.UTC).toInstant();
         String attachmentUrl = requiredAttachmentUrl(root, "자켓");
         var command = new CreateSongCommand(null, optionText(root, "장르"), optionText(root, "곡명"),
                 optionText(root, "아티스트"), version, null, date, List.copyOf(charts));
@@ -499,7 +499,7 @@ public class DiscordInteractionController {
     private static Instant optionalDate(JsonNode root, String name) {
         JsonNode value = optionalOption(root, name);
         return value == null ? null : LocalDate.parse(value.path("value").asText())
-                .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+                .atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
     private static String optionText(JsonNode root, String name) {
@@ -519,7 +519,7 @@ public class DiscordInteractionController {
         json.put("genreName", after.genreName()); json.put("artistName", after.artistName());
         json.put("version", after.version());
         if (after.createdAt() != null)
-            json.put("date", after.createdAt().atZone(ZoneId.of("Asia/Seoul")).toLocalDate().toString());
+            json.put("date", after.createdAt().atZone(ZoneOffset.UTC).toLocalDate().toString());
         json.put("charts", after.charts().stream().map(chart -> Map.of(
                 "chartId", chart.chartId(), "level", chart.level(), "upper", chart.isUpper())).toList());
         String preview;
@@ -549,7 +549,7 @@ public class DiscordInteractionController {
                 || attachment.path("size").asLong() > 5 * 1024 * 1024L)
             throw new IllegalArgumentException("자켓은 5MB 이하 이미지여야 합니다.");
         Instant createdAt = LocalDate.parse(values.get("date"))
-                .atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+                .atStartOfDay(ZoneOffset.UTC).toInstant();
         return new Draft(new CreateSongCommand(null, requiredText(metadata, "genreName"),
                 requiredText(metadata, "songName"), requiredText(metadata, "artistName"),
                 version, null, createdAt, List.copyOf(charts)),
@@ -586,7 +586,7 @@ public class DiscordInteractionController {
         Map<String, Object> json = new java.util.LinkedHashMap<>();
         json.put("songName", draft.command().songName()); json.put("genreName", draft.command().genreName());
         json.put("artistName", draft.command().artistName()); json.put("version", draft.command().version());
-        json.put("date", draft.command().createdAt().atZone(ZoneId.of("Asia/Seoul")).toLocalDate().toString());
+        json.put("date", draft.command().createdAt().atZone(ZoneOffset.UTC).toLocalDate().toString());
         json.put("upper", draft.command().charts().getFirst().isUpper());
         Map<String, Integer> levels = new java.util.LinkedHashMap<>();
         String[] names = {"L", "N", "H", "EX"};

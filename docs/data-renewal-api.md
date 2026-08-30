@@ -6,7 +6,8 @@
 
 - 기존 `Authorization: Bearer <token>` 인증을 계속 지원합니다.
 - 로그인과 가입 성공 시 같은 JWT를 `access_token` HttpOnly 쿠키로도 발급합니다.
-- 쿠키 속성은 `Secure; HttpOnly; SameSite=None; Path=/`입니다.
+- 쿠키 속성은 기본적으로 `Secure; HttpOnly; SameSite=Lax; Path=/`입니다.
+  교차 사이트 개발 프런트가 필요한 환경만 `AUTH_COOKIE_SAME_SITE=None`을 사용합니다.
 - 쿠키로 인증한 요청에는 새 JWT 쿠키를 발급해 만료시간을 슬라이딩 갱신합니다.
 - 브라우저 호출은 CORS credentials를 사용해야 합니다.
 

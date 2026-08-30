@@ -12,6 +12,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.Customizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import jakarta.servlet.DispatcherType;
@@ -23,6 +30,12 @@ import jakarta.servlet.DispatcherType;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${popngg.swagger.username:admin}")
+    private String swaggerUsername;
+
+    @Value("${popngg.swagger.password:change-me}")
+    private String swaggerPassword;
 
     @Bean
     @Order(1)
@@ -38,6 +51,30 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
+    public SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/swagger-ui/**", "/v3/api-docs/**")
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("SWAGGER"))
+                .httpBasic(Customizer.withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder swaggerPasswordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    @Bean
+    public UserDetailsService swaggerUsers(PasswordEncoder passwordEncoder) {
+        return new InMemoryUserDetailsManager(User.withUsername(swaggerUsername)
+                .password(passwordEncoder.encode(swaggerPassword))
+                .roles("SWAGGER")
+                .build());
+    }
+
+    @Bean
+    @Order(3)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> {})
@@ -54,9 +91,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/registrations/**",
                                 "/api/v1/auth/password-reset/**",
                                 "/api/v1/discord/interactions",
-                                "/health",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/health"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/users/**",
