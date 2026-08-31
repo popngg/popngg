@@ -67,5 +67,11 @@ class UnknownChartReportJdbcAdapterTest {
         long reportId = adapter.findRecentIncomplete(10).getFirst().reportId();
         adapter.resolve(reportId);
         assertThat(adapter.findRecentIncomplete(10)).isEmpty();
+
+        jdbc.update("UPDATE songs SET artist_name='reported artist' WHERE song_id=7");
+        adapter.record(2, "user", List.of(row));
+        assertThat(adapter.findRecentIncomplete(10))
+                .as("matching metadata must stay out even when a later import reopens the report")
+                .isEmpty();
     }
 }

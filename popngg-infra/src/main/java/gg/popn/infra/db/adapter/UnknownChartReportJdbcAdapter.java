@@ -58,6 +58,7 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
                  GROUP BY r.report_id,r.song_name,r.genre_name,r.artist_name,
                           r.occurrences,r.last_seen_at
                 HAVING COUNT(DISTINCT s.song_id)=1
+                   AND MIN(COALESCE(s.artist_name,'')) <> r.artist_name
                  ORDER BY r.last_seen_at DESC LIMIT ?
                 """, (rs, n) -> new IncompleteReport(rs.getLong("report_id"), rs.getLong("song_id"),
                 rs.getString("song_name"), rs.getString("genre_name"),
