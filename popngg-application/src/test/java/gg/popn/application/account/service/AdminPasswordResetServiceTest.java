@@ -5,7 +5,9 @@ import gg.popn.application.auth.port.out.PasswordHasherPort;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,6 +17,13 @@ import static org.mockito.Mockito.*;
 class AdminPasswordResetServiceTest {
     private final AccountSettingsPort accounts = mock(AccountSettingsPort.class);
     private final PasswordHasherPort hasher = mock(PasswordHasherPort.class);
+
+    @Test
+    void marksProductionConstructorForSpringInjection() {
+        assertThat(Arrays.stream(AdminPasswordResetService.class.getConstructors())
+                .filter(constructor -> constructor.getParameterCount() == 2)
+                .findFirst().orElseThrow().isAnnotationPresent(Autowired.class)).isTrue();
+    }
 
     @Test
     void createsTemporaryPasswordAndStoresItsClientDigestAsBcrypt() throws Exception {

@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class AdminPasswordResetService implements AdminPasswordResetUseCase {
@@ -19,6 +20,7 @@ public class AdminPasswordResetService implements AdminPasswordResetUseCase {
     private final PasswordHasherPort passwordHasher;
     private final SecureRandom random;
 
+    @Autowired
     public AdminPasswordResetService(AccountSettingsPort accounts, PasswordHasherPort passwordHasher) {
         this(accounts, passwordHasher, new SecureRandom());
     }
