@@ -62,6 +62,8 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                                     "description", "곡명, 장르 또는 아티스트", "required", true))),
                     Map.of("name", "곡수정", "description", "기존 곡과 채보 수정", "type", 1,
                             "options", updateOptions()),
+                    Map.of("name", "비밀번호초기화", "description", "특정 사용자의 임시 비밀번호 발급", "type", 1,
+                            "options", List.of(option(3, "팝토모_id", "예: 1234-5678-9012", true))),
                     Map.of("name", "정보보완목록", "description", "등록된 곡의 불완전한 정보 조회 및 수정", "type", 1),
                     Map.of("name", "미등록목록", "description", "최근 미등록 곡과 채보 조회", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(

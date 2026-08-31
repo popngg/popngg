@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import gg.popn.application.playdata.port.out.UnknownChartReportPort;
+import gg.popn.application.account.port.in.AdminPasswordResetUseCase;
 import gg.popn.application.song.dto.result.*;
 import gg.popn.application.song.dto.result.CreateSongResult;
 import gg.popn.application.song.port.in.*;
@@ -38,6 +39,7 @@ class DiscordInteractionControllerTest {
     private final UpdateSongUseCase updateSong = mock(UpdateSongUseCase.class);
     private final AdminNotificationPort admin = mock(AdminNotificationPort.class);
     private final UnknownChartReportPort unknown = mock(UnknownChartReportPort.class);
+    private final AdminPasswordResetUseCase passwordReset = mock(AdminPasswordResetUseCase.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
 
@@ -48,7 +50,8 @@ class DiscordInteractionControllerTest {
         String rawPublicKey = HexFormat.of().formatHex(
                 java.util.Arrays.copyOfRange(encoded, encoded.length - 32, encoded.length));
         controller = new DiscordInteractionController(mapper, createSong, findSongs, jackets,
-                findDetail, updateSong, admin, unknown, rawPublicKey, "guild", "admin", url -> new byte[]{1});
+                findDetail, updateSong, admin, unknown, passwordReset,
+                rawPublicKey, "guild", "admin", url -> new byte[]{1});
     }
 
     @Test
@@ -65,6 +68,20 @@ class DiscordInteractionControllerTest {
         ObjectNode command = command("곡조회");
         command.withObject("member").withArray("roles").removeAll();
         assertThat(content(call(command))).contains("관리자 역할");
+    }
+
+    @Test
+    void resetsPasswordOnlyForAdminAndKeepsTemporaryPasswordEphemeral() throws Exception {
+        when(passwordReset.reset("1234-5678-9012")).thenReturn("TempPass2345");
+        ObjectNode reset = command("비밀번호초기화");
+        option(reset, "팝토모_id", "1234-5678-9012");
+
+        Map<?, ?> response = body(call(reset));
+        Map<?, ?> data = (Map<?, ?>) response.get("data");
+        assertThat(data.get("flags")).isEqualTo(64);
+        assertThat(data.get("content").toString()).contains("TempPass2345", "1234-5678-9012");
+        verify(admin).send(contains("1234-5678-9012"));
+        verify(admin, never()).send(contains("TempPass2345"));
     }
 
     @Test
