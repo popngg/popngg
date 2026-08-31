@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: deploy-server
@@ -63,6 +64,7 @@ jobs:
           fi
 
       - name: Deploy selected revision
+        id: deploy_candidate
         env:
           DEV_HOST: ${{ secrets.DEV_HOST }}
           DEV_USER: ${{ secrets.DEV_USER }}
@@ -97,9 +99,47 @@ jobs:
           ./deploy/bin/deploy.sh
           REMOTE
 
+      - name: Open release pull request
+        if: >-
+          success() &&
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.head_branch == 'develop'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN || github.token }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          existing_url=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head develop \
+            --state open \
+            --json url \
+            --jq '.[0].url // empty')
+
+          if [[ -n "$existing_url" ]]; then
+            echo "Release PR already exists: $existing_url"
+            exit 0
+          fi
+
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head develop \
+            --title "Release develop to main" \
+            --body "$(cat <<EOF
+          ## 배포 검증
+
+          \`develop\` 커밋 \`$DEPLOY_SHA\`의 후보 배포와 자동 헬스체크가 성공했습니다.
+
+          실제 기능을 확인한 뒤 사람이 이 PR을 병합하여 현재 버전을 안정 버전으로 확정합니다.
+          EOF
+          )"
+
       - name: Restore stable main after failed candidate
         if: >-
           failure() &&
+          steps.deploy_candidate.outcome == 'failure' &&
           github.event_name == 'workflow_run' &&
           github.event.workflow_run.head_branch == 'develop'
         env:
