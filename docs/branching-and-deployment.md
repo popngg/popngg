@@ -15,7 +15,8 @@
 3. 출시할 변경을 모은 뒤 `develop`에서 `main`으로 PR을 만듭니다.
 4. `develop` CI가 성공하면 해당 커밋을 서버에 자동 배포합니다.
 5. 배포 후 컨테이너 헬스체크와 API smoke test를 통과하는지 확인합니다.
-6. 정상이라면 `develop`에서 `main`으로 PR을 만들어 병합하고 안정 버전으로 확정합니다.
+6. 정상이라면 워크플로가 `develop`에서 `main`으로 릴리스 PR을 자동 생성합니다.
+7. 사람이 실제 기능을 확인한 뒤 릴리스 PR을 병합하여 안정 버전으로 확정합니다.
 
 ## 긴급 수정
 
@@ -35,3 +36,5 @@ Flyway 마이그레이션은 자동으로 되돌아가지 않으므로, 모든 �
 - CodeQL 검사
 
 `develop` CI 성공은 서버에 후보 버전이 배포됨을 의미합니다. `main` 병합은 이미 검증한 후보를 안정 버전으로 확정하며, 서버에 별도 재배포를 발생시키지 않습니다.
+
+자동 생성된 릴리스 PR의 CI까지 실행하려면 저장소 secret `RELEASE_PR_TOKEN`에 PR 생성 권한이 있는 fine-grained personal access token 또는 GitHub App token을 설정합니다. 이 secret이 없으면 기본 `GITHUB_TOKEN`을 사용하지만, GitHub의 재귀 실행 방지 정책 때문에 새 PR의 CI가 자동으로 시작되지 않을 수 있습니다.
