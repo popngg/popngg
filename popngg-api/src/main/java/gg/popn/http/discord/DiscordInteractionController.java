@@ -13,6 +13,7 @@ import gg.popn.application.song.dto.query.FindSongsQuery;
 import gg.popn.application.song.port.out.JacketStoragePort;
 import gg.popn.application.song.port.out.AdminNotificationPort;
 import gg.popn.application.playdata.port.out.UnknownChartReportPort;
+import gg.popn.application.account.port.in.AdminPasswordResetUseCase;
 import gg.popn.domain.chart.model.field.SongHashGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +57,7 @@ public class DiscordInteractionController {
     private final UpdateSongUseCase updateSong;
     private final AdminNotificationPort adminNotification;
     private final UnknownChartReportPort unknownChartReport;
+    private final AdminPasswordResetUseCase adminPasswordReset;
     private final JacketDownloader jacketDownloader;
     private final byte[] publicKey;
     private final String guildId;
@@ -71,11 +73,12 @@ public class DiscordInteractionController {
             FindSongDetailUseCase findSongDetail, UpdateSongUseCase updateSong,
             AdminNotificationPort adminNotification,
             UnknownChartReportPort unknownChartReport,
+            AdminPasswordResetUseCase adminPasswordReset,
             @Value("${popngg.discord.public-key:}") String publicKey,
             @Value("${popngg.discord.guild-id:}") String guildId,
             @Value("${popngg.discord.admin-role-id:}") String adminRoleId) {
         this(mapper, createSong, findSongs, jacketStorage, findSongDetail, updateSong,
-                adminNotification, unknownChartReport, publicKey, guildId, adminRoleId,
+                adminNotification, unknownChartReport, adminPasswordReset, publicKey, guildId, adminRoleId,
                 DiscordInteractionController::downloadPng);
     }
 
@@ -83,6 +86,7 @@ public class DiscordInteractionController {
             FindSongsUseCase findSongs, JacketStoragePort jacketStorage,
             FindSongDetailUseCase findSongDetail, UpdateSongUseCase updateSong,
             AdminNotificationPort adminNotification, UnknownChartReportPort unknownChartReport,
+            AdminPasswordResetUseCase adminPasswordReset,
             String publicKey, String guildId, String adminRoleId, JacketDownloader jacketDownloader) {
         this.mapper = mapper;
         this.createSong = createSong;
@@ -92,6 +96,7 @@ public class DiscordInteractionController {
         this.updateSong = updateSong;
         this.adminNotification = adminNotification;
         this.unknownChartReport = unknownChartReport;
+        this.adminPasswordReset = adminPasswordReset;
         this.publicKey = publicKey.isBlank() ? new byte[0] : HexFormat.of().parseHex(publicKey.strip());
         this.guildId = guildId;
         this.adminRoleId = adminRoleId;
@@ -108,6 +113,23 @@ public class DiscordInteractionController {
         int type = root.path("type").asInt();
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
+        if (type == 2 && "비밀번호초기화".equals(root.path("data").path("name").asText())) {
+            String poptomoId = option(root, "팝토모_id").path("value").asText();
+            String temporaryPassword;
+            try {
+                temporaryPassword = adminPasswordReset.reset(poptomoId);
+            } catch (RuntimeException exception) {
+                return ResponseEntity.ok(ephemeral("팝토모 ID를 확인할 수 없거나 사용자를 찾지 못했습니다."));
+            }
+            try {
+                adminNotification.send("[Discord 관리자] 비밀번호 초기화\n대상: `" + poptomoId + "`");
+            } catch (RuntimeException ignored) {
+                // The password is already changed; a notification outage must not hide the temporary password.
+            }
+            return ResponseEntity.ok(ephemeral("**비밀번호 초기화 완료**\n대상: `" + poptomoId
+                    + "`\n임시 비밀번호: `" + temporaryPassword
+                    + "`\n\n이 비밀번호는 다시 표시되지 않습니다. 사용자에게 안전하게 전달해 주세요."));
+        }
         if (type == 2 && "곡추가".equals(root.path("data").path("name").asText())) {
             try {
                 Draft draft = createDraftFromOptions(root);
@@ -604,6 +626,10 @@ public class DiscordInteractionController {
 
     private static Map<String, Object> message(String content) {
         return Map.of("type", 4, "data", Map.of("content", content));
+    }
+
+    private static Map<String, Object> ephemeral(String content) {
+        return Map.of("type", 4, "data", Map.of("content", content, "flags", 64));
     }
 
     private static JsonNode option(JsonNode root, String name) {
