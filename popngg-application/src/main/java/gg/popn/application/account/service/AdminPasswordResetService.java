@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class AdminPasswordResetService implements AdminPasswordResetUseCase {
     private static final char[] PASSWORD_CHARS =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789".toCharArray();
+    private static final int TEMPORARY_PASSWORD_LENGTH = 6;
     private final AccountSettingsPort accounts;
     private final PasswordHasherPort passwordHasher;
     private final SecureRandom random;
@@ -43,8 +44,8 @@ public class AdminPasswordResetService implements AdminPasswordResetUseCase {
     }
 
     private String temporaryPassword() {
-        StringBuilder value = new StringBuilder(12);
-        for (int i = 0; i < 12; i++) {
+        StringBuilder value = new StringBuilder(TEMPORARY_PASSWORD_LENGTH);
+        for (int i = 0; i < TEMPORARY_PASSWORD_LENGTH; i++) {
             value.append(PASSWORD_CHARS[random.nextInt(PASSWORD_CHARS.length)]);
         }
         return value.toString();
