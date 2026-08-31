@@ -181,6 +181,26 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(adapter.findPotentialPopclass("0000").targets()).hasSize(2);
     }
 
+    @Test
+    void excludesZeroScoreRowsFromCurrentAndPotentialTargets() {
+        jdbc.update("INSERT INTO charts VALUES (102, 10, 1, 'LIGHT', 7, 29, FALSE, FALSE)");
+        jdbc.update("""
+                INSERT INTO playdata
+                    (user_id, chart_id, current_version, version_score,
+                     version_score_known, version_rank_code, all_time_score,
+                     all_time_score_version, all_time_rank_code, medal_code,
+                     popclass, potential_popclass, is_display_popclass_target,
+                     popclass_bucket, popclass_bucket_rank)
+                VALUES (1, 102, 29, 0, TRUE, 1, 0, 29, 1, 1,
+                        0, 0, TRUE, 'CURRENT_VERSION', 2)
+                """);
+
+        assertThat(adapter.findPopclass("0000").targets())
+                .extracting(row -> row.chartId()).containsExactly(100L);
+        assertThat(adapter.findPotentialPopclass("0000").targets())
+                .extracting(row -> row.chartId()).doesNotContain(102L);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"LEVEL", "VERSION", "DIFFICULTY", "TITLE", "GENRE", "SCORE", "MEDAL", "RANK", "POPCLASS"})
     void sortsUserRecordsByEverySupportedField(String sort) {

@@ -157,10 +157,14 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                         (PopclassRow row) -> row.allTimeScore).reversed())
                 .thenComparingLong(row -> row.chartId);
         List<PopclassRow> current = rows.stream()
-                .filter(row -> row.chartVersion == currentVersion)
+                .filter(row -> row.chartVersion == currentVersion
+                        && row.playdataVersion == currentVersion
+                        && row.versionScoreKnown && row.versionScore > 0)
                 .sorted(displayOrder).limit(20).toList();
         List<PopclassRow> old = rows.stream()
-                .filter(row -> row.chartVersion != currentVersion)
+                .filter(row -> row.chartVersion != currentVersion
+                        && row.playdataVersion == currentVersion
+                        && row.versionScoreKnown && row.versionScore > 0)
                 .sorted(displayOrder).limit(40).toList();
         mark(current, "CURRENT_VERSION");
         mark(old, "OLD_VERSION");
@@ -180,16 +184,17 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                                 (PopclassRow row) -> row.allTimeScore).reversed())
                         .thenComparingLong(row -> row.chartId);
         List<PopclassRow> potentialCurrent = rows.stream()
-                .filter(row -> row.chartVersion == currentVersion)
+                .filter(row -> row.chartVersion == currentVersion && row.allTimeScore > 0)
                 .sorted(potentialOrder).limit(20).toList();
         List<PopclassRow> potentialOld = rows.stream()
-                .filter(row -> row.chartVersion != currentVersion)
+                .filter(row -> row.chartVersion != currentVersion && row.allTimeScore > 0)
                 .sorted(potentialOrder).limit(40).toList();
         int potentialPopclass = popclassPolicy.newUserPopclassFromCharts(
                 java.util.stream.Stream.concat(potentialCurrent.stream(), potentialOld.stream())
                         .map(row -> new PopclassPolicy.NewChartScore(
                                 row.level, row.allTimeScore, row.medalCode)).toList());
         int legacyPopclass = popclassPolicy.legacyUserPopclass(rows.stream()
+                .filter(row -> row.allTimeScore > 0)
                 .sorted(Comparator.comparingInt(
                         (PopclassRow row) -> row.legacyPopclass).reversed()
                         .thenComparing(Comparator.comparingInt(
