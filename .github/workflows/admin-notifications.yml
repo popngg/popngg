@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, closed]
   workflow_run:
-    workflows: [CI, Deploy dev]
+    workflows: [CI, Deploy candidate]
     types: [completed]
 
 permissions:
