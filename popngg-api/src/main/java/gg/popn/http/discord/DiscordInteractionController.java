@@ -174,7 +174,7 @@ public class DiscordInteractionController {
             SongDetailView current = findSongDetail.findSong(selected.get().songId());
             String id = UUID.randomUUID().toString();
             editDrafts.put(id, new EditDraft(current, null, null, null, Instant.now(), reportId));
-            return ResponseEntity.ok(editModal(id, current));
+            return ResponseEntity.ok(editModal(id, current, null));
         }
         if (type == 3 && "unknown_song_select".equals(root.path("data").path("custom_id").asText())) {
             long reportId = root.path("data").path("values").path(0).asLong();
@@ -191,6 +191,12 @@ public class DiscordInteractionController {
             try {
                 long songId = option(root, "song_id").path("value").asLong();
                 SongDetailView current = findSongDetail.findSong(songId);
+                if (!hasSongUpdateOptions(root)) {
+                    String id = UUID.randomUUID().toString();
+                    editDrafts.put(id, new EditDraft(
+                            current, null, null, null, Instant.now(), null));
+                    return ResponseEntity.ok(editModal(id, current, null));
+                }
                 Instant createdAt = optionalDate(root, "추가일");
                 String attachmentUrl = optionalAttachmentUrl(root, "자켓");
                 UpdateSongCommand command = updateCommandFromOptions(root, current, createdAt);
@@ -200,6 +206,19 @@ public class DiscordInteractionController {
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(message("곡을 찾을 수 없거나 추가일 형식이 올바르지 않습니다."));
             }
+        }
+        if (type == 3 && root.path("data").path("custom_id").asText()
+                .startsWith("song_edit_reopen:")) {
+            String id = root.path("data").path("custom_id").asText()
+                    .substring("song_edit_reopen:".length());
+            EditDraft stored = editDrafts.remove(id);
+            if (stored == null || stored.command() == null)
+                return ResponseEntity.ok(message("수정 요청이 만료되었습니다."));
+            String nextId = UUID.randomUUID().toString();
+            editDrafts.put(nextId, new EditDraft(stored.current(), null,
+                    stored.attachmentUrl(), stored.requestedCreatedAt(), Instant.now(),
+                    stored.reportId()));
+            return ResponseEntity.ok(editModal(nextId, stored.current(), stored.command()));
         }
         if (type == 5 && root.path("data").path("custom_id").asText().startsWith("song_edit:")) {
             String editId = root.path("data").path("custom_id").asText().substring("song_edit:".length());
@@ -389,17 +408,38 @@ public class DiscordInteractionController {
                 "label", label, "style", 1, "required", true, "value", value == null ? "" : value)));
     }
 
-    private static Map<String, Object> editModal(String id, SongDetailView current) {
+    private static Map<String, Object> editModal(
+            String id, SongDetailView current, UpdateSongCommand defaults) {
+        List<UpdateSongCommand.ChartUpdate> requested = defaults == null
+                ? List.of() : defaults.charts();
+        Map<Long, Integer> requestedLevels = requested.stream().collect(
+                java.util.stream.Collectors.toMap(UpdateSongCommand.ChartUpdate::chartId,
+                        UpdateSongCommand.ChartUpdate::level));
         String charts = current.charts().stream().filter(chart -> !chart.isDeleted())
-                .map(chart -> chart.difficulty().shortLabel() + ":" + chart.level())
+                .map(chart -> chart.difficulty().shortLabel() + ":"
+                        + requestedLevels.getOrDefault(chart.chartId(), chart.level()))
                 .collect(java.util.stream.Collectors.joining(","));
-        if (!current.charts().isEmpty() && current.charts().getFirst().isUpper()) charts = "UPPER " + charts;
+        boolean upper = requested.isEmpty()
+                ? !current.charts().isEmpty() && current.charts().getFirst().isUpper()
+                : requested.getFirst().isUpper();
+        if (upper) charts = "UPPER " + charts;
+        String song = defaults == null ? current.song().songName() : defaults.songName();
+        String genre = defaults == null ? current.song().genreName() : defaults.genreName();
+        String artist = defaults == null ? current.song().artistName() : defaults.artistName();
+        int version = defaults == null ? current.song().version() : defaults.version();
         return Map.of("type", 9, "data", Map.of("custom_id", "song_edit:" + id, "title", "곡 수정",
-                "components", List.of(inputValue("song", "곡명", current.song().songName()),
-                        inputValue("genre", "장르", current.song().genreName()),
-                        inputValue("artist", "아티스트", current.song().artistName()),
-                        inputValue("version", "버전", Integer.toString(current.song().version())),
+                "components", List.of(inputValue("song", "곡명", song),
+                        inputValue("genre", "장르", genre),
+                        inputValue("artist", "아티스트", artist),
+                        inputValue("version", "버전", Integer.toString(version)),
                         inputValue("charts", "채보", charts))));
+    }
+
+    private static boolean hasSongUpdateOptions(JsonNode root) {
+        for (JsonNode option : root.path("data").path("options")) {
+            if (!"song_id".equals(option.path("name").asText())) return true;
+        }
+        return false;
     }
 
     private static Map<String, String> modalValues(JsonNode root) {
@@ -529,6 +569,7 @@ public class DiscordInteractionController {
                 "content", "**곡 수정 JSON 확인**\n```json\n" + preview + "\n```",
                 "components", List.of(Map.of("type", 1, "components", List.of(
                         Map.of("type", 2, "style", 3, "label", "수정 확정", "custom_id", "song_edit_confirm:" + id),
+                        Map.of("type", 2, "style", 2, "label", "다시 수정", "custom_id", "song_edit_reopen:" + id),
                         Map.of("type", 2, "style", 4, "label", "취소", "custom_id", "song_cancel"))))));
     }
 
