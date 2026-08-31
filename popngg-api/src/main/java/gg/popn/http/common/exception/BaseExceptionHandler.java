@@ -29,6 +29,7 @@ import gg.popn.application.account.exception.AccountSettingsException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import java.util.UUID;
 
 @Slf4j
 @RestControllerAdvice
@@ -171,35 +172,49 @@ public class BaseExceptionHandler {
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<Map<String, Object>> handleBaseException(HttpServletRequest request, BaseException e) {
+        String traceId = traceId(request);
         if (e.getCode().getStatusCode() >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
-            log.error("BaseException occurred. requestURL={}, method={}", request.getRequestURL(), request.getMethod(), e);
-            notifyError(request, e);
+            log.error("BaseException occurred. traceId={}, requestURL={}, method={}",
+                    traceId, request.getRequestURL(), request.getMethod(), e);
+            notifyError(request, e, traceId);
         }
         else {
             log.info("BaseException occurred. requestURL={}, method={}", request.getRequestURL(), request.getMethod(), e);
         }
 
-        return ResponseEntity
-                .status(e.getCode().getStatusCode())
-                .body(toMap(e));
+        Map<String, Object> body = toMap(e);
+        if (e.getCode().getStatusCode() >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+            body.put("traceId", traceId);
+        }
+        return ResponseEntity.status(e.getCode().getStatusCode()).body(body);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUnexpected(
             HttpServletRequest request, Exception exception) {
-        log.error("Unexpected server error. path={}, method={}", request.getRequestURI(), request.getMethod(), exception);
-        notifyError(request, exception);
+        String traceId = traceId(request);
+        log.error("Unexpected server error. traceId={}, path={}, method={}",
+                traceId, request.getRequestURI(), request.getMethod(), exception);
+        notifyError(request, exception, traceId);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "code", "INTERNAL_SERVER_ERROR", "message", "An unexpected server error occurred."));
+                "code", "INTERNAL_SERVER_ERROR",
+                "message", "An unexpected server error occurred.",
+                "traceId", traceId));
     }
 
-    private void notifyError(HttpServletRequest request, Exception exception) {
+    private void notifyError(HttpServletRequest request, Exception exception, String traceId) {
         Throwable root = exception;
         while (root.getCause() != null && root.getCause() != root) root = root.getCause();
         errorNotification.notifyServerError(request.getMethod(), request.getRequestURI(),
                 exception.getClass().getSimpleName(), exception.getMessage(),
                 root == exception ? "-" : root.getClass().getSimpleName() + ": " + root.getMessage(),
-                request.getHeader("X-Request-Id"));
+                traceId);
+    }
+
+    private static String traceId(HttpServletRequest request) {
+        String supplied = request.getHeader("X-Request-Id");
+        if (supplied != null && supplied.matches("[A-Za-z0-9._:-]{1,100}")) return supplied;
+        return UUID.randomUUID().toString();
     }
 
     private static Map<String, Object> toMap(BaseException e) {
