@@ -74,8 +74,8 @@ creating an `.env` file. See `deploy/README.md` for migration and rollback detai
 
 ## Monitoring
 
-An optional Prometheus and Grafana stack collects Spring Boot HTTP histograms, JVM metrics,
-and HikariCP pool metrics. It is isolated from the API lifecycle and binds its administration
+An optional Prometheus, Loki, Alloy, and Grafana stack collects Spring Boot metrics and
+structured JSON logs. It is isolated from the API lifecycle and binds its administration
 ports to host loopback only. See [deploy/monitoring/README.md](deploy/monitoring/README.md)
 for setup, SSH access, dashboard definitions, retention, and troubleshooting.
 

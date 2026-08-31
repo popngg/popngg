@@ -1,0 +1,19 @@
+loki.source.file "popngg_api" {
+	targets = [{
+		__path__    = "/var/log/popngg/*.log",
+		job         = "popngg-api",
+		environment = "local",
+	}]
+	forward_to = [loki.write.local.receiver]
+
+	file_match {
+		enabled     = true
+		sync_period = "10s"
+	}
+}
+
+loki.write "local" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}

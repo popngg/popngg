@@ -117,6 +117,29 @@ jobs:
             raise SystemExit('catalog migration history key is missing')
         if "popn29-v4-levels-20260822" not in compose:
             raise SystemExit('popn29 level migration history key is missing')
+
+        monitoring = Path('deploy/compose.monitoring.yml').read_text()
+        if 'grafana/promtail' in monitoring or 'promtail:' in monitoring:
+            raise SystemExit('the EOL Promtail collector must not be used')
+        if 'alloy-data:/var/lib/alloy/data' not in monitoring:
+            raise SystemExit('Alloy positions storage must be persistent')
+
+        loki = Path('deploy/monitoring/loki/config.yml').read_text()
+        required_loki_settings = (
+            'store: tsdb',
+            'period: 24h',
+            'retention_period: 168h',
+            'retention_enabled: true',
+            'delete_request_store: filesystem',
+        )
+        if any(setting not in loki for setting in required_loki_settings):
+            raise SystemExit('Loki TSDB retention configuration is incomplete')
+
+        prod = Path('popngg-api/src/main/resources/application-prod.yml').read_text()
+        if 'logging.file' in prod or '/var/log/popngg' in prod:
+            raise SystemExit('prod profile must not force migration jobs to write API logs')
+        if 'api-logs-init' not in compose or 'LOGGING_FILE_NAME' not in compose:
+            raise SystemExit('API log volume initialization or API-only logging is missing')
         PY
     
     - name: Build with Gradle
