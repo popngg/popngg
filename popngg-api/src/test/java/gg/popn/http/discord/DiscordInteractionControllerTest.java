@@ -95,7 +95,7 @@ class DiscordInteractionControllerTest {
 
         when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
-                        3, Instant.now())));
+                        4, true, false, 3, Instant.now())));
         assertThat(content(call(command("미등록목록")))).contains("new song", "3회")
                 .doesNotContain("난이도", "UPPER");
 

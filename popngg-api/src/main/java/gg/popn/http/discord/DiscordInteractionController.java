@@ -155,9 +155,12 @@ public class DiscordInteractionController {
             var reports = unknownChartReport.findRecentUnresolved(20);
             if (reports.isEmpty()) return ResponseEntity.ok(message("현재 미등록 곡/채보가 없습니다."));
             String content = reports.stream().map(report ->
-                    "- `#%d` **%s** / %s / %s / %d회".formatted(
-                            report.reportId(), report.songName(), report.genreName(),
-                            report.artistName(), report.occurrences()))
+                    "- `#%d` **%s** %s / %s / %s / %d회".formatted(
+                            report.reportId(), report.songName(),
+                            report.missingVariant()
+                                    ? report.upper() ? "[UPPER 누락]" : "[일반 버전 누락]"
+                                    : "[곡 미등록]",
+                            report.genreName(), report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
             List<Map<String, Object>> choices = reports.stream().limit(25).map(report -> Map.<String, Object>of(
                     "label", truncate(report.songName(), 100), "description", truncate(report.genreName(), 100),
@@ -205,7 +208,8 @@ public class DiscordInteractionController {
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
             String id = UUID.randomUUID().toString();
-            Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(), false);
+            Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
+                    Boolean.TRUE.equals(report.upper()));
             preDrafts.put(id, new PreDraft(prefill, Instant.now()));
             return ResponseEntity.ok(unknownSongModal(id, prefill));
         }
