@@ -86,3 +86,19 @@ for setup, SSH access, dashboard definitions, retention, and troubleshooting.
 - Gradle 8.13 wrapper
 - MySQL 8 and Flyway
 - Docker Compose
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening
+a pull request. Security vulnerabilities must be reported privately according
+to [SECURITY.md](SECURITY.md), not through a public issue.
+
+## License and content notice
+
+The software source code and project documentation are licensed under the
+[Apache License 2.0](LICENSE).
+
+Game data, song and chart metadata, jacket artwork, third-party trademarks, and
+other copyrighted game assets are not granted under the Apache License 2.0.
+Their respective rights remain with their owners. Do not redistribute those
+materials unless you have separate permission to do so.
