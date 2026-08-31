@@ -7,6 +7,35 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  branch-policy:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate pull request flow
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          case "$BASE_BRANCH" in
+            develop)
+              [[ "$HEAD_BRANCH" == feature/* || "$HEAD_BRANCH" == hotfix/* ]] || {
+                echo "PRs into develop must come from feature/** or hotfix/**." >&2
+                exit 1
+              }
+              ;;
+            main)
+              [[ "$HEAD_BRANCH" == develop || "$HEAD_BRANCH" == hotfix/* ]] || {
+                echo "PRs into main must come from develop, except emergency hotfix/** PRs." >&2
+                exit 1
+              }
+              ;;
+            *)
+              echo "Unsupported target branch: $BASE_BRANCH" >&2
+              exit 1
+              ;;
+          esac
+
   build-and-test:
     runs-on: ubuntu-latest
     
@@ -145,6 +174,8 @@ jobs:
       run: pip install diff-cover[jenkins]
     
     - name: Diff Coverage Check
+      env:
+        COMPARE_BRANCH: origin/${{ github.base_ref || github.ref_name }}
       run: |
         set -euo pipefail
 
@@ -160,7 +191,7 @@ jobs:
         diff-cover \
           "${reports[@]}" \
           --fail-under=80 \
-          --compare-branch=origin/main \
+          --compare-branch="$COMPARE_BRANCH" \
           --src-roots \
             popngg-api/src/main/java \
             popngg-application/src/main/java \

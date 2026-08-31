@@ -1,4 +1,4 @@
-name: Deploy dev
+name: Deploy production
 
 on:
   workflow_run:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-dev
+  group: deploy-production
   cancel-in-progress: false
 
 jobs:
@@ -20,6 +20,8 @@ jobs:
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The existing `dev` environment stores the production SSH secrets.
+    # Rename it separately in GitHub before changing this key.
     environment: dev
 
     steps:
