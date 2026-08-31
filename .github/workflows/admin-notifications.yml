@@ -1,4 +1,4 @@
-name: Admin notifications
+name: GitHub notifications
 
 on:
   pull_request:
@@ -14,15 +14,15 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send administrator event to Discord
+      - name: Send GitHub event to Discord
         env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_ADMIN_WEBHOOK_URL }}
+          WEBHOOK_URL: ${{ secrets.DISCORD_PR_WEBHOOK_URL }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_JSON: ${{ toJson(github.event) }}
         run: |
           set -euo pipefail
           if [ -z "$WEBHOOK_URL" ]; then
-            echo "DISCORD_ADMIN_WEBHOOK_URL is not configured; skipping notification."
+            echo "DISCORD_PR_WEBHOOK_URL is not configured; skipping notification."
             exit 0
           fi
           if [ "$EVENT_NAME" = "pull_request" ]; then
@@ -45,5 +45,6 @@ jobs:
             printf -v content '**[GitHub Actions]** %s: %s\n브랜치: %s\n커밋: %s\n%s' \
               "$workflow" "$conclusion" "$branch" "$sha" "$url"
           fi
-          jq -n --arg content "$content" '{content: $content}' |
+          jq -n --arg content "$content" \
+            '{content: $content, allowed_mentions: {parse: []}}' |
             curl --fail --silent --show-error -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"

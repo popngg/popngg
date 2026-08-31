@@ -11,6 +11,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,9 +32,11 @@ class NotificationAdaptersTest {
     @Test
     void sendsDiscordNotificationsAndSuppressesDuplicateErrors() throws Exception {
         CountDownLatch requests = new CountDownLatch(3);
+        AtomicReference<String> errorPayload = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/webhook", exchange -> {
-            exchange.getRequestBody().readAllBytes();
+            String payload = new String(exchange.getRequestBody().readAllBytes());
+            if (payload.contains("API 서버 오류")) errorPayload.set(payload);
             exchange.sendResponseHeaders(204, -1); exchange.close(); requests.countDown();
         });
         server.start();
@@ -42,12 +45,14 @@ class NotificationAdaptersTest {
             ObjectMapper mapper = new ObjectMapper();
             new DiscordAdminNotificationAdapter(url, mapper).send("admin");
             var errors = new DiscordErrorNotificationAdapter(url, mapper);
-            errors.notifyServerError("GET", "/x", "Boom", "message", "cause", "trace");
-            errors.notifyServerError("GET", "/x", "Boom", "message", "cause", "trace");
+            errors.notifyServerError("GET", "/x", "Boom", "message @everyone", "cause", "trace");
+            errors.notifyServerError("GET", "/x", "Boom", "message @everyone", "cause", "trace");
             new DiscordUnknownChartNotifier(url, mapper, java.net.http.HttpClient.newHttpClient())
                     .notifyUnknownCharts(1, "user", List.of(new ImportPlaydataCommand.Row(
                             null, null, 4, false, null, "song", "genre", 1, 1, 1)));
             assertThat(requests.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(errorPayload.get()).contains("embeds", "allowed_mentions", "추적 ID", "trace")
+                    .doesNotContain("@everyone");
         } finally { server.stop(0); }
     }
 
