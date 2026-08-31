@@ -272,6 +272,18 @@ class DiscordInteractionControllerTest {
         assertThat(content(call(create))).contains("하나 이상");
     }
 
+    @Test
+    void previewsANewlyAddedDifficultyDuringSongEdit() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "ex", 49);
+
+        String preview = content(call(edit));
+
+        assertThat(preview).contains("\"difficulty\" : \"EX\"", "\"chartId\" : null", "\"level\" : 49");
+    }
+
     private SongDetailView detail(String title, String hash) {
         var metadata = new SongMetadataView(12, hash, "genre", title, "artist", 29,
                 "https://static.popn.gg/" + hash + ".png");
