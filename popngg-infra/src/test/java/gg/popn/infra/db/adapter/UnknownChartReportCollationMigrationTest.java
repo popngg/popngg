@@ -32,12 +32,18 @@ class UnknownChartReportCollationMigrationTest extends MySqlIntegrationTestSuppo
                         NOW(), NOW())
                 """);
         jdbc.update("""
+                INSERT INTO charts
+                    (chart_id, song_id, difficulty_code, difficulty_label, level,
+                     chart_version, is_upper, created_at, updated_at)
+                VALUES (1, 1, 4, 'EX', 48, 28, FALSE, NOW(), NOW())
+                """);
+        jdbc.update("""
                 INSERT INTO unknown_chart_reports
                     (renew_log_id, poptomo_id, song_name, genre_name, artist_name,
                      difficulty_code, is_upper, occurrences, resolved,
                      first_seen_at, last_seen_at)
                 VALUES
-                    (1, 'user', 'known', 'genre', '', 4, FALSE, 1, FALSE, NOW(), NOW()),
+                    (1, 'user', 'known', 'genre', 'reported artist', 4, FALSE, 1, FALSE, NOW(), NOW()),
                     (1, 'user', 'unknown', 'genre', '', 4, FALSE, 1, FALSE, NOW(), NOW())
                 """);
 

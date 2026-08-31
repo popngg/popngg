@@ -21,27 +21,40 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
                 INSERT INTO unknown_chart_reports
                     (renew_log_id,poptomo_id,song_name,genre_name,artist_name,difficulty_code,
                      is_upper,occurrences,resolved,first_seen_at,last_seen_at)
-                VALUES (?,?,?,?,?,NULL,NULL,1,FALSE,?,?)
+                VALUES (?,?,?,?,?,?,?,1,FALSE,?,?)
                 ON DUPLICATE KEY UPDATE renew_log_id=VALUES(renew_log_id),
                     poptomo_id=VALUES(poptomo_id), occurrences=occurrences+1,
                     resolved=FALSE,last_seen_at=VALUES(last_seen_at)
                 """, renewLogId, poptomoId, row.songName(), row.genreName(),
-                row.artistName() == null ? "" : row.artistName(), Timestamp.from(now), Timestamp.from(now));
+                row.artistName() == null ? "" : row.artistName(), row.difficultyCode(), row.upper(),
+                Timestamp.from(now), Timestamp.from(now));
     }
 
     @Override
     public List<Report> findRecentUnresolved(int limit) {
         return jdbc.query("""
-                SELECT report_id,song_name,genre_name,artist_name,occurrences,last_seen_at
-                FROM unknown_chart_reports
-                WHERE resolved=FALSE
-                  AND NOT EXISTS (
-                      SELECT 1 FROM songs s
-                       WHERE s.song_name=unknown_chart_reports.song_name
-                         AND s.genre_name=unknown_chart_reports.genre_name)
+                SELECT r.report_id,r.song_name,r.genre_name,r.artist_name,r.difficulty_code,r.is_upper,
+                       EXISTS (SELECT 1 FROM songs s
+                                WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name)
+                           AS missing_variant,
+                       r.occurrences,r.last_seen_at
+                FROM unknown_chart_reports r
+                WHERE r.resolved=FALSE
+                  AND (NOT EXISTS (
+                          SELECT 1 FROM songs s
+                           WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name)
+                       OR (r.is_upper IS NOT NULL
+                           AND NOT EXISTS (
+                               SELECT 1 FROM songs s
+                               JOIN charts c ON c.song_id=s.song_id AND c.is_deleted=FALSE
+                                WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name
+                                  AND c.is_upper=r.is_upper)))
                 ORDER BY last_seen_at DESC LIMIT ?
                 """, (rs, n) -> new Report(rs.getLong("report_id"), rs.getString("song_name"),
-                rs.getString("genre_name"), rs.getString("artist_name"), rs.getInt("occurrences"),
+                rs.getString("genre_name"), rs.getString("artist_name"),
+                (Integer) rs.getObject("difficulty_code"),
+                rs.getObject("is_upper") == null ? null : rs.getBoolean("is_upper"),
+                rs.getBoolean("missing_variant"), rs.getInt("occurrences"),
                 rs.getTimestamp("last_seen_at").toInstant()), limit);
     }
 
@@ -58,6 +71,7 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
                  GROUP BY r.report_id,r.song_name,r.genre_name,r.artist_name,
                           r.occurrences,r.last_seen_at
                 HAVING COUNT(DISTINCT s.song_id)=1
+                   AND MIN(COALESCE(s.artist_name,'')) <> r.artist_name
                  ORDER BY r.last_seen_at DESC LIMIT ?
                 """, (rs, n) -> new IncompleteReport(rs.getLong("report_id"), rs.getLong("song_id"),
                 rs.getString("song_name"), rs.getString("genre_name"),

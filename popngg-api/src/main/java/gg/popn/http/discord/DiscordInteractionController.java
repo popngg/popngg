@@ -155,9 +155,12 @@ public class DiscordInteractionController {
             var reports = unknownChartReport.findRecentUnresolved(20);
             if (reports.isEmpty()) return ResponseEntity.ok(message("현재 미등록 곡/채보가 없습니다."));
             String content = reports.stream().map(report ->
-                    "- `#%d` **%s** / %s / %s / %d회".formatted(
-                            report.reportId(), report.songName(), report.genreName(),
-                            report.artistName(), report.occurrences()))
+                    "- `#%d` **%s** %s / %s / %s / %d회".formatted(
+                            report.reportId(), report.songName(),
+                            report.missingVariant()
+                                    ? report.upper() ? "[UPPER 누락]" : "[일반 버전 누락]"
+                                    : "[곡 미등록]",
+                            report.genreName(), report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
             List<Map<String, Object>> choices = reports.stream().limit(25).map(report -> Map.<String, Object>of(
                     "label", truncate(report.songName(), 100), "description", truncate(report.genreName(), 100),
@@ -205,7 +208,8 @@ public class DiscordInteractionController {
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
             String id = UUID.randomUUID().toString();
-            Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(), false);
+            Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
+                    Boolean.TRUE.equals(report.upper()));
             preDrafts.put(id, new PreDraft(prefill, Instant.now()));
             return ResponseEntity.ok(unknownSongModal(id, prefill));
         }
@@ -434,12 +438,12 @@ public class DiscordInteractionController {
             String id, SongDetailView current, UpdateSongCommand defaults) {
         List<UpdateSongCommand.ChartUpdate> requested = defaults == null
                 ? List.of() : defaults.charts();
-        Map<Long, Integer> requestedLevels = requested.stream().collect(
-                java.util.stream.Collectors.toMap(UpdateSongCommand.ChartUpdate::chartId,
+        Map<Integer, Integer> requestedLevels = requested.stream().collect(
+                java.util.stream.Collectors.toMap(UpdateSongCommand.ChartUpdate::difficultyCode,
                         UpdateSongCommand.ChartUpdate::level));
         String charts = current.charts().stream().filter(chart -> !chart.isDeleted())
                 .map(chart -> chart.difficulty().shortLabel() + ":"
-                        + requestedLevels.getOrDefault(chart.chartId(), chart.level()))
+                        + requestedLevels.getOrDefault(chart.difficulty().code(), chart.level()))
                 .collect(java.util.stream.Collectors.joining(","));
         boolean upper = requested.isEmpty()
                 ? !current.charts().isEmpty() && current.charts().getFirst().isUpper()
@@ -485,10 +489,16 @@ public class DiscordInteractionController {
             };
             levels.put(code, Integer.parseInt(pair[1].strip()));
         }
-        return current.charts().stream().filter(chart -> levels.containsKey(chart.difficulty().code()))
-                .map(chart -> new UpdateSongCommand.ChartUpdate(chart.chartId(),
-                        levels.get(chart.difficulty().code()), chart.chartVersion(), upper,
-                        chart.hasStrictGauge(), chart.hasStrictJudgement())).toList();
+        return levels.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry -> {
+            var existing = current.charts().stream()
+                    .filter(chart -> !chart.isDeleted() && chart.difficulty().code() == entry.getKey())
+                    .findFirst();
+            return existing.<UpdateSongCommand.ChartUpdate>map(chart ->
+                    new UpdateSongCommand.ChartUpdate(chart.chartId(), entry.getKey(), entry.getValue(),
+                            chart.chartVersion(), upper, chart.hasStrictGauge(), chart.hasStrictJudgement()))
+                    .orElseGet(() -> new UpdateSongCommand.ChartUpdate(null, entry.getKey(), entry.getValue(),
+                            current.song().version(), upper, false, false));
+        }).toList();
     }
 
     private Draft createDraftFromOptions(JsonNode root) {
@@ -524,17 +534,20 @@ public class DiscordInteractionController {
             JsonNode level = optionalOption(root, names[i]);
             if (level != null) requestedLevels.put(i + 1, level.path("value").asInt());
         }
-        for (Integer difficulty : requestedLevels.keySet()) {
-            if (current.charts().stream().noneMatch(chart -> chart.difficulty().code() == difficulty && !chart.isDeleted()))
-                throw new IllegalArgumentException("현재 존재하지 않는 난이도 채보는 곡수정으로 추가할 수 없습니다.");
-        }
         List<UpdateSongCommand.ChartUpdate> charts = current.charts().stream()
                 .filter(chart -> !chart.isDeleted()
                         && (requestedLevels.containsKey(chart.difficulty().code()) || upper != null))
-                .map(chart -> new UpdateSongCommand.ChartUpdate(chart.chartId(),
+                .map(chart -> new UpdateSongCommand.ChartUpdate(chart.chartId(), chart.difficulty().code(),
                         requestedLevels.getOrDefault(chart.difficulty().code(), chart.level()),
                         chart.chartVersion(), upper == null ? chart.isUpper() : upper,
-                        chart.hasStrictGauge(), chart.hasStrictJudgement())).toList();
+                        chart.hasStrictGauge(), chart.hasStrictJudgement())).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        for (var requested : requestedLevels.entrySet()) {
+            if (current.charts().stream().noneMatch(chart -> !chart.isDeleted()
+                    && chart.difficulty().code() == requested.getKey())) {
+                charts.add(new UpdateSongCommand.ChartUpdate(null, requested.getKey(), requested.getValue(),
+                        version, upper == null ? current.charts().getFirst().isUpper() : upper, false, false));
+            }
+        }
         return new UpdateSongCommand(current.song().songId(), genre, song, artist, version,
                 null, date, charts);
     }
@@ -582,8 +595,16 @@ public class DiscordInteractionController {
         json.put("version", after.version());
         if (after.createdAt() != null)
             json.put("date", after.createdAt().atZone(ZoneOffset.UTC).toLocalDate().toString());
-        json.put("charts", after.charts().stream().map(chart -> Map.of(
-                "chartId", chart.chartId(), "level", chart.level(), "upper", chart.isUpper())).toList());
+        json.put("charts", after.charts().stream().map(chart -> {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("difficulty", switch (chart.difficultyCode()) {
+                case 1 -> "L"; case 2 -> "N"; case 3 -> "H"; case 4 -> "EX"; default -> "-";
+            });
+            item.put("chartId", chart.chartId());
+            item.put("level", chart.level());
+            item.put("upper", chart.isUpper());
+            return item;
+        }).toList());
         String preview;
         try { preview = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json); }
         catch (Exception exception) { throw new IllegalStateException("JSON 미리보기를 만들 수 없습니다.", exception); }

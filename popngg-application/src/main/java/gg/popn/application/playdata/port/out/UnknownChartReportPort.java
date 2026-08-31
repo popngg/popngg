@@ -11,6 +11,7 @@ public interface UnknownChartReportPort {
     void resolve(long reportId);
 
     record Report(long reportId, String songName, String genreName, String artistName,
+                  Integer difficultyCode, Boolean upper, boolean missingVariant,
                   int occurrences, Instant lastSeenAt) {}
     record IncompleteReport(long reportId, long songId, String songName, String genreName,
                             String reportedArtistName, String registeredArtistName,

@@ -95,7 +95,7 @@ class DiscordInteractionControllerTest {
 
         when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
-                        3, Instant.now())));
+                        4, true, false, 3, Instant.now())));
         assertThat(content(call(command("미등록목록")))).contains("new song", "3회")
                 .doesNotContain("난이도", "UPPER");
 
@@ -270,6 +270,18 @@ class DiscordInteractionControllerTest {
                 .put("size", 100).put("content_type", "image/png")
                 .put("url", "https://cdn.discordapp.com/test.png");
         assertThat(content(call(create))).contains("하나 이상");
+    }
+
+    @Test
+    void previewsANewlyAddedDifficultyDuringSongEdit() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "ex", 49);
+
+        String preview = content(call(edit));
+
+        assertThat(preview).contains("\"difficulty\" : \"EX\"", "\"chartId\" : null", "\"level\" : 49");
     }
 
     private SongDetailView detail(String title, String hash) {
