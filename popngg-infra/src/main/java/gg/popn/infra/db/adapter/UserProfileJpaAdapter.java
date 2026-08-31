@@ -130,7 +130,12 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                        p.comment,
                        CASE WHEN p.display_popclass = 0 THEN p.potential_popclass
                             ELSE p.display_popclass END AS effective_popclass,
-                       p.updated_at,
+                       COALESCE((
+                           SELECT MAX(rl.created_at)
+                             FROM renew_logs rl
+                            WHERE rl.poptomo_id = u.poptomo_id
+                              AND rl.status IN ('SUCCESS', 'PARTIAL_SUCCESS')
+                       ), p.updated_at) AS updated_at,
                        ROW_NUMBER() OVER (
                            ORDER BY CASE WHEN p.display_popclass = 0
                                              THEN p.potential_popclass
