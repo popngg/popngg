@@ -51,8 +51,48 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.7.3
+    command:
+      - -config.file=/etc/loki/config.yml
+    volumes:
+      - ./monitoring/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+    mem_limit: 512m
+    cpus: 0.50
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:v1.12.0
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - api-logs:/var/log/popngg:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      loki:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 0.25
     restart: unless-stopped
 
 volumes:
   prometheus-data:
   grafana-data:
+  loki-data:
+  alloy-data:
