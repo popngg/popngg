@@ -19,8 +19,8 @@ jobs:
           set -euo pipefail
           case "$BASE_BRANCH" in
             develop)
-              [[ "$HEAD_BRANCH" == feature/* || "$HEAD_BRANCH" == hotfix/* ]] || {
-                echo "PRs into develop must come from feature/** or hotfix/**." >&2
+              [[ "$HEAD_BRANCH" == feature/* || "$HEAD_BRANCH" == hotfix/* || "$HEAD_BRANCH" == chore/* ]] || {
+                echo "PRs into develop must come from feature/**, hotfix/**, or chore/**." >&2
                 exit 1
               }
               ;;

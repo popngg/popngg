@@ -4,12 +4,13 @@
 
 - `feature/**`: 기능 개발. `develop`으로 PR을 보냅니다.
 - `hotfix/**`: 수정 작업. `develop`으로 PR을 보냅니다.
+- `chore/**`: CI/CD, 설정, 문서와 같은 유지보수 작업. `develop`으로 PR을 보냅니다.
 - `develop`: 다음 운영 후보 버전입니다. CI 성공 후 서버에 자동 배포하여 검증합니다.
 - `main`: 검증이 완료된 안정 버전이자 롤백 기준입니다.
 
 ## 일반 출시 흐름
 
-1. `feature/**` 또는 `hotfix/**`에서 작업합니다.
+1. `feature/**`, `hotfix/**` 또는 `chore/**`에서 작업합니다.
 2. `develop` 대상 PR의 CI와 리뷰를 통과시켜 병합합니다.
 3. 출시할 변경을 모은 뒤 `develop`에서 `main`으로 PR을 만듭니다.
 4. `develop` CI가 성공하면 해당 커밋을 서버에 자동 배포합니다.
