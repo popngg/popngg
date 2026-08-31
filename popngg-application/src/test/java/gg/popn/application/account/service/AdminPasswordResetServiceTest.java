@@ -33,7 +33,7 @@ class AdminPasswordResetServiceTest {
 
         String temporaryPassword = service.reset("1234-5678-9012");
 
-        assertThat(temporaryPassword).matches("[A-Za-z0-9]{12}");
+        assertThat(temporaryPassword).matches("[A-Za-z0-9]{6}");
         String digest = java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(temporaryPassword.getBytes(StandardCharsets.UTF_8)));
         verify(hasher).hash(digest);

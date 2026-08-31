@@ -72,16 +72,16 @@ class DiscordInteractionControllerTest {
 
     @Test
     void resetsPasswordOnlyForAdminAndKeepsTemporaryPasswordEphemeral() throws Exception {
-        when(passwordReset.reset("1234-5678-9012")).thenReturn("TempPass2345");
+        when(passwordReset.reset("1234-5678-9012")).thenReturn("Ab3xY7");
         ObjectNode reset = command("비밀번호초기화");
         option(reset, "팝토모_id", "1234-5678-9012");
 
         Map<?, ?> response = body(call(reset));
         Map<?, ?> data = (Map<?, ?>) response.get("data");
         assertThat(data.get("flags")).isEqualTo(64);
-        assertThat(data.get("content").toString()).contains("TempPass2345", "1234-5678-9012");
+        assertThat(data.get("content").toString()).contains("Ab3xY7", "1234-5678-9012");
         verify(admin).send(contains("1234-5678-9012"));
-        verify(admin, never()).send(contains("TempPass2345"));
+        verify(admin, never()).send(contains("Ab3xY7"));
     }
 
     @Test
