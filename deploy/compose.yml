@@ -129,6 +129,12 @@ services:
       SERVER_MAX_SWALLOW_SIZE: ${SERVER_MAX_SWALLOW_SIZE:-4MB}
       SERVER_FORWARD_HEADERS_STRATEGY: ${SERVER_FORWARD_HEADERS_STRATEGY:-framework}
       MANAGEMENT_PORT: 9091
+      LOGGING_FILE_NAME: /var/log/popngg/application.log
+      LOGGING_LOGBACK_ROLLINGPOLICY_MAX_FILE_SIZE: 100MB
+      LOGGING_LOGBACK_ROLLINGPOLICY_MAX_HISTORY: 7
+      LOGGING_LOGBACK_ROLLINGPOLICY_TOTAL_SIZE_CAP: 1GB
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: logstash
+      LOGGING_STRUCTURED_FORMAT_FILE: logstash
       SWAGGER_USERNAME: ${SWAGGER_USERNAME:?SWAGGER_USERNAME is required}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:?SWAGGER_PASSWORD is required}
       TZ: UTC
@@ -140,6 +146,8 @@ services:
     depends_on:
       catalog-migration:
         condition: service_completed_successfully
+      api-logs-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent http://localhost:9091/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 5s
@@ -147,6 +155,13 @@ services:
       retries: 20
       start_period: 20s
     restart: unless-stopped
+
+  api-logs-init:
+    image: alpine:3.22
+    command: ["sh", "-c", "chown -R 10001:10001 /var/log/popngg"]
+    volumes:
+      - api-logs:/var/log/popngg
+    restart: "no"
 
   adminer:
     image: adminer:4.8.1-standalone

@@ -1,7 +1,8 @@
 # POPN.GG monitoring operations
 
-The monitoring stack is optional infrastructure. The API does not depend on Prometheus or
-Grafana, so either monitoring container can fail or restart without stopping POPN.GG.
+The monitoring stack is optional infrastructure. The API does not depend on Prometheus,
+Loki, Alloy, or Grafana, so a monitoring container can fail or restart without stopping
+POPN.GG.
 
 ## Architecture and security
 
@@ -16,12 +17,14 @@ Spring Boot API :9091/actuator/prometheus (Compose network only)
                          ^
                          | Nginx HTTPS reverse proxy
                   grafana.popn.gg
+
+Spring Boot JSON file log -> Alloy -> Loki -> Grafana Explore
 ```
 
 The API's main port remains bound to host loopback for Nginx. Only the detail-free
 `/health` endpoint remains on that port. The complete Actuator surface, including
-Prometheus, listens on container port 9091 and is not published to the host. Prometheus and
-Grafana bind their host ports to `127.0.0.1`. Only Grafana is exposed through the reviewed
+Prometheus, listens on container port 9091 and is not published to the host. Prometheus,
+Loki, and Grafana bind their host ports to `127.0.0.1`. Only Grafana is exposed through the reviewed
 Nginx virtual host; Prometheus must never be added to Nginx or bound to `0.0.0.0`.
 
 Prometheus labels use Micrometer's normalized MVC `uri` template, such as
@@ -34,6 +37,7 @@ Set these values in the untracked repository-root `.env` file:
 
 ```dotenv
 PROMETHEUS_PORT=9090
+LOKI_PORT=3100
 GRAFANA_PORT=3000
 GRAFANA_DOMAIN=grafana.popn.gg
 GRAFANA_ADMIN_USER=admin
@@ -55,7 +59,7 @@ environment file:
 docker compose --env-file .env \
   -f deploy/compose.yml \
   -f deploy/compose.monitoring.yml \
-  up -d prometheus grafana
+  up -d --wait prometheus loki alloy grafana
 ```
 
 This command is also suitable for a local full-stack test after building the API image and
@@ -66,12 +70,13 @@ To stop monitoring without touching the API or database:
 docker compose --env-file .env \
   -f deploy/compose.yml \
   -f deploy/compose.monitoring.yml \
-  stop prometheus grafana
+  stop prometheus loki alloy grafana
 ```
 
 Do not use `down --volumes` in production: it deletes monitoring history (and, when the base
-Compose file is included, can delete database data). The named `prometheus-data` and
-`grafana-data` volumes preserve state across ordinary restarts.
+Compose file is included, can delete database data). The named `prometheus-data`,
+`grafana-data`, `loki-data`, and `alloy-data` volumes preserve metrics, dashboards, logs,
+and file read positions across ordinary restarts.
 
 ## Publish Grafana at grafana.popn.gg
 
@@ -157,10 +162,13 @@ Container and target checks:
 docker compose --env-file .env -f deploy/compose.yml \
   -f deploy/compose.monitoring.yml ps
 docker compose --env-file .env -f deploy/compose.yml \
-  -f deploy/compose.monitoring.yml logs --tail=100 prometheus grafana
+  -f deploy/compose.monitoring.yml logs --tail=100 prometheus loki alloy grafana
 docker compose --env-file .env -f deploy/compose.yml exec prometheus \
   wget -qO- http://api:9091/actuator/prometheus | head
 curl -fsS http://127.0.0.1:9090/api/v1/targets
+curl -fsS http://127.0.0.1:3100/ready
+curl -fsSG http://127.0.0.1:3100/loki/api/v1/query \
+  --data-urlencode 'query={job="popngg-api"}'
 curl -fsS -H 'Host: grafana.popn.gg' http://127.0.0.1:3000/api/health
 curl -fsS https://grafana.popn.gg/api/health
 ```
@@ -176,13 +184,15 @@ Disk and retention checks:
 
 ```bash
 docker system df -v
-docker volume inspect popngg_prometheus-data popngg_grafana-data
+docker volume inspect popngg_prometheus-data popngg_grafana-data \
+  popngg_loki-data popngg_alloy-data api-logs
 curl -fsS http://127.0.0.1:9090/api/v1/status/flags
 ```
 
 Prometheus keeps at most seven days of blocks and targets 1GB of retained blocks. WAL and
 head chunks are not immediately removable, so actual volume use can temporarily exceed the
-retention size. Monitor host disk capacity separately.
+retention size. Loki uses its TSDB Compactor to retain seven days of logs. Retention is
+time-based, not disk-size-based, so monitor host disk capacity separately.
 
 If the target is `DOWN`, confirm the API is healthy, both services use the same Compose
 project, and the target is exactly `api:9091`. If Grafana has no
