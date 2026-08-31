@@ -5,6 +5,7 @@ import gg.popn.application.user.dto.result.UserRankingResult;
 import gg.popn.application.user.dto.result.UserListResult;
 import gg.popn.application.user.dto.result.UserProfileResult.MedalSummary;
 import gg.popn.application.user.port.in.UserProfileUseCase;
+import jakarta.validation.constraints.Pattern;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -12,10 +13,39 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class UserPaginationControllerTest {
+    @Test
+    void allowsBotIdsForPublicProfileReads() throws NoSuchMethodException {
+        var profiles = mock(UserProfileUseCase.class);
+        var bot = new UserProfileResult(
+                "BOT-1-1", "bot", "character", "", null, false,
+                10, 20, 30, 0, 0, 0, 0);
+        when(profiles.get(any())).thenReturn(bot);
+
+        var response = new UserController(profiles).getUser("BOT-1-1");
+
+        assertThat(response.getData().poptomoId()).isEqualTo("BOT-1-1");
+        verify(profiles).get(argThat(query -> query.poptomoId().equals("BOT-1-1")));
+
+        var constraint = UserController.class
+                .getDeclaredMethod("getUser", String.class)
+                .getParameterAnnotations()[0];
+        var regexp = java.util.Arrays.stream(constraint)
+                .filter(Pattern.class::isInstance)
+                .map(Pattern.class::cast)
+                .findFirst()
+                .orElseThrow()
+                .regexp();
+        assertThat(java.util.regex.Pattern.matches(regexp, "BOT-1-1")).isTrue();
+        assertThat(java.util.regex.Pattern.matches(regexp, "1234-5678-9012")).isTrue();
+        assertThat(java.util.regex.Pattern.matches(regexp, "BOT-invalid")).isFalse();
+    }
+
     @Test
     void mapsUserRankingToCommonPageResponse() {
         var profiles = mock(UserProfileUseCase.class);
