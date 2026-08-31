@@ -168,6 +168,31 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void opensSongEditModalAndCanReopenPreviewForFurtherChanges() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        Map<?, ?> modal = body(call(edit));
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(((Map<?, ?>) modal.get("data")).toString())
+                .contains("곡 수정", "old", "genre", "N:30", "H:42");
+
+        ObjectNode editWithValue = command("곡수정");
+        option(editWithValue, "song_id", 12);
+        option(editWithValue, "곡명", "changed draft");
+        Map<?, ?> preview = body(call(editWithValue));
+        String reopenId = buttonId(preview, "song_edit_reopen:");
+
+        ObjectNode reopen = interaction(3);
+        reopen.withObject("data").put("custom_id", reopenId);
+        Map<?, ?> reopenedModal = body(call(reopen));
+        assertThat(reopenedModal.get("type")).isEqualTo(9);
+        assertThat(((Map<?, ?>) reopenedModal.get("data")).toString())
+                .contains("changed draft", "genre", "N:30", "H:42");
+    }
+
+    @Test
     void reportsExpiredUnknownSongSelection() throws Exception {
         ObjectNode selection = interaction(3);
         selection.withObject("data").put("custom_id", "unknown_song_select")
@@ -297,5 +322,15 @@ class DiscordInteractionControllerTest {
         List<?> rows = (List<?>) data.get("components");
         List<?> buttons = (List<?>) ((Map<?, ?>) rows.getFirst()).get("components");
         return (String) ((Map<?, ?>) buttons.getFirst()).get("custom_id");
+    }
+    private String buttonId(Map<?, ?> response, String prefix) {
+        Map<?, ?> data = (Map<?, ?>) response.get("data");
+        List<?> rows = (List<?>) data.get("components");
+        List<?> buttons = (List<?>) ((Map<?, ?>) rows.getFirst()).get("components");
+        return buttons.stream()
+                .map(button -> (String) ((Map<?, ?>) button).get("custom_id"))
+                .filter(id -> id.startsWith(prefix))
+                .findFirst()
+                .orElseThrow();
     }
 }
