@@ -60,6 +60,10 @@ class UserProfileJpaAdapterTest {
                   user_id BIGINT NOT NULL, chart_id BIGINT NOT NULL,
                   current_version INT NOT NULL, medal_code INT NOT NULL)
                 """);
+        jdbc.execute("""
+                CREATE TABLE renew_logs(
+                  poptomo_id VARCHAR(32), status VARCHAR(20), created_at TIMESTAMP)
+                """);
         jdbc.update("""
                 INSERT INTO charts(chart_id, level, is_deleted) VALUES
                   (1, 48, FALSE), (2, 48, FALSE),
@@ -155,6 +159,11 @@ class UserProfileJpaAdapterTest {
                 INSERT INTO playdata(user_id, chart_id, current_version, medal_code) VALUES
                   (10, 1, 29, 1), (10, 3, 29, 5)
                 """);
+        jdbc.update("""
+                INSERT INTO renew_logs(poptomo_id, status, created_at) VALUES
+                  ('1234-5678-9012', 'SUCCESS', TIMESTAMP '2026-08-20 09:00:00'),
+                  ('1234-5678-9012', 'FAILED', TIMESTAMP '2026-08-23 09:00:00')
+                """);
 
         var result = adapter.findUsers(new FindUsersQuery(
                 "alpha", FindUsersQuery.Sort.RANK,
@@ -165,6 +174,8 @@ class UserProfileJpaAdapterTest {
             assertThat(user.poptomoId()).isEqualTo("1234-5678-9012");
             assertThat(user.rank()).isEqualTo(1);
             assertThat(user.displayPopclass()).isEqualTo(180000);
+            assertThat(user.updatedAt()).isEqualTo(
+                    LocalDateTime.of(2026, 8, 20, 9, 0));
             assertThat(user.bestLevels()).extracting(summary -> summary.maxLevel())
                     .containsExactly(49, 48, 48);
         });
