@@ -29,6 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users")
 public class UserController {
+    static final String READABLE_USER_ID_PATTERN =
+            "^(?:\\d{4}-\\d{4}-\\d{4}|BOT-\\d+-\\d+)$";
+
     private final UserProfileUseCase userProfile;
 
     @GetMapping
@@ -50,7 +53,7 @@ public class UserController {
     @GetMapping("/{poptomoId}")
     SuccessResponse<UserProfileResponse> getUser(
             @PathVariable
-            @Pattern(regexp = "^\\d{4}-\\d{4}-\\d{4}$")
+            @Pattern(regexp = READABLE_USER_ID_PATTERN)
             String poptomoId) {
         return success(UserProfileResponse.from(
                 userProfile.get(new UserProfileQuery(poptomoId))));
