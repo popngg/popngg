@@ -53,6 +53,40 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  loki:
+    image: grafana/loki:3.4.0
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -table-manager.retention-period=7d
+    volumes:
+      - loki-data:/loki
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+    mem_limit: 512m
+    cpus: 0.50
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.4.0
+    command:
+      - -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
+      - api-logs:/var/log/popngg:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 0.25
+    restart: unless-stopped
+
 volumes:
   prometheus-data:
   grafana-data:
+  loki-data:

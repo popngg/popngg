@@ -135,6 +135,8 @@ services:
       JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8080"
+    volumes:
+      - api-logs:/var/log/popngg
     depends_on:
       catalog-migration:
         condition: service_completed_successfully
@@ -160,3 +162,5 @@ services:
 
 volumes:
   db-data:
+  api-logs:
+    external: true

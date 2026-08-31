@@ -51,6 +51,14 @@ management:
         http.server.requests: 50ms,100ms,200ms,300ms,500ms,1s,2s,5s
 
 logging:
+  file:
+    name: /var/log/popngg/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 7
+      total-size-cap: 1GB
   structured:
     format:
       console: logstash
+      file: logstash

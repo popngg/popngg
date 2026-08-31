@@ -26,6 +26,7 @@ trap 'rmdir "$lock_dir"' EXIT
 }
 
 compose=(docker compose "${compose_env[@]}" -f "$repo_root/deploy/compose.yml")
+docker volume create api-logs 2>/dev/null || true
 "${compose[@]}" up --no-deps --wait mysql
 "${compose[@]}" run --rm migration
 "${compose[@]}" run --rm --no-deps catalog-migration
