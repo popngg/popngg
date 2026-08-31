@@ -250,12 +250,14 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                  JOIN charts c ON c.chart_id = p.chart_id
                  WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
                    AND p.is_display_popclass_target = TRUE
+                   AND p.version_score > 0
                 """, Integer.class, user.userId(), currentVersion);
         Integer unknown = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM playdata p
                   JOIN charts c ON c.chart_id = p.chart_id
                  WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
                    AND p.is_display_popclass_target = TRUE
+                   AND p.version_score > 0
                    AND p.version_score_known = FALSE
                 """, Integer.class, user.userId(), currentVersion);
         if (total == null || total == 0 || unknown == null || unknown > 0) {
@@ -269,7 +271,8 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                   JOIN charts c ON c.chart_id = p.chart_id
                   JOIN songs s ON s.song_id = c.song_id
                  WHERE p.user_id = ? AND p.current_version = ?
-                   AND p.is_display_popclass_target = TRUE AND c.is_deleted = FALSE
+                   AND p.is_display_popclass_target = TRUE
+                   AND p.version_score > 0 AND c.is_deleted = FALSE
                  ORDER BY CASE p.popclass_bucket
                             WHEN 'CURRENT_VERSION' THEN 0 ELSE 1 END,
                           p.popclass_bucket_rank
@@ -292,6 +295,7 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                  WHERE p.user_id = ? AND p.current_version = ? AND c.is_deleted = FALSE
                 """, user.userId(), currentVersion).stream()
                 .map(this::withPotentialPopclass)
+                .filter(row -> row.allTimeBest().score() > 0)
                 .toList();
         Comparator<PlaydataQueryResults.ChartPlaydata> order = Comparator
                 .comparingInt((PlaydataQueryResults.ChartPlaydata row) -> row.popclass()).reversed()
