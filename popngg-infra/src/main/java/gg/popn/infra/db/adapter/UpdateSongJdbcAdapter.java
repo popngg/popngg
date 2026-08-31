@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
+import gg.popn.domain.game.policy.DifficultyPolicy;
 
 @Repository @RequiredArgsConstructor
 public class UpdateSongJdbcAdapter implements UpdateSongPort {
@@ -30,6 +31,20 @@ public class UpdateSongJdbcAdapter implements UpdateSongPort {
         if (songs != 1) throw new IllegalArgumentException("Song was not found.");
 
         for (var chart : command.charts()) {
+            if (chart.chartId() == null) {
+                DifficultyPolicy difficulty = DifficultyPolicy.fromCode(chart.difficultyCode());
+                jdbc.update("""
+                        INSERT INTO charts (song_id,difficulty_code,difficulty_label,level,chart_version,
+                            is_upper,has_strict_gauge,has_strict_judgement,is_deleted,created_at,updated_at)
+                        VALUES (:songId,:difficulty,:label,:level,:chartVersion,:upper,
+                            :strictGauge,:strictJudgement,FALSE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+                        """, new MapSqlParameterSource().addValue("songId", command.songId())
+                        .addValue("difficulty", difficulty.getCode()).addValue("label", difficulty.getLabel())
+                        .addValue("level", chart.level()).addValue("chartVersion", chart.chartVersion())
+                        .addValue("upper", chart.isUpper()).addValue("strictGauge", chart.hasStrictGauge())
+                        .addValue("strictJudgement", chart.hasStrictJudgement()));
+                continue;
+            }
             int updated = jdbc.update("""
                     UPDATE charts SET level=:level, chart_version=:chartVersion,
                         is_upper=:upper, has_strict_gauge=:strictGauge,

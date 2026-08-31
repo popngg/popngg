@@ -30,8 +30,14 @@ public class UpdateSongService implements UpdateSongUseCase {
         if (command.charts().stream().anyMatch(chart -> chart.isUpper() != upper))
             throw new IllegalArgumentException("A song cannot mix regular and Upper charts.");
         if (command.charts().stream().anyMatch(chart -> chart.level() < 1 || chart.level() > 50
-                || chart.chartVersion() < 1))
+                || chart.chartVersion() < 1 || (chart.chartId() == null
+                && (chart.difficultyCode() < 1 || chart.difficultyCode() > 4))))
             throw new IllegalArgumentException("Chart level or version is invalid.");
+        if (command.charts().stream().filter(chart -> chart.chartId() == null)
+                .anyMatch(chart -> activeCharts.stream().anyMatch(existing ->
+                        existing.difficulty().code() == chart.difficultyCode()
+                                && existing.isUpper() == chart.isUpper())))
+            throw new IllegalArgumentException("The chart difficulty already exists.");
         if (upper != currentUpper) {
             Set<Long> requested = command.charts().stream().map(UpdateSongCommand.ChartUpdate::chartId)
                     .collect(Collectors.toSet());
