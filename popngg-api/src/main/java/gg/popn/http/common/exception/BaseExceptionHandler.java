@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -108,6 +109,13 @@ public class BaseExceptionHandler {
         String code = emptyCharts ? "EMPTY_PAYLOAD" : "INVALID_PAYLOAD";
         String message = emptyCharts ? "At least one played chart is required." : "The request payload is invalid.";
         return ResponseEntity.badRequest().body(Map.of("code",code,"message",message));
+    }
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(
+            ConstraintViolationException exception) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "code", "INVALID_REQUEST_PARAMETER",
+                "message", "A request parameter or path value is invalid."));
     }
     @ExceptionHandler(AlreadyRegisteredException.class)
     public ResponseEntity<Map<String, Object>> handleAlreadyRegistered() {
