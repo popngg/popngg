@@ -17,5 +17,25 @@ services:
       timeout: 3s
       retries: 30
 
+  loki:
+    image: grafana/loki:3.4.0
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - local-loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.4.0
+    command:
+      - -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./deploy/monitoring/promtail/config-local.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log/popngg:ro
+    depends_on:
+      - loki
+
 volumes:
   local-db-data:
+  local-loki-data:

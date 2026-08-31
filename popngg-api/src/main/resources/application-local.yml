@@ -27,6 +27,12 @@ spring:
 
 # Logging
 logging:
+  file:
+    name: ./logs/application.log
+  structured:
+    format:
+      console: logstash
+      file: logstash
   level:
     root: INFO
     org.hibernate.SQL: DEBUG
