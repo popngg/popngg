@@ -1,27 +1,34 @@
-name: Deploy production
+name: Deploy candidate
 
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Deployment action
+        required: true
+        type: choice
+        options:
+          - rollback-main
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-production
+  group: deploy-server
   cancel-in-progress: false
 
 jobs:
   deploy:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'develop')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # The existing `dev` environment stores the production SSH secrets.
-    # Rename it separately in GitHub before changing this key.
+    timeout-minutes: 40
     environment: dev
 
     steps:
@@ -39,16 +46,34 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy tested commit
+      - name: Select deployment revision
+        id: revision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CANDIDATE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            echo "ref=origin/main" >> "$GITHUB_OUTPUT"
+            echo "reason=manual rollback to main" >> "$GITHUB_OUTPUT"
+          else
+            test -n "$CANDIDATE_SHA"
+            echo "ref=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+            echo "reason=develop candidate" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy selected revision
         env:
           DEV_HOST: ${{ secrets.DEV_HOST }}
           DEV_USER: ${{ secrets.DEV_USER }}
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEPLOY_REF: ${{ steps.revision.outputs.ref }}
+          DEPLOY_REASON: ${{ steps.revision.outputs.reason }}
         run: |
           set -euo pipefail
           test -n "$DEV_HOST"
           test -n "$DEV_USER"
-          test -n "$DEPLOY_SHA"
+          test -n "$DEPLOY_REF"
+          echo "Deploying $DEPLOY_REASON: $DEPLOY_REF"
           ssh -i ~/.ssh/dev_deploy \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
@@ -56,18 +81,50 @@ jobs:
             -o ServerAliveCountMax=20 \
             -o TCPKeepAlive=yes \
             "$DEV_USER@$DEV_HOST" \
-            "bash -s -- '$DEPLOY_SHA'" <<'REMOTE'
+            "bash -s -- '$DEPLOY_REF'" <<'REMOTE'
           set -euo pipefail
-          deploy_sha=$1
+          deploy_ref=$1
           cd "$HOME/popngg"
-          git fetch origin main
-          git switch main
-          git pull --ff-only origin main
-          test "$(git rev-parse HEAD)" = "$deploy_sha"
+          git fetch origin main develop
+          deploy_sha=$(git rev-parse "$deploy_ref^{commit}")
+          git switch --detach "$deploy_sha"
           if grep -q '^IMAGE_TAG=' .env; then
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$deploy_sha/" .env
           else
             printf 'IMAGE_TAG=%s\n' "$deploy_sha" >> .env
+          fi
+          ./deploy/bin/build-image.sh
+          ./deploy/bin/deploy.sh
+          REMOTE
+
+      - name: Restore stable main after failed candidate
+        if: >-
+          failure() &&
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.head_branch == 'develop'
+        env:
+          DEV_HOST: ${{ secrets.DEV_HOST }}
+          DEV_USER: ${{ secrets.DEV_USER }}
+        run: |
+          set -euo pipefail
+          echo "Candidate deployment failed; restoring origin/main."
+          ssh -i ~/.ssh/dev_deploy \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
+            -o TCPKeepAlive=yes \
+            "$DEV_USER@$DEV_HOST" \
+            "bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$HOME/popngg"
+          git fetch origin main
+          stable_sha=$(git rev-parse 'origin/main^{commit}')
+          git switch --detach "$stable_sha"
+          if grep -q '^IMAGE_TAG=' .env; then
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$stable_sha/" .env
+          else
+            printf 'IMAGE_TAG=%s\n' "$stable_sha" >> .env
           fi
           ./deploy/bin/build-image.sh
           ./deploy/bin/deploy.sh

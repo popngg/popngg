@@ -25,8 +25,8 @@ jobs:
               }
               ;;
             main)
-              [[ "$HEAD_BRANCH" == develop || "$HEAD_BRANCH" == hotfix/* ]] || {
-                echo "PRs into main must come from develop, except emergency hotfix/** PRs." >&2
+              [[ "$HEAD_BRANCH" == develop ]] || {
+                echo "PRs into main must come from develop." >&2
                 exit 1
               }
               ;;
