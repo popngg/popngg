@@ -165,6 +165,25 @@ MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
 - songHash 중복과 하나의 old hash가 여러 new song으로 갈라지는 alias
 - jacket 원본 참조가 신규 song 참조로 보존되었는지 여부
 
+## 운영 데이터의 레거시 메달 대조
+
+28버전 dump를 병합한 뒤 메달 코드가 의심되면 dump를 격리 DB에 복원하고 아래
+감사를 실행합니다. 갱신 이력이 없는 28버전 원본 행만 `migration_playdata_map`으로
+대조하며, 사용자나 곡 식별자는 출력하지 않습니다. 이 명령은 데이터를 수정하지
+않고 불일치가 있으면 종료 코드 2를 반환합니다.
+
+```bash
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
+./migration/bin/audit-legacy-medals.sh \
+  --legacy-db popngg_legacy_audit \
+  --target-db popngg \
+  --report build/reports/legacy-medal-audit.tsv
+```
+
+불일치가 확인되기 전에는 메달을 점수나 현재 코드만으로 추정하여 수정하지
+않습니다. BLACK STAR/DIAMOND/CIRCLE은 종료 게이지 정보가 필요하므로 복원한
+원본 dump를 교정의 기준으로 사용해야 합니다.
+
 검증 SQL은 계정 식별자, 비밀번호, 이메일, 토큰, 원본 row를 출력하지 않습니다.
 Docker MySQL 8에서 실패 감지와 정상 통과를 함께 확인하려면 다음을 실행합니다.
 
