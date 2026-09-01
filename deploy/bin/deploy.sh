@@ -34,12 +34,28 @@ docker volume create api-logs 2>/dev/null || true
 "${compose[@]}" up -d --no-deps --wait api
 "$repo_root/deploy/bin/smoke-test.sh"
 
+wait_for_loki() {
+  local port=${LOKI_PORT:-3100}
+  local attempt
+  for attempt in {1..30}; do
+    if curl --fail --silent "http://127.0.0.1:${port}/ready" >/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Loki did not become ready on 127.0.0.1:${port}" >&2
+  return 1
+}
+
 monitoring_status=skipped
 if [[ -n "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
   monitoring=(docker compose "${compose_env[@]}"
     -f "$repo_root/deploy/compose.yml"
     -f "$repo_root/deploy/compose.monitoring.yml")
-  if "${monitoring[@]}" up -d --wait prometheus loki alloy grafana; then
+  if "${monitoring[@]}" run --rm --no-deps loki-init \
+    && "${monitoring[@]}" up -d --no-deps loki \
+    && wait_for_loki \
+    && "${monitoring[@]}" up -d --wait prometheus alloy grafana; then
     monitoring_status=healthy
   else
     monitoring_status=failed

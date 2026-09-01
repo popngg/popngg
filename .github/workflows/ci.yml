@@ -123,6 +123,10 @@ jobs:
             raise SystemExit('the EOL Promtail collector must not be used')
         if 'alloy-data:/var/lib/alloy/data' not in monitoring:
             raise SystemExit('Alloy positions storage must be persistent')
+        if 'loki-init:' not in monitoring or 'chown -R 10001:10001 /loki' not in monitoring:
+            raise SystemExit('Loki data volume ownership initialization is missing')
+        if 'wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready' in monitoring:
+            raise SystemExit('the distroless Loki image cannot run a shell/wget healthcheck')
 
         loki = Path('deploy/monitoring/loki/config.yml').read_text()
         required_loki_settings = (

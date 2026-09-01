@@ -17,6 +17,13 @@ services:
       timeout: 3s
       retries: 30
 
+  loki-init:
+    image: alpine:3.22
+    command: ["sh", "-c", "chown -R 10001:10001 /loki"]
+    volumes:
+      - local-loki-data:/loki
+    restart: "no"
+
   loki:
     image: grafana/loki:3.7.3
     command:
@@ -26,6 +33,9 @@ services:
     volumes:
       - ./deploy/monitoring/loki/config.yml:/etc/loki/config.yml:ro
       - local-loki-data:/loki
+    depends_on:
+      loki-init:
+        condition: service_completed_successfully
 
   alloy:
     image: grafana/alloy:v1.12.0
@@ -38,7 +48,8 @@ services:
       - ./logs:/var/log/popngg:ro
       - local-alloy-data:/var/lib/alloy/data
     depends_on:
-      - loki
+      loki:
+        condition: service_started
 
 volumes:
   local-db-data:
