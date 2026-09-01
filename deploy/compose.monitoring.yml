@@ -52,8 +52,15 @@ services:
       prometheus:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
+
+  loki-init:
+    image: alpine:3.22
+    command: ["sh", "-c", "chown -R 10001:10001 /loki"]
+    volumes:
+      - loki-data:/loki
+    restart: "no"
 
   loki:
     image: grafana/loki:3.7.3
@@ -64,14 +71,11 @@ services:
       - loki-data:/loki
     ports:
       - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+    depends_on:
+      loki-init:
+        condition: service_completed_successfully
     mem_limit: 512m
     cpus: 0.50
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
     restart: unless-stopped
 
   alloy:
@@ -86,7 +90,7 @@ services:
       - alloy-data:/var/lib/alloy/data
     depends_on:
       loki:
-        condition: service_healthy
+        condition: service_started
     mem_limit: 256m
     cpus: 0.25
     restart: unless-stopped
