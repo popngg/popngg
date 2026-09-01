@@ -66,6 +66,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Transactional
     public ImportPlaydataResult execute(ImportPlaydataCommand command) {
         long userId = findUserId(command.poptomoId());
+        lockUser(userId);
         Integer previousDisplayPopclass = findDisplayPopclass(userId);
         updateProfile(userId, command.profile());
         long renewLogId = startLog(command, userId);
@@ -345,6 +346,20 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
             throw new IllegalArgumentException("Authenticated user was not found.");
         }
         return ids.getFirst();
+    }
+
+    /**
+     * Serializes imports for the same user for the lifetime of the surrounding transaction.
+     * Locking the existing user row also protects the first insert for a chart, where there is
+     * no playdata row available to lock yet.
+     */
+    private void lockUser(long userId) {
+        jdbc.queryForObject("""
+                SELECT user_id
+                  FROM users
+                 WHERE user_id = ?
+                 FOR UPDATE
+                """, Long.class, userId);
     }
 
     private Integer findDisplayPopclass(long userId) {
