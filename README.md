@@ -74,6 +74,26 @@ creating an `.env` file. See `deploy/README.md` for migration and rollback detai
 
 ## Monitoring
 
+### Deployment version
+
+Discord administrators can run `/배포버전` to inspect the API instance handling the command.
+The private reply includes the release version, full Git commit, image build time, and
+server start time (KST). Existing Discord guild, role, and signature checks still apply.
+
+`deploy/bin/build-image.sh` generates versions such as `2026.09.02.194605-60b34ec`
+(image build date/time in Asia/Seoul plus the short Git SHA). Each image retains its
+commit-SHA deployment tag and also receives the date-based tag. Metadata is baked into
+the image and OCI labels, not read from the host checkout or `.env` at query time.
+Rebuilding the same commit generates a new date-based version. This identifies a build,
+not proof that deployment succeeded; the bot reports the image actually serving it.
+Rollback to an image built with this feature reports that image's older version.
+Versions predating this feature do not support the command. Direct Docker builds without
+metadata report `local` / `unknown` rather than guessing a deployed revision.
+
+No Discord portal change is required when guild command registration is already configured;
+the command is registered on API startup. Do not override `POPNGG_RELEASE_VERSION`,
+`POPNGG_GIT_SHA`, or `POPNGG_BUILD_TIME` in Compose or `.env`.
+
 An optional Prometheus, Loki, Alloy, and Grafana stack collects Spring Boot metrics and
 structured JSON logs. It is isolated from the API lifecycle and binds its administration
 ports to host loopback only. See [deploy/monitoring/README.md](deploy/monitoring/README.md)

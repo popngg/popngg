@@ -65,7 +65,8 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                     Map.of("name", "비밀번호초기화", "description", "특정 사용자의 임시 비밀번호 발급", "type", 1,
                             "options", List.of(option(3, "팝토모_id", "예: 1234-5678-9012", true))),
                     Map.of("name", "정보보완목록", "description", "등록된 곡의 불완전한 정보 조회 및 수정", "type", 1),
-                    Map.of("name", "미등록목록", "description", "최근 미등록 곡과 채보 조회", "type", 1)));
+                    Map.of("name", "미등록목록", "description", "최근 미등록 곡과 채보 조회", "type", 1),
+                    Map.of("name", "배포버전", "description", "현재 실행 중인 API 버전과 커밋 확인", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")
                                 .formatted(applicationId, guildId)))

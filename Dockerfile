@@ -10,6 +10,12 @@ COPY popngg-api popngg-api
 RUN ./gradlew :popngg-api:bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre
+ARG POPNGG_RELEASE_VERSION=local
+ARG POPNGG_GIT_SHA=unknown
+ARG POPNGG_BUILD_TIME=unknown
+ENV POPNGG_RELEASE_VERSION=${POPNGG_RELEASE_VERSION} \
+    POPNGG_GIT_SHA=${POPNGG_GIT_SHA} \
+    POPNGG_BUILD_TIME=${POPNGG_BUILD_TIME}
 RUN apt-get update \
   && apt-get install -y --no-install-recommends curl \
   && rm -rf /var/lib/apt/lists/* \
