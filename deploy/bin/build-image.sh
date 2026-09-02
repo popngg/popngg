@@ -21,6 +21,18 @@ image_tag=${IMAGE_TAG:-}
   exit 64
 }
 
-docker build --pull --label "org.opencontainers.image.revision=$image_tag" \
-  --tag "$image_repository:$image_tag" "$repo_root"
-echo "image=$image_repository:$image_tag status=built"
+revision=$(git -C "$repo_root" rev-parse HEAD)
+build_epoch=$(date +%s)
+build_time=$(date -u -d "@$build_epoch" +%Y-%m-%dT%H:%M:%SZ)
+# POSIX TZ works even when the host has no IANA zoneinfo database (e.g. Git Bash).
+release_version="$(TZ=KST-9 date -d "@$build_epoch" +%Y.%m.%d.%H%M%S)-${revision:0:7}"
+docker build --pull \
+  --build-arg "POPNGG_RELEASE_VERSION=$release_version" \
+  --build-arg "POPNGG_GIT_SHA=$revision" \
+  --build-arg "POPNGG_BUILD_TIME=$build_time" \
+  --label "org.opencontainers.image.revision=$revision" \
+  --label "org.opencontainers.image.version=$release_version" \
+  --label "org.opencontainers.image.created=$build_time" \
+  --tag "$image_repository:$image_tag" \
+  --tag "$image_repository:$release_version" "$repo_root"
+echo "image=$image_repository:$image_tag release=$release_version revision=$revision status=built"

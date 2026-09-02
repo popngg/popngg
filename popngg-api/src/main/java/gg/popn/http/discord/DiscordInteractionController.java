@@ -58,6 +58,7 @@ public class DiscordInteractionController {
     private final AdminNotificationPort adminNotification;
     private final UnknownChartReportPort unknownChartReport;
     private final AdminPasswordResetUseCase adminPasswordReset;
+    private final DeploymentVersion deploymentVersion;
     private final JacketDownloader jacketDownloader;
     private final byte[] publicKey;
     private final String guildId;
@@ -74,11 +75,12 @@ public class DiscordInteractionController {
             AdminNotificationPort adminNotification,
             UnknownChartReportPort unknownChartReport,
             AdminPasswordResetUseCase adminPasswordReset,
+            DeploymentVersion deploymentVersion,
             @Value("${popngg.discord.public-key:}") String publicKey,
             @Value("${popngg.discord.guild-id:}") String guildId,
             @Value("${popngg.discord.admin-role-id:}") String adminRoleId) {
         this(mapper, createSong, findSongs, jacketStorage, findSongDetail, updateSong,
-                adminNotification, unknownChartReport, adminPasswordReset, publicKey, guildId, adminRoleId,
+                adminNotification, unknownChartReport, adminPasswordReset, deploymentVersion, publicKey, guildId, adminRoleId,
                 DiscordInteractionController::downloadPng);
     }
 
@@ -87,6 +89,7 @@ public class DiscordInteractionController {
             FindSongDetailUseCase findSongDetail, UpdateSongUseCase updateSong,
             AdminNotificationPort adminNotification, UnknownChartReportPort unknownChartReport,
             AdminPasswordResetUseCase adminPasswordReset,
+            DeploymentVersion deploymentVersion,
             String publicKey, String guildId, String adminRoleId, JacketDownloader jacketDownloader) {
         this.mapper = mapper;
         this.createSong = createSong;
@@ -97,6 +100,7 @@ public class DiscordInteractionController {
         this.adminNotification = adminNotification;
         this.unknownChartReport = unknownChartReport;
         this.adminPasswordReset = adminPasswordReset;
+        this.deploymentVersion = deploymentVersion;
         this.publicKey = publicKey.isBlank() ? new byte[0] : HexFormat.of().parseHex(publicKey.strip());
         this.guildId = guildId;
         this.adminRoleId = adminRoleId;
@@ -113,6 +117,9 @@ public class DiscordInteractionController {
         int type = root.path("type").asInt();
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
+        if (type == 2 && "배포버전".equals(root.path("data").path("name").asText())) {
+            return ResponseEntity.ok(ephemeral(deploymentVersion.message()));
+        }
         if (type == 2 && "비밀번호초기화".equals(root.path("data").path("name").asText())) {
             String poptomoId = option(root, "팝토모_id").path("value").asText();
             String temporaryPassword;
