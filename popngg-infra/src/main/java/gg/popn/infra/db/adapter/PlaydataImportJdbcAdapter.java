@@ -65,8 +65,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Override
     @Transactional
     public ImportPlaydataResult execute(ImportPlaydataCommand command) {
-        long userId = findUserId(command.poptomoId());
-        lockUser(userId);
+        long userId = findUserIdForUpdate(command.poptomoId());
         Integer previousDisplayPopclass = findDisplayPopclass(userId);
         updateProfile(userId, command.profile());
         long renewLogId = startLog(command, userId);
@@ -349,17 +348,21 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     }
 
     /**
-     * Serializes imports for the same user for the lifetime of the surrounding transaction.
-     * Locking the existing user row also protects the first insert for a chart, where there is
-     * no playdata row available to lock yet.
+     * Lock before any consistent read establishes a REPEATABLE READ snapshot. Looking up the
+     * user with a plain SELECT first would leave a waiting renewal reading stale playdata
+     * even after the preceding renewal commits and releases the user lock.
      */
-    private void lockUser(long userId) {
-        jdbc.queryForObject("""
+    private long findUserIdForUpdate(String poptomoId) {
+        List<Long> ids = jdbc.query("""
                 SELECT user_id
                   FROM users
-                 WHERE user_id = ?
+                 WHERE poptomo_id = ?
                  FOR UPDATE
-                """, Long.class, userId);
+                """, (rs, rowNum) -> rs.getLong(1), poptomoId);
+        if (ids.size() != 1) {
+            throw new IllegalArgumentException("Authenticated user was not found.");
+        }
+        return ids.getFirst();
     }
 
     private Integer findDisplayPopclass(long userId) {
