@@ -77,6 +77,9 @@ Do not use `down --volumes` in production: it deletes monitoring history (and, w
 Compose file is included, can delete database data). The named `prometheus-data`,
 `grafana-data`, `loki-data`, and `alloy-data` volumes preserve metrics, dashboards, logs,
 and file read positions across ordinary restarts.
+The `loki-init` one-shot service makes the Loki volume writable by the image's UID 10001
+before Loki starts. The deployment script then polls Loki's `/ready` endpoint from the host;
+the distroless Loki image does not contain a shell, wget, or curl for an in-container check.
 
 ## Publish Grafana at grafana.popn.gg
 

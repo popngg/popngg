@@ -65,7 +65,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Override
     @Transactional
     public ImportPlaydataResult execute(ImportPlaydataCommand command) {
-        long userId = findUserId(command.poptomoId());
+        long userId = findUserIdForUpdate(command.poptomoId());
         Integer previousDisplayPopclass = findDisplayPopclass(userId);
         updateProfile(userId, command.profile());
         long renewLogId = startLog(command, userId);
@@ -341,6 +341,24 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     private long findUserId(String poptomoId) {
         List<Long> ids = jdbc.query("SELECT user_id FROM users WHERE poptomo_id = ?",
                 (rs, rowNum) -> rs.getLong(1), poptomoId);
+        if (ids.size() != 1) {
+            throw new IllegalArgumentException("Authenticated user was not found.");
+        }
+        return ids.getFirst();
+    }
+
+    /**
+     * Lock before any consistent read establishes a REPEATABLE READ snapshot. Looking up the
+     * user with a plain SELECT first would leave a waiting renewal reading stale playdata
+     * even after the preceding renewal commits and releases the user lock.
+     */
+    private long findUserIdForUpdate(String poptomoId) {
+        List<Long> ids = jdbc.query("""
+                SELECT user_id
+                  FROM users
+                 WHERE poptomo_id = ?
+                 FOR UPDATE
+                """, (rs, rowNum) -> rs.getLong(1), poptomoId);
         if (ids.size() != 1) {
             throw new IllegalArgumentException("Authenticated user was not found.");
         }

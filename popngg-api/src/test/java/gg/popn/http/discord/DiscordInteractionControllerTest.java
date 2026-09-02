@@ -51,7 +51,20 @@ class DiscordInteractionControllerTest {
                 java.util.Arrays.copyOfRange(encoded, encoded.length - 32, encoded.length));
         controller = new DiscordInteractionController(mapper, createSong, findSongs, jackets,
                 findDetail, updateSong, admin, unknown, passwordReset,
+                new DeploymentVersion("2026.09.02.194605-60b34ec", "60b34ec", "2026-09-02T10:46:05Z"),
                 rawPublicKey, "guild", "admin", url -> new byte[]{1});
+    }
+
+    @Test
+    void reportsRunningImageVersionOnlyToAuthorizedAdmin() throws Exception {
+        var request = command("배포버전");
+        var data = (Map<?, ?>) body(call(request)).get("data");
+        assertThat(data.get("flags")).isEqualTo(64);
+        assertThat(data.get("content").toString())
+                .contains("2026.09.02.194605-60b34ec", "60b34ec", "2026-09-02 19:46:05 KST", "서버 시작");
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할").doesNotContain("60b34ec");
+        verifyNoInteractions(createSong, updateSong, passwordReset);
     }
 
     @Test

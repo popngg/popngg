@@ -8,12 +8,17 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,6 +48,74 @@ class PlaydataHistoryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
         PlatformTransactionManager manager = new DataSourceTransactionManager(dataSource);
         transaction = new TransactionTemplate(manager);
         seed();
+    }
+
+    @Test
+    void concurrentRenewalSeesCommittedInsertAfterAcquiringUserLock() throws Exception {
+        var lockingLookupReached = new CountDownLatch(1);
+        var firstCommitted = new CountDownLatch(1);
+        var dataSource = mysqlDataSource();
+        // Pause the second renewal at its locking read. With the old implementation,
+        // its preceding plain user SELECT has already established a stale snapshot.
+        var secondJdbc = new JdbcTemplate(dataSource) {
+            private void beforeLock(String sql) {
+                if (!sql.contains("FOR UPDATE")) return;
+                lockingLookupReached.countDown();
+                try {
+                    assertThat(firstCommitted.await(10, TimeUnit.SECONDS)).isTrue();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                }
+            }
+
+            @Override
+            public <T> List<T> query(String sql, RowMapper<T> mapper, Object... args) {
+                beforeLock(sql);
+                return super.query(sql, mapper, args);
+            }
+
+            @Override
+            public <T> T queryForObject(String sql, Class<T> type, Object... args) {
+                beforeLock(sql);
+                return super.queryForObject(sql, type, args);
+            }
+        };
+        var secondAdapter = new PlaydataImportJdbcAdapter(secondJdbc,
+                new PlaydataUpsertPolicy(), new PlaydataHistoryPolicy(), new PopclassPolicy(), 29);
+        var secondTransaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        secondTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        transaction.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var pending = transaction.execute(status -> {
+                adapter.execute(command(90_000, 4, 2));
+                var future = executor.submit(() -> secondTransaction.execute(
+                        secondStatus -> secondAdapter.execute(command(95_000, 3, 5))));
+                try {
+                    assertThat(lockingLookupReached.await(10, TimeUnit.SECONDS)).isTrue();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                }
+                return future;
+            });
+            firstCommitted.countDown();
+            assertThat(pending).isNotNull();
+            assertThat(pending.get(15, TimeUnit.SECONDS).historyCount()).isEqualTo(4);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM playdata", Integer.class)).isEqualTo(1);
+            assertThat(jdbc.queryForObject("SELECT all_time_score FROM playdata", Integer.class))
+                    .isEqualTo(95_000);
+            assertThat(jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM playdata_history WHERE event_type = 'REGISTER'", Integer.class))
+                    .isEqualTo(1);
+            assertThat(jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM renew_logs WHERE status = 'SUCCESS'", Integer.class)).isEqualTo(2);
+        } finally {
+            firstCommitted.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+        }
     }
 
     @Test
