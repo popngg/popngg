@@ -19,6 +19,9 @@ class UpdateSongJdbcAdapterTest {
                 "jdbc:h2:mem:update-" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", ""));
         jdbc.execute("CREATE TABLE songs(song_id BIGINT PRIMARY KEY,song_hash VARCHAR(64) UNIQUE,genre_name VARCHAR(255),song_name VARCHAR(255),artist_name VARCHAR(255),version INT,jacket_url VARCHAR(512),created_at TIMESTAMP,updated_at TIMESTAMP)");
         jdbc.execute("CREATE TABLE charts(chart_id BIGINT AUTO_INCREMENT PRIMARY KEY,song_id BIGINT,difficulty_code INT,difficulty_label VARCHAR(16),level INT,chart_version INT,is_upper BOOLEAN,has_strict_gauge BOOLEAN,has_strict_judgement BOOLEAN,is_deleted BOOLEAN,created_at TIMESTAMP,updated_at TIMESTAMP)");
+        UserDirectoryTestSchema.create(jdbc);
+        jdbc.execute("CREATE TABLE playdata(user_id BIGINT,chart_id BIGINT,current_version INT,medal_code INT)");
+        jdbc.update("INSERT INTO playdata VALUES(1,10,29,11)");
         jdbc.update("INSERT INTO songs VALUES(1,'old','g','s','a',1,NULL,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO charts VALUES(10,1,2,'NORMAL',30,1,FALSE,FALSE,FALSE,FALSE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         var adapter = new UpdateSongJdbcAdapter(new NamedParameterJdbcTemplate(jdbc));
@@ -28,6 +31,7 @@ class UpdateSongJdbcAdapterTest {
                         new UpdateSongCommand.ChartUpdate(null, 4, 49, 29, false, false, false)));
 
         adapter.update(command, "new-hash");
+        assertThat(jdbc.queryForObject("SELECT clear_level FROM user_clear_levels WHERE user_id=1 AND current_version=29", Integer.class)).isEqualTo(42);
 
         assertThat(jdbc.queryForObject("SELECT song_hash FROM songs WHERE song_id=1", String.class)).isEqualTo("new-hash");
         assertThat(jdbc.queryForObject("SELECT level FROM charts WHERE chart_id=10", Integer.class)).isEqualTo(42);

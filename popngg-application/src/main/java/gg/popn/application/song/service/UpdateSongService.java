@@ -11,6 +11,7 @@ import gg.popn.domain.chart.model.field.SongHashGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -20,7 +21,7 @@ public class UpdateSongService implements UpdateSongUseCase {
     private final UpdateSongPort updatePort;
     private final JacketStoragePort jacketStorage;
 
-    @Override @Transactional
+    @Override @Transactional(isolation = Isolation.READ_COMMITTED)
     public SongDetailView execute(UpdateSongCommand command) {
         SongDetailView current = catalog.findSongDetail(command.songId())
                 .orElseThrow(() -> new CatalogItemNotFoundException("Song", command.songId()));

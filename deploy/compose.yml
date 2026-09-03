@@ -1,4 +1,15 @@
 services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    mem_limit: 192m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
   mysql:
     image: mysql:8.0
     environment:
@@ -99,6 +110,11 @@ services:
   api:
     image: ${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
+      POPNGG_USER_DIRECTORY_CACHE_ENABLED: ${USER_DIRECTORY_CACHE_ENABLED:-true}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_CONNECT_TIMEOUT: 200ms
+      SPRING_DATA_REDIS_TIMEOUT: 200ms
+      MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/popngg?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: popngg

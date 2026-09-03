@@ -31,6 +31,9 @@ docker volume create api-logs 2>/dev/null || true
 "${compose[@]}" up --no-deps --wait mysql
 "${compose[@]}" run --rm migration
 "${compose[@]}" run --rm --no-deps catalog-migration
+if ! "${compose[@]}" up -d --no-deps redis; then
+  echo "warning: Redis could not start; API will use DB fallback" >&2
+fi
 "${compose[@]}" up -d --no-deps --wait api
 "$repo_root/deploy/bin/smoke-test.sh"
 

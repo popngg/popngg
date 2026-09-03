@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.sql.Timestamp;
 import gg.popn.domain.game.policy.DifficultyPolicy;
@@ -15,7 +17,9 @@ public class UpdateSongJdbcAdapter implements UpdateSongPort {
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void update(UpdateSongCommand command, String songHash) {
+        UserDirectoryState.invalidate(jdbc.getJdbcTemplate());
         var songParams = new MapSqlParameterSource()
                 .addValue("songId", command.songId()).addValue("songHash", songHash)
                 .addValue("genreName", command.genreName()).addValue("songName", command.songName())
@@ -57,5 +61,6 @@ public class UpdateSongJdbcAdapter implements UpdateSongPort {
                     .addValue("strictJudgement", chart.hasStrictJudgement()));
             if (updated != 1) throw new IllegalArgumentException("Chart does not belong to the song: " + chart.chartId());
         }
+        UserDirectoryState.refreshAll(jdbc.getJdbcTemplate());
     }
 }
