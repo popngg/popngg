@@ -19,6 +19,7 @@ class RegisterUserJdbcAdapterTest {
                 "jdbc:h2:mem:register;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE", "sa", "");
         jdbc = new JdbcTemplate(source);
         jdbc.execute("DROP ALL OBJECTS");
+        UserDirectoryTestSchema.create(jdbc);
         jdbc.execute("""
                 CREATE TABLE users(user_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                   poptomo_id VARCHAR(32) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL,

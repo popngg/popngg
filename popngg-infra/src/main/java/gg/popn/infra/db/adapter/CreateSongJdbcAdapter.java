@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,9 @@ public class CreateSongJdbcAdapter implements CreateSongPort {
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     @Override
+    @Transactional
     public CreateSongResult create(CreateSongCommand command) {
+        UserDirectoryState.invalidate(jdbcTemplate.getJdbcTemplate());
         long songId = insertSong(command);
         List<Long> chartIds = new ArrayList<>();
         for (CreateSongCommand.CreateChartCommand chart : command.charts()) {

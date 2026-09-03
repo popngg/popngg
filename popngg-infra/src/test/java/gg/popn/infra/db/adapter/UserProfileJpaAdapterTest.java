@@ -37,6 +37,7 @@ class UserProfileJpaAdapterTest {
     @BeforeEach
     void setUp() {
         jdbc = spy(new JdbcTemplate(dataSource()));
+        UserDirectoryTestSchema.create(jdbc);
         for (String table : java.util.List.of("playdata", "renew_logs", "user_profiles", "charts", "users")) {
             jdbc.execute("DROP TABLE IF EXISTS " + table);
         }
@@ -208,6 +209,7 @@ class UserProfileJpaAdapterTest {
                   (20, 3, 29, 11), (20, 5, 29, 8),
                   (30, 1, 29, 12), (40, 5, 29, 1)
                 """);
+        UserDirectoryState.refreshAll(jdbc);
         var first = adapter.findUsers(new FindUsersQuery(null, FindUsersQuery.Sort.CLEAR_LEVEL,
                 FindUsersQuery.Order.DESC, 0, 2));
         var second = adapter.findUsers(new FindUsersQuery(null, FindUsersQuery.Sort.CLEAR_LEVEL,
@@ -226,7 +228,8 @@ class UserProfileJpaAdapterTest {
             assertThat(item.rank()).isEqualTo(2);
         });
         verify(jdbc, times(4)).query(
-                argThat(sql -> sql.contains("GROUP BY pd.user_id")
+                argThat(sql -> !sql.contains("GROUP BY pd.user_id")
+                        && sql.contains("LEFT JOIN user_clear_levels")
                         && sql.contains("cleared ON cleared.user_id = u.user_id")
                         && !sql.contains("WHERE pd.user_id = u.user_id")),
                 org.mockito.ArgumentMatchers.<RowMapper<Object>>any(), any(Object[].class));

@@ -66,6 +66,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Transactional
     public ImportPlaydataResult execute(ImportPlaydataCommand command) {
         long userId = findUserIdForUpdate(command.poptomoId());
+        UserDirectoryState.invalidate(jdbc);
         Integer previousDisplayPopclass = findDisplayPopclass(userId);
         updateProfile(userId, command.profile());
         long renewLogId = startLog(command, userId);
@@ -113,7 +114,9 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
     @Override
     @Transactional
     public PopclassRecalculationResult recalculate(String poptomoId) {
-        return rebuildPopclass(poptomoId, findUserId(poptomoId), null);
+        long userId = findUserIdForUpdate(poptomoId);
+        UserDirectoryState.invalidate(jdbc);
+        return rebuildPopclass(poptomoId, userId, null);
     }
 
     private PopclassRecalculationResult rebuildPopclass(
@@ -208,6 +211,7 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                  WHERE user_id = ?
                 """, displayPopclass, potentialPopclass, legacyPopclass,
                 Timestamp.from(Instant.now()), userId);
+        UserDirectoryState.refreshUser(jdbc, userId);
         return new PopclassRecalculationResult(
                 poptomoId, legacyPopclass, displayPopclass, potentialPopclass,
                 PopclassPolicy.NEW_POPCLASS_SCALE, current.size(), old.size());
@@ -336,15 +340,6 @@ public class PlaydataImportJdbcAdapter implements PlaydataImportPort, PopclassRe
                     previous == null ? null : previous.medalCode(), current.medalCode(),
                     event.name(), renewLogId, Timestamp.from(Instant.now()));
         }
-    }
-
-    private long findUserId(String poptomoId) {
-        List<Long> ids = jdbc.query("SELECT user_id FROM users WHERE poptomo_id = ?",
-                (rs, rowNum) -> rs.getLong(1), poptomoId);
-        if (ids.size() != 1) {
-            throw new IllegalArgumentException("Authenticated user was not found.");
-        }
-        return ids.getFirst();
     }
 
     /**

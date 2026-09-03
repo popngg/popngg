@@ -1,4 +1,10 @@
 spring:
+  data:
+    redis:
+      connect-timeout: 200ms
+      timeout: 200ms
+      repositories:
+        enabled: false
   config:
     activate:
       on-profile: prod
@@ -25,6 +31,9 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://popn.gg,https://www.popn.gg}
 
 management:
+  health:
+    redis:
+      enabled: false # Optional cache, not an API availability dependency.
   server:
     port: ${MANAGEMENT_PORT:9091}
   endpoints:

@@ -54,6 +54,7 @@ actuator/
 
 # Test reports
 test-results/
+__pycache__/
 
 # Dependency directories
 node_modules/

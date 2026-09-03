@@ -23,6 +23,7 @@ import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class UserProfileJpaAdapter implements UserProfilePort {
@@ -51,7 +52,9 @@ public class UserProfileJpaAdapter implements UserProfilePort {
     }
 
     @Override
+    @Transactional
     public UserProfileResult update(UpdateUserProfileCommand command) {
+        UserDirectoryState.invalidate(jdbc);
         var user = userRepository.findByPoptomoId(command.poptomoId())
                 .orElseThrow(UserProfileNotFoundException::new);
         user.getProfile().update(
@@ -118,16 +121,10 @@ public class UserProfileJpaAdapter implements UserProfilePort {
         boolean needsClearLevel = query.sort() == FindUsersQuery.Sort.CLEAR_LEVEL;
         String clearLevel = needsClearLevel
                 ? "COALESCE(cleared.clear_level, 0) AS clear_level" : "0 AS clear_level";
-        // Aggregate once per request rather than running a correlated scan for every user.
-        // Keep the LEFT JOIN so users without a qualifying clear remain in the ranking.
+        // Maintained on writes; no scan of all playdata on a cold-cache request.
         String clearLevelJoin = needsClearLevel ? """
-                  LEFT JOIN (
-                      SELECT pd.user_id, MAX(c.level) AS clear_level
-                        FROM playdata pd JOIN charts c ON c.chart_id = pd.chart_id
-                       WHERE pd.current_version = ? AND c.is_deleted = FALSE
-                         AND pd.medal_code IN (1,2,3,4,5,6,7,11,12)
-                       GROUP BY pd.user_id
-                  ) cleared ON cleared.user_id = u.user_id
+                  LEFT JOIN user_clear_levels cleared ON cleared.user_id = u.user_id
+                   AND cleared.current_version = ?
                 """ : "";
         String base = """
                 SELECT u.user_id, u.poptomo_id, p.user_name, p.profile_image_url,
