@@ -129,6 +129,24 @@ jobs:
             raise SystemExit('Loki data volume ownership initialization is missing')
         if 'wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready' in monitoring:
             raise SystemExit('the distroless Loki image cannot run a shell/wget healthcheck')
+        if 'node-exporter:' not in monitoring or 'cadvisor:' not in monitoring:
+            raise SystemExit('host and container metric exporters are missing')
+
+        prometheus = Path('deploy/monitoring/prometheus/prometheus.yml').read_text()
+        if 'job_name: node-exporter' not in prometheus or 'job_name: cadvisor' not in prometheus:
+            raise SystemExit('host and container Prometheus scrape jobs are missing')
+
+        dashboard = Path(
+            'deploy/monitoring/grafana/dashboards/popngg-production-overview.json'
+        ).read_text()
+        required_diagnostic_panels = (
+            'Container CPU by service',
+            'Container restarts / uptime',
+            'API JVM blocked threads',
+            'API process uptime',
+        )
+        if any(panel not in dashboard for panel in required_diagnostic_panels):
+            raise SystemExit('CPU attribution or deadlock diagnostic panels are missing')
 
         loki = Path('deploy/monitoring/loki/config.yml').read_text()
         required_loki_settings = (
