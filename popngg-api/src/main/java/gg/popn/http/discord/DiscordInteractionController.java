@@ -14,8 +14,11 @@ import gg.popn.application.song.port.out.JacketStoragePort;
 import gg.popn.application.song.port.out.AdminNotificationPort;
 import gg.popn.application.playdata.port.out.UnknownChartReportPort;
 import gg.popn.application.account.port.in.AdminPasswordResetUseCase;
+import gg.popn.application.common.ErrorNotificationPort;
 import gg.popn.domain.chart.model.field.SongHashGenerator;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,6 +51,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("/api/v1/discord/interactions")
 public class DiscordInteractionController {
     private static final byte[] ED25519_X509_PREFIX = HexFormat.of().parseHex("302a300506032b6570032100");
+    private static final Logger log = LoggerFactory.getLogger(DiscordInteractionController.class);
 
     private final ObjectMapper mapper;
     private final CreateSongUseCase createSong;
@@ -59,6 +63,8 @@ public class DiscordInteractionController {
     private final UnknownChartReportPort unknownChartReport;
     private final AdminPasswordResetUseCase adminPasswordReset;
     private final DeploymentVersion deploymentVersion;
+    private final ErrorNotificationPort errorNotification;
+    private final String grafanaUrl;
     private final JacketDownloader jacketDownloader;
     private final byte[] publicKey;
     private final String guildId;
@@ -76,11 +82,14 @@ public class DiscordInteractionController {
             UnknownChartReportPort unknownChartReport,
             AdminPasswordResetUseCase adminPasswordReset,
             DeploymentVersion deploymentVersion,
+            ErrorNotificationPort errorNotification,
             @Value("${popngg.discord.public-key:}") String publicKey,
             @Value("${popngg.discord.guild-id:}") String guildId,
-            @Value("${popngg.discord.admin-role-id:}") String adminRoleId) {
+            @Value("${popngg.discord.admin-role-id:}") String adminRoleId,
+            @Value("${popngg.monitoring.grafana-url:https://grafana.popn.gg}") String grafanaUrl) {
         this(mapper, createSong, findSongs, jacketStorage, findSongDetail, updateSong,
-                adminNotification, unknownChartReport, adminPasswordReset, deploymentVersion, publicKey, guildId, adminRoleId,
+                adminNotification, unknownChartReport, adminPasswordReset, deploymentVersion,
+                errorNotification, publicKey, guildId, adminRoleId, grafanaUrl,
                 DiscordInteractionController::downloadPng);
     }
 
@@ -90,7 +99,9 @@ public class DiscordInteractionController {
             AdminNotificationPort adminNotification, UnknownChartReportPort unknownChartReport,
             AdminPasswordResetUseCase adminPasswordReset,
             DeploymentVersion deploymentVersion,
-            String publicKey, String guildId, String adminRoleId, JacketDownloader jacketDownloader) {
+            ErrorNotificationPort errorNotification,
+            String publicKey, String guildId, String adminRoleId, String grafanaUrl,
+            JacketDownloader jacketDownloader) {
         this.mapper = mapper;
         this.createSong = createSong;
         this.findSongs = findSongs;
@@ -101,9 +112,11 @@ public class DiscordInteractionController {
         this.unknownChartReport = unknownChartReport;
         this.adminPasswordReset = adminPasswordReset;
         this.deploymentVersion = deploymentVersion;
+        this.errorNotification = errorNotification;
         this.publicKey = publicKey.isBlank() ? new byte[0] : HexFormat.of().parseHex(publicKey.strip());
         this.guildId = guildId;
         this.adminRoleId = adminRoleId;
+        this.grafanaUrl = stripTrailingSlash(grafanaUrl);
         this.jacketDownloader = jacketDownloader;
     }
 
@@ -119,6 +132,21 @@ public class DiscordInteractionController {
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
         if (type == 2 && "배포버전".equals(root.path("data").path("name").asText())) {
             return ResponseEntity.ok(ephemeral(deploymentVersion.message()));
+        }
+        if (type == 2 && "성능대시보드".equals(root.path("data").path("name").asText())) {
+            String dashboard = grafanaUrl + "/d/popngg-production-overview/popn-gg-production-overview"
+                    + "?from=now-6h&to=now&timezone=browser&var-job=popngg-api&refresh=30s";
+            return ResponseEntity.ok(ephemeral("**현재 운영 성능 대시보드**\n[Grafana에서 열기](" + dashboard + ")"));
+        }
+        if (type == 2 && "오류알림테스트".equals(root.path("data").path("name").asText())) {
+            String traceId = "diagnostic-" + UUID.randomUUID();
+            log.warn("Synthetic Discord error notification test. traceId={}, requestedBy={}",
+                    traceId, actorId(root));
+            errorNotification.notifyServerError("SYNTHETIC", "/diagnostics/discord",
+                    "DiagnosticTestException", "관리자 요청으로 생성된 오류 알림 테스트입니다.",
+                    "-", traceId);
+            return ResponseEntity.ok(ephemeral("오류 알림 테스트를 전송했습니다.\n추적 ID: `" + traceId
+                    + "`\n같은 테스트 알림은 5분 동안 중복 억제됩니다."));
         }
         if (type == 2 && "비밀번호초기화".equals(root.path("data").path("name").asText())) {
             String poptomoId = option(root, "팝토모_id").path("value").asText();
@@ -726,6 +754,13 @@ public class DiscordInteractionController {
     private static String truncate(String value, int length) {
         if (value == null || value.isBlank()) return "-";
         return value.length() <= length ? value : value.substring(0, length - 1) + "…";
+    }
+
+    private static String stripTrailingSlash(String value) {
+        if (value == null || value.isBlank()) return "https://grafana.popn.gg";
+        String stripped = value.strip();
+        while (stripped.endsWith("/")) stripped = stripped.substring(0, stripped.length() - 1);
+        return stripped;
     }
 
     private static String actorId(JsonNode root) {

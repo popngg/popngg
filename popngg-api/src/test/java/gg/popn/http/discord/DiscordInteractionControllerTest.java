@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import gg.popn.application.playdata.port.out.UnknownChartReportPort;
 import gg.popn.application.account.port.in.AdminPasswordResetUseCase;
+import gg.popn.application.common.ErrorNotificationPort;
 import gg.popn.application.song.dto.result.*;
 import gg.popn.application.song.dto.result.CreateSongResult;
 import gg.popn.application.song.port.in.*;
@@ -40,6 +41,7 @@ class DiscordInteractionControllerTest {
     private final AdminNotificationPort admin = mock(AdminNotificationPort.class);
     private final UnknownChartReportPort unknown = mock(UnknownChartReportPort.class);
     private final AdminPasswordResetUseCase passwordReset = mock(AdminPasswordResetUseCase.class);
+    private final ErrorNotificationPort errorNotification = mock(ErrorNotificationPort.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
 
@@ -52,7 +54,8 @@ class DiscordInteractionControllerTest {
         controller = new DiscordInteractionController(mapper, createSong, findSongs, jackets,
                 findDetail, updateSong, admin, unknown, passwordReset,
                 new DeploymentVersion("2026.09.02.194605-60b34ec", "60b34ec", "2026-09-02T10:46:05Z"),
-                rawPublicKey, "guild", "admin", url -> new byte[]{1});
+                errorNotification, rawPublicKey, "guild", "admin", "https://grafana.example/",
+                url -> new byte[]{1});
     }
 
     @Test
@@ -65,6 +68,19 @@ class DiscordInteractionControllerTest {
         request.withObject("member").withArray("roles").removeAll();
         assertThat(content(call(request))).contains("관리자 역할").doesNotContain("60b34ec");
         verifyNoInteractions(createSong, updateSong, passwordReset);
+    }
+
+    @Test
+    void returnsPerformanceDashboardAndSendsSyntheticErrorNotification() throws Exception {
+        assertThat(content(call(command("성능대시보드"))))
+                .contains("https://grafana.example/d/popngg-production-overview")
+                .contains("from=now-6h", "var-job=popngg-api");
+
+        String response = content(call(command("오류알림테스트")));
+        assertThat(response).contains("오류 알림 테스트를 전송했습니다", "diagnostic-");
+        verify(errorNotification).notifyServerError(
+                eq("SYNTHETIC"), eq("/diagnostics/discord"), eq("DiagnosticTestException"),
+                contains("오류 알림 테스트"), eq("-"), startsWith("diagnostic-"));
     }
 
     @Test
