@@ -66,7 +66,9 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                             "options", List.of(option(3, "팝토모_id", "예: 1234-5678-9012", true))),
                     Map.of("name", "정보보완목록", "description", "등록된 곡의 불완전한 정보 조회 및 수정", "type", 1),
                     Map.of("name", "미등록목록", "description", "최근 미등록 곡과 채보 조회", "type", 1),
-                    Map.of("name", "배포버전", "description", "현재 실행 중인 API 버전과 커밋 확인", "type", 1)));
+                    Map.of("name", "배포버전", "description", "현재 실행 중인 API 버전과 커밋 확인", "type", 1),
+                    Map.of("name", "성능대시보드", "description", "현재 운영 성능 Grafana 대시보드 열기", "type", 1),
+                    Map.of("name", "오류알림테스트", "description", "관리자 전용 Discord 오류 알림 전송 테스트", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")
                                 .formatted(applicationId, guildId)))
