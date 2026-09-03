@@ -153,9 +153,20 @@ External uptime monitoring should use `https://api.popn.gg/health`. The previous
   table also shows 4xx and 5xx counts over the selected dashboard time range.
 
 The HTTP section contains overall rate and latency, status distribution, and a URI-template
-endpoint table. JVM panels cover heap/non-heap, heap ratio, GC, threads, process CPU, and
-system CPU. HikariCP panels cover active, idle, pending, and maximum connections plus
-average/maximum acquisition time when exported by the active Hikari version.
+endpoint table. Latency uses a fixed five-minute window so a nearly idle service does not
+turn a tiny denominator into a misleading multi-day average. Endpoint latency uses the
+whole selected range, while request and error counts are rounded to undo Prometheus range
+extrapolation in the human-facing table. JVM panels cover heap/non-heap, heap ratio, GC,
+threads, process CPU, and system CPU. HikariCP panels cover active, idle, pending, and
+maximum connections plus average/maximum acquisition time when exported by the active
+Hikari version.
+
+The Host / Containers row uses node_exporter and cAdvisor to attribute a server-wide CPU
+spike to a host CPU mode or Compose service. Container and API uptime drops identify
+deployments/restarts, and the blocked-thread panel distinguishes JVM lock contention from
+unrelated host load. cAdvisor requires read-only host and Docker filesystem mounts plus
+privileged access to collect container cgroup metrics; it is not published through a host
+port and is reachable only on the Compose network.
 
 ## Checks and troubleshooting
 
@@ -165,10 +176,12 @@ Container and target checks:
 docker compose --env-file .env -f deploy/compose.yml \
   -f deploy/compose.monitoring.yml ps
 docker compose --env-file .env -f deploy/compose.yml \
-  -f deploy/compose.monitoring.yml logs --tail=100 prometheus loki alloy grafana
+  -f deploy/compose.monitoring.yml logs --tail=100 prometheus node-exporter cadvisor loki alloy grafana
 docker compose --env-file .env -f deploy/compose.yml exec prometheus \
   wget -qO- http://api:9091/actuator/prometheus | head
 curl -fsS http://127.0.0.1:9090/api/v1/targets
+curl -fsSG http://127.0.0.1:9090/api/v1/query \
+  --data-urlencode 'query=up{job=~"node-exporter|cadvisor"}'
 curl -fsS http://127.0.0.1:3100/ready
 curl -fsSG http://127.0.0.1:3100/loki/api/v1/query \
   --data-urlencode 'query={job="popngg-api"}'

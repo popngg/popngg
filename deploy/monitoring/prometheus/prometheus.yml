@@ -10,3 +10,15 @@ scrape_configs:
         labels:
           service: popngg-api
           environment: production
+
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          environment: production
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          environment: production
