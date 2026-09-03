@@ -22,7 +22,7 @@ class NotificationAdaptersTest {
     void disabledDiscordAdaptersAreNoOps() {
         ObjectMapper mapper = new ObjectMapper();
         new DiscordAdminNotificationAdapter("", mapper).send("message");
-        var errors = new DiscordErrorNotificationAdapter("", mapper);
+        var errors = new DiscordErrorNotificationAdapter("", "https://grafana.example/", "test-release", mapper);
         errors.notifyServerError("GET", "/path", "Failure", "message", "cause", "trace");
         var unknown = new DiscordUnknownChartNotifier("", mapper, java.net.http.HttpClient.newHttpClient());
         unknown.notifyUnknownCharts(1, "user", List.of(new ImportPlaydataCommand.Row(
@@ -44,14 +44,19 @@ class NotificationAdaptersTest {
             String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/webhook";
             ObjectMapper mapper = new ObjectMapper();
             new DiscordAdminNotificationAdapter(url, mapper).send("admin");
-            var errors = new DiscordErrorNotificationAdapter(url, mapper);
+            var errors = new DiscordErrorNotificationAdapter(
+                    url, "https://grafana.example/", "2026.09.04-test", mapper);
             errors.notifyServerError("GET", "/x", "Boom", "message @everyone", "cause", "trace");
             errors.notifyServerError("GET", "/x", "Boom", "message @everyone", "cause", "trace");
             new DiscordUnknownChartNotifier(url, mapper, java.net.http.HttpClient.newHttpClient())
                     .notifyUnknownCharts(1, "user", List.of(new ImportPlaydataCommand.Row(
                             null, null, 4, false, null, "song", "genre", 1, 1, 1)));
             assertThat(requests.await(5, TimeUnit.SECONDS)).isTrue();
-            assertThat(errorPayload.get()).contains("embeds", "allowed_mentions", "추적 ID", "trace")
+            assertThat(errorPayload.get())
+                    .contains("embeds", "allowed_mentions", "추적 ID", "trace")
+                    .contains("배포 버전", "2026.09.04-test")
+                    .contains("https://grafana.example/d/popngg-production-overview")
+                    .contains("https://grafana.example/explore?schemaVersion=1")
                     .doesNotContain("@everyone");
         } finally { server.stop(0); }
     }

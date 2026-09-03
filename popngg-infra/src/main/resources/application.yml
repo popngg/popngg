@@ -38,6 +38,8 @@ popngg:
     admin-role-id: ${DISCORD_ADMIN_ROLE_ID:}
     admin-webhook-url: ${DISCORD_ADMIN_WEBHOOK_URL:}
     error-webhook-url: ${DISCORD_ERROR_WEBHOOK_URL:}
+  monitoring:
+    grafana-url: ${GRAFANA_PUBLIC_URL:https://grafana.popn.gg}
   jacket:
     region: ${AWS_REGION:ap-northeast-2}
     bucket: ${AWS_S3_BUCKET:}
