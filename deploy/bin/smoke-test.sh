@@ -7,6 +7,7 @@ curl_args=(--fail --silent --show-error --connect-timeout 3 --max-time 10)
 curl "${curl_args[@]}" "$base_url/health" | grep -q '"status":"UP"'
 curl "${curl_args[@]}" "$base_url/api/v1/songs?page=0&size=1" >/dev/null
 curl "${curl_args[@]}" "$base_url/api/v1/users/rankings?page=0&size=1" >/dev/null
+curl "${curl_args[@]}" "$base_url/api/v1/users?sort=clearLevel&order=desc&page=1&size=20" >/dev/null
 
 if [[ -n "${SMOKE_POPTOMO_ID:-}" ]]; then
   curl "${curl_args[@]}" "$base_url/api/v1/users/$SMOKE_POPTOMO_ID" >/dev/null
@@ -20,4 +21,4 @@ if [[ -n "${SMOKE_LOGIN_PASSWORD:-}" && -n "${SMOKE_POPTOMO_ID:-}" ]]; then
     "$base_url/api/v1/auth/login" >/dev/null
 fi
 
-echo "smoke health=PASS songs=PASS rankings=PASS"
+echo "smoke health=PASS songs=PASS rankings=PASS users_clear_level=PASS"

@@ -116,15 +116,19 @@ public class UserProfileJpaAdapter implements UserProfilePort {
             args.add(keyword);
         }
         boolean needsClearLevel = query.sort() == FindUsersQuery.Sort.CLEAR_LEVEL;
-        String clearLevel = needsClearLevel ? """
-                       COALESCE((
-                           SELECT MAX(c.level)
-                             FROM playdata pd JOIN charts c ON c.chart_id = pd.chart_id
-                            WHERE pd.user_id = u.user_id
-                              AND pd.current_version = ? AND c.is_deleted = FALSE
-                              AND pd.medal_code IN (1,2,3,4,5,6,7,11,12)
-                       ), 0) AS clear_level
-                """ : "0 AS clear_level";
+        String clearLevel = needsClearLevel
+                ? "COALESCE(cleared.clear_level, 0) AS clear_level" : "0 AS clear_level";
+        // Aggregate once per request rather than running a correlated scan for every user.
+        // Keep the LEFT JOIN so users without a qualifying clear remain in the ranking.
+        String clearLevelJoin = needsClearLevel ? """
+                  LEFT JOIN (
+                      SELECT pd.user_id, MAX(c.level) AS clear_level
+                        FROM playdata pd JOIN charts c ON c.chart_id = pd.chart_id
+                       WHERE pd.current_version = ? AND c.is_deleted = FALSE
+                         AND pd.medal_code IN (1,2,3,4,5,6,7,11,12)
+                       GROUP BY pd.user_id
+                  ) cleared ON cleared.user_id = u.user_id
+                """ : "";
         String base = """
                 SELECT u.user_id, u.poptomo_id, p.user_name, p.profile_image_url,
                        p.comment,
@@ -144,8 +148,9 @@ public class UserProfileJpaAdapter implements UserProfilePort {
                        ) AS ranking,
                        %s
                   FROM users u JOIN user_profiles p ON p.user_id = u.user_id
+                  %s
                  WHERE p.is_hidden = FALSE
-                """.formatted(clearLevel);
+                """.formatted(clearLevel, clearLevelJoin);
         List<Object> baseArgs = new ArrayList<>();
         if (needsClearLevel) baseArgs.add(currentVersion);
         baseArgs.addAll(args);

@@ -62,7 +62,11 @@ future catalog edits are not compared against the historical before-state on eve
 
 ## Smoke scenarios
 
-The default test verifies health, song search, and user ranking. Set
+The default test verifies health, song search, user ranking, and a 20-user page sorted
+by clear level (`/api/v1/users?sort=clearLevel&order=desc&page=1&size=20`). Each request
+must finish within 10 seconds. A slow clear-level query fails the candidate deployment
+check and can trigger the existing rollback workflow; this is a smoke-test limit, not
+a production latency SLA. Set
 `SMOKE_POPTOMO_ID` to also verify the public user profile and playdata query. Set both
 `SMOKE_POPTOMO_ID` and `SMOKE_LOGIN_PASSWORD` only for a dedicated non-production smoke
 account to verify login.
