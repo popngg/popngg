@@ -10,6 +10,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,11 +36,11 @@ class UserProfileJpaAdapterTest {
 
     @BeforeEach
     void setUp() {
-        var source = new DriverManagerDataSource(
-                "jdbc:h2:mem:user-profile;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
-                "sa", "");
-        jdbc = spy(new JdbcTemplate(source));
-        jdbc.execute("DROP ALL OBJECTS");
+        jdbc = spy(new JdbcTemplate(dataSource()));
+        UserDirectoryTestSchema.create(jdbc);
+        for (String table : java.util.List.of("playdata", "renew_logs", "user_profiles", "charts", "users")) {
+            jdbc.execute("DROP TABLE IF EXISTS " + table);
+        }
         jdbc.execute("""
                 CREATE TABLE users(
                   user_id BIGINT PRIMARY KEY, poptomo_id VARCHAR(32) NOT NULL)
@@ -80,6 +81,12 @@ class UserProfileJpaAdapterTest {
                 entityManager,
                 jdbc,
                 29);
+    }
+
+    protected DataSource dataSource() {
+        return new DriverManagerDataSource(
+                "jdbc:h2:mem:user-profile;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
+                "sa", "");
     }
 
     @Test
@@ -183,6 +190,57 @@ class UserProfileJpaAdapterTest {
                 argThat(sql -> sql.startsWith("SELECT COUNT(*) FROM users")
                         && !sql.contains("ROW_NUMBER") && !sql.contains("playdata")),
                 eq(Long.class), any(Object[].class));
+    }
+
+    @Test
+    void sortsClearLevelsWithStablePagingAndPreservesGlobalRanksWhenSearching() {
+        jdbc.update("INSERT INTO users VALUES (10, '0001'), (20, '0002'), (30, '0003'), (40, '0004'), (50, '0005')");
+        jdbc.update("""
+                INSERT INTO user_profiles VALUES
+                  (10, 'alpha', NULL, '', 500, 0, FALSE, CURRENT_TIMESTAMP),
+                  (20, 'beta', NULL, '', 400, 0, FALSE, CURRENT_TIMESTAMP),
+                  (30, 'gamma', NULL, '', 300, 0, FALSE, CURRENT_TIMESTAMP),
+                  (40, 'hidden', NULL, '', 900, 0, TRUE, CURRENT_TIMESTAMP),
+                  (50, 'empty', NULL, '', 200, 0, FALSE, CURRENT_TIMESTAMP)
+                """);
+        jdbc.update("""
+                INSERT INTO playdata VALUES
+                  (10, 1, 29, 1), (10, 3, 29, 5), (10, 5, 28, 1), (10, 6, 29, 1),
+                  (20, 3, 29, 11), (20, 5, 29, 8),
+                  (30, 1, 29, 12), (40, 5, 29, 1)
+                """);
+        UserDirectoryState.refreshAll(jdbc);
+        var first = adapter.findUsers(new FindUsersQuery(null, FindUsersQuery.Sort.CLEAR_LEVEL,
+                FindUsersQuery.Order.DESC, 0, 2));
+        var second = adapter.findUsers(new FindUsersQuery(null, FindUsersQuery.Sort.CLEAR_LEVEL,
+                FindUsersQuery.Order.DESC, 1, 2));
+        assertThat(first.totalElements()).isEqualTo(4);
+        assertThat(first.users()).extracting(item -> item.poptomoId()).containsExactly("0001", "0002");
+        assertThat(second.users()).extracting(item -> item.poptomoId()).containsExactly("0003", "0005");
+        assertThat(adapter.findUsers(new FindUsersQuery(null, FindUsersQuery.Sort.CLEAR_LEVEL,
+                FindUsersQuery.Order.ASC, 0, 20)).users())
+                .extracting(item -> item.poptomoId()).containsExactly("0005", "0003", "0001", "0002");
+        var searched = adapter.findUsers(new FindUsersQuery("beta", FindUsersQuery.Sort.CLEAR_LEVEL,
+                FindUsersQuery.Order.DESC, 0, 20));
+        assertThat(searched.totalElements()).isEqualTo(1);
+        assertThat(searched.users()).singleElement().satisfies(item -> {
+            assertThat(item.poptomoId()).isEqualTo("0002");
+            assertThat(item.rank()).isEqualTo(2);
+        });
+        verify(jdbc, times(4)).query(
+                argThat(sql -> !sql.contains("GROUP BY pd.user_id")
+                        && sql.contains("LEFT JOIN user_clear_levels")
+                        && sql.contains("cleared ON cleared.user_id = u.user_id")
+                        && !sql.contains("WHERE pd.user_id = u.user_id")),
+                org.mockito.ArgumentMatchers.<RowMapper<Object>>any(), any(Object[].class));
+    }
+
+    @Test
+    void avoidsClearLevelAggregationForOtherSorts() {
+        adapter.findUsers(new FindUsersQuery(null, FindUsersQuery.Sort.RANK,
+                FindUsersQuery.Order.ASC, 0, 20));
+        verify(jdbc).query(argThat(sql -> !sql.contains("playdata") && !sql.contains("cleared")),
+                org.mockito.ArgumentMatchers.<RowMapper<Object>>any(), any(Object[].class));
     }
 
     @Test

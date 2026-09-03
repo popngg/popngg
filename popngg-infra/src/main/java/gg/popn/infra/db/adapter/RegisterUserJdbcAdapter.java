@@ -51,6 +51,7 @@ public class RegisterUserJdbcAdapter implements RegisterUserPort {
                          extra_credit, time_play_10_credit, time_play_16_credit, created_at, updated_at)
                     VALUES (?, ?, '', '', NULL, ?, 0, 0, 0, 0, 0, 0, 0, ?, ?)
                     """, keys.getKey().longValue(), poptomoId, hidden, now, now);
+            UserDirectoryState.invalidate(jdbc);
         } catch (DuplicateKeyException exception) {
             throw new AlreadyRegisteredException();
         }

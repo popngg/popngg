@@ -22,6 +22,7 @@ class CreateSongJdbcAdapterTest {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 "jdbc:h2:mem:create-song-" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(dataSource);
+        UserDirectoryTestSchema.create(jdbc);
         adapter = new CreateSongJdbcAdapter(new NamedParameterJdbcTemplate(jdbc));
         jdbc.execute("""
                 CREATE TABLE songs (

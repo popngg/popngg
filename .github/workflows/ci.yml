@@ -68,6 +68,8 @@ jobs:
       run: |
         set -euo pipefail
         bash -n deploy/bin/deploy.sh
+        bash -n deploy/bin/smoke-test.sh
+        python3 -m unittest discover -s deploy/tests -p 'test_*.py'
         docker compose -f deploy/compose.yml config >/dev/null
         docker compose -f deploy/compose.yml -f deploy/compose.monitoring.yml config >/dev/null
         python3 - <<'PY'

@@ -24,6 +24,7 @@ class PlaydataImportJdbcAdapterTest {
                 "jdbc:h2:mem:import;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE", "sa", "");
         jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("DROP ALL OBJECTS");
+        UserDirectoryTestSchema.create(jdbc);
         jdbc.execute("CREATE TABLE users(user_id BIGINT PRIMARY KEY, poptomo_id VARCHAR(32) UNIQUE)");
         jdbc.execute("""
                 CREATE TABLE user_profiles(user_id BIGINT PRIMARY KEY, user_name VARCHAR(64),
@@ -100,6 +101,8 @@ class PlaydataImportJdbcAdapterTest {
         var result = adapter.execute(new ImportPlaydataCommand("0000-0000-0000", profile, rows));
 
         assertThat(result.receivedCount()).isEqualTo(4);
+        assertThat(jdbc.queryForObject("SELECT revision FROM user_directory_revision WHERE id=1", Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT clear_level FROM user_clear_levels WHERE current_version=29", Integer.class)).isEqualTo(48);
         assertThat(result.matchedCount()).isEqualTo(4);
         assertThat(result.skippedCount()).isZero();
         assertThat(result.updatedCount()).isEqualTo(1);

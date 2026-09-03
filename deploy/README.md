@@ -62,7 +62,16 @@ future catalog edits are not compared against the historical before-state on eve
 
 ## Smoke scenarios
 
-The default test verifies health, song search, and user ranking. Set
+Every smoke request logs its label, HTTP status, time to first byte, total duration,
+and curl exit code. The clear-level page is requested twice (first load and repeat);
+neither request gets a relaxed timeout. The first request is not necessarily a cache
+miss if public traffic already populated it. Bodies, passwords and tokens are not logged.
+
+The default test verifies health, song search, user ranking, and a 20-user page sorted
+by clear level (`/api/v1/users?sort=clearLevel&order=desc&page=1&size=20`). Each request
+must finish within 10 seconds. A slow clear-level query fails the candidate deployment
+check and can trigger the existing rollback workflow; this is a smoke-test limit, not
+a production latency SLA. Set
 `SMOKE_POPTOMO_ID` to also verify the public user profile and playdata query. Set both
 `SMOKE_POPTOMO_ID` and `SMOKE_LOGIN_PASSWORD` only for a dedicated non-production smoke
 account to verify login.
@@ -71,6 +80,52 @@ The deployment checklist must additionally exercise an authenticated playdata im
 disposable staging account, then verify the affected user playdata and chart ranking. Do
 not run a write smoke against a real user. Record only status codes, counts, image tag,
 and timestamps; never record credentials or tokens.
+
+## User directory cache
+
+The production Compose stack starts an internal-only Redis cache (no published port).
+It has a 128 MB eviction budget, a 192 MB container memory limit, five-minute response
+TTLs, and no persistence. Cache data is disposable; MySQL remains the source of truth.
+See [Redis eviction guidance](https://redis.io/docs/latest/develop/reference/eviction/).
+
+Only the first page of public user lists without search terms and public rankings is
+cached. Sort, direction, page size, game version, application instance and the committed
+DB revision distinguish keys. Later pages, searches and individual/private profiles
+bypass this cache. Renewal, recalculation, registration, profile/privacy changes and
+catalog writes invalidate it transactionally. Results are filled on the next request,
+not synchronously warmed during a renewal. Old revision keys expire naturally; no
+Redis `KEYS` scan or broad `FLUSHALL` is used by the application.
+
+V21 adds `user_clear_levels` and `user_directory_revision`. Clear levels are computed
+on renewal/recalculation, with catalog changes rebuilding the summaries. The first
+uncached list request joins the small summary table instead of aggregating all playdata.
+Summary maintenance uses a shared revision-row lock to serialize directory-affecting
+writes; imports acquire their existing user lock first to preserve the duplicate-key
+fix. Concurrent renewals may wait for one another; monitor write latency if renewal
+volume grows. Reads are not blocked by this lock. Catalog update uses READ COMMITTED
+so a waited-for renewal's committed playdata is included in the rebuild.
+
+At API startup summaries are reconciled once, covering catalog SQL migrations and
+writes made by the older application during a rollback. The schema is additive. Keep
+these tables when rolling back. Do not run mixed old/new API writers simultaneously
+or make direct SQL catalog/playdata edits while serving traffic; perform such maintenance
+with writes paused and restart the API afterward to reconcile and invalidate.
+
+Redis connection/command timeouts are 200 ms. On cache failure the API falls back to DB
+and backs off Redis access for 30 seconds. Redis is excluded from API health because
+it is an optional cache; check its own Compose health separately. The DB revision makes
+invalidation independent of Redis availability. To disable caching for a deployment,
+set `USER_DIRECTORY_CACHE_ENABLED=false` in the deployment environment and recreate
+the API; this retains summary-table optimization. See
+[Spring Boot Redis properties](https://docs.spring.io/spring-boot/appendix/application-properties/index.html).
+
+For local testing, `compose.local.yml` publishes Redis only at `127.0.0.1:6379`.
+Set `POPNGG_USER_DIRECTORY_CACHE_ENABLED=true` for the locally running API (default off).
+Before merging, run `./gradlew test` with Docker available: the suite includes MySQL
+summary/rollback tests and a Redis TTL/eviction integration test. Without Docker those
+container tests are explicitly skipped; mock/H2 tests alone do not establish live
+deployment performance. In staging check a cold request, repeat request, renewal,
+privacy change, Redis outage and recovery, then compare the smoke timings.
 
 ## Inspect the database locally
 

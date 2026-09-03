@@ -19,7 +19,9 @@ import org.junit.jupiter.api.Test;
 class AccountSettingsJpaAdapterTest {
     private final UserJpaRepository users = mock(UserJpaRepository.class);
     private final UserProfileJpaRepository profiles = mock(UserProfileJpaRepository.class);
-    private final AccountSettingsJpaAdapter adapter = new AccountSettingsJpaAdapter(users, profiles);
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+    private final AccountSettingsJpaAdapter adapter = new AccountSettingsJpaAdapter(users, profiles,
+            jdbc);
     private UserEntity user;
 
     @BeforeEach
@@ -43,6 +45,7 @@ class AccountSettingsJpaAdapterTest {
         assertThat(updated.privateProfile()).isTrue();
         assertThat(updated.avatarUrl()).isNull();
         verify(profiles).save(user.getProfile());
+        verify(jdbc).update("UPDATE user_directory_revision SET revision = revision + 1 WHERE id = 1");
     }
 
     @Test

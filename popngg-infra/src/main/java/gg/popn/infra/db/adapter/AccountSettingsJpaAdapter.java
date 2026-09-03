@@ -7,15 +7,20 @@ import gg.popn.infra.db.jpa.UserJpaRepository;
 import gg.popn.infra.db.jpa.UserProfileJpaRepository;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class AccountSettingsJpaAdapter implements AccountSettingsPort {
     private final UserJpaRepository users;
     private final UserProfileJpaRepository profiles;
+    private final JdbcTemplate jdbc;
 
-    public AccountSettingsJpaAdapter(UserJpaRepository users, UserProfileJpaRepository profiles) {
+    public AccountSettingsJpaAdapter(UserJpaRepository users, UserProfileJpaRepository profiles,
+            JdbcTemplate jdbc) {
         this.users = users;
         this.profiles = profiles;
+        this.jdbc = jdbc;
     }
 
     @Override
@@ -25,8 +30,10 @@ public class AccountSettingsJpaAdapter implements AccountSettingsPort {
     }
 
     @Override
+    @Transactional
     public AccountSettings updateProfile(String poptomoId, String comment, boolean privateProfile,
             String avatarUrl, boolean avatarChanged) {
+        UserDirectoryState.invalidate(jdbc);
         var user = user(poptomoId);
         user.getProfile().updateSettings(comment, privateProfile, avatarUrl, avatarChanged, LocalDateTime.now());
         profiles.save(user.getProfile());
