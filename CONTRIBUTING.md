@@ -11,6 +11,9 @@ database, or architecture changes in an issue before implementation.
 4. Open a pull request into `develop` and complete the pull request checklist.
 5. Address review feedback. Maintainers promote a deployed and verified
    `develop` revision to `main` through a separate release pull request.
+   Release pull requests from `develop` to `main` must use **Create a merge commit**;
+   the `main` ruleset rejects squash and rebase merges so the long-lived branch history
+   remains connected. Feature and hotfix pull requests into `develop` may still be squashed.
 
 Do not open ordinary feature pull requests directly against `main`.
 

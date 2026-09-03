@@ -98,7 +98,6 @@ jobs:
           ./deploy/bin/build-image.sh
           ./deploy/bin/deploy.sh
           REMOTE
-
       - name: Open release pull request
         if: >-
           success() &&
@@ -109,6 +108,18 @@ jobs:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+          release_body=$(cat <<EOF
+          ## 배포 검증
+
+          \`develop\` 커밋 \`$DEPLOY_SHA\`의 후보 배포와 자동 헬스체크가 성공했습니다.
+
+          실제 기능을 확인하고 필수 승인과 검사를 완료한 뒤 이 PR을 병합하여 현재 버전을 안정 버전으로 확정합니다.
+
+          ## 병합 방식
+
+          이 릴리스 PR은 반드시 **Create a merge commit**으로 병합해야 합니다. main Ruleset이 squash와 rebase 병합을 차단합니다. develop과 main의 계보를 유지하기 위해 이 PR에서는 **Squash and merge를 사용하지 마세요.**
+          EOF
+          )
           existing_url=$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
             --base main \
@@ -118,6 +129,10 @@ jobs:
             --jq '.[0].url // empty')
 
           if [[ -n "$existing_url" ]]; then
+            gh pr edit "$existing_url" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Release develop to main" \
+              --body "$release_body"
             echo "Release PR already exists: $existing_url"
             exit 0
           fi
@@ -127,14 +142,7 @@ jobs:
             --base main \
             --head develop \
             --title "Release develop to main" \
-            --body "$(cat <<EOF
-          ## 배포 검증
-
-          \`develop\` 커밋 \`$DEPLOY_SHA\`의 후보 배포와 자동 헬스체크가 성공했습니다.
-
-          실제 기능을 확인한 뒤 사람이 이 PR을 병합하여 현재 버전을 안정 버전으로 확정합니다.
-          EOF
-          )"
+            --body "$release_body"
 
       - name: Restore stable main after failed candidate
         if: >-
