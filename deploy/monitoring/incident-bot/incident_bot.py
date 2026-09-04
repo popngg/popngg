@@ -13,6 +13,7 @@ WEBHOOK = os.getenv("DISCORD_ERROR_WEBHOOK_URL", "").strip()
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "").strip()
 GRAFANA = os.getenv("GRAFANA_PUBLIC_URL", "https://grafana.popn.gg").rstrip("/")
 INTERVAL = int(os.getenv("INCIDENT_POLL_INTERVAL_SECONDS", "30"))
+USER_AGENT = "popngg-incident-monitor/1.0 (+https://popn.gg)"
 
 RULES = {
     "api-down": ("API 응답 불가", 'up{job="popngg-api"}', lambda value: value < 1, 120),
@@ -27,10 +28,18 @@ states = {key: {"since": None, "thread": None, "started": None} for key in RULES
 
 def request_json(url, payload=None, headers=None, timeout=4):
     data = None if payload is None else json.dumps(payload).encode()
-    request = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", **(headers or {})})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        body = response.read()
-        return json.loads(body) if body else {}
+    request = urllib.request.Request(url, data=data, headers={
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+        **(headers or {}),
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read()
+            return json.loads(body) if body else {}
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode(errors="replace")[:500]
+        raise RuntimeError(f"HTTP {error.code} from {request.full_url}: {detail}") from error
 
 
 def query(expression):
