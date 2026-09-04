@@ -1,6 +1,7 @@
 package gg.popn.http.discord;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -14,6 +15,7 @@ public class IncidentThreadTestClient {
     private final String incidentBotUrl;
     private final HttpClient client;
 
+    @Autowired
     public IncidentThreadTestClient(
             @Value("${popngg.monitoring.incident-bot-url:http://incident-bot:8080}") String incidentBotUrl) {
         this(incidentBotUrl, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(300)).build());
