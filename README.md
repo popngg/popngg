@@ -77,6 +77,9 @@ creating an `.env` file. See `deploy/README.md` for migration and rollback detai
 ### Deployment version
 
 Discord administrators can run `/배포버전` to inspect the API instance handling the command.
+They can also use `/성능대시보드` for a live Prometheus summary, `/장애진단테스트` for a
+safe threshold-based health classification, and `/오류알림테스트` to verify the Discord
+error webhook and its trace-linked Loki view without causing a real outage.
 The private reply includes the release version, full Git commit, image build time, and
 server start time (KST). Existing Discord guild, role, and signature checks still apply.
 

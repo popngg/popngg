@@ -42,6 +42,7 @@ class DiscordInteractionControllerTest {
     private final UnknownChartReportPort unknown = mock(UnknownChartReportPort.class);
     private final AdminPasswordResetUseCase passwordReset = mock(AdminPasswordResetUseCase.class);
     private final ErrorNotificationPort errorNotification = mock(ErrorNotificationPort.class);
+    private final PerformanceDiagnostics performanceDiagnostics = mock(PerformanceDiagnostics.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
 
@@ -54,7 +55,7 @@ class DiscordInteractionControllerTest {
         controller = new DiscordInteractionController(mapper, createSong, findSongs, jackets,
                 findDetail, updateSong, admin, unknown, passwordReset,
                 new DeploymentVersion("2026.09.02.194605-60b34ec", "60b34ec", "2026-09-02T10:46:05Z"),
-                errorNotification, rawPublicKey, "guild", "admin", "https://grafana.example/",
+                errorNotification, performanceDiagnostics, rawPublicKey, "guild", "admin", "https://grafana.example/",
                 url -> new byte[]{1});
     }
 
@@ -72,15 +73,35 @@ class DiscordInteractionControllerTest {
 
     @Test
     void returnsPerformanceDashboardAndSendsSyntheticErrorNotification() throws Exception {
+        when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
+                Instant.now(), Map.of("requestRate", 0.2, "averageMs", 45.0, "p95Ms", 320.0,
+                        "p99Ms", 480.0, "errorRate", 0.0, "apiCpu", 0.04,
+                        "systemCpu", 0.12, "hikariPending", 0.0, "blockedThreads", 0.0), null));
         assertThat(content(call(command("성능대시보드"))))
                 .contains("https://grafana.example/d/popngg-production-overview")
-                .contains("from=now-6h", "var-job=popngg-api");
+                .contains("from=now-6h", "var-job=popngg-api", "0.2 req/s", "320.0 ms", "0.0%");
+
+        assertThat(content(call(command("장애진단테스트"))))
+                .contains("현재 장애 징후 없음", "순간 지표 진단");
 
         String response = content(call(command("오류알림테스트")));
         assertThat(response).contains("오류 알림 테스트를 전송했습니다", "diagnostic-");
         verify(errorNotification).notifyServerError(
                 eq("SYNTHETIC"), eq("/diagnostics/discord"), eq("DiagnosticTestException"),
                 contains("오류 알림 테스트"), eq("-"), startsWith("diagnostic-"));
+    }
+
+    @Test
+    void classifiesCriticalMetricsAndReportsPrometheusFailure() throws Exception {
+        when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
+                Instant.now(), Map.of("p95Ms", 6200.0, "errorRate", 0.08), null));
+        assertThat(content(call(command("장애진단테스트"))))
+                .contains("장애 의심", "6200.0 ms", "8.0%");
+
+        when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
+                Instant.now(), Map.of(), "Prometheus 지표를 조회하지 못했습니다."));
+        assertThat(content(call(command("성능대시보드"))))
+                .contains("운영 지표 조회 실패", "API 서비스에는 영향을 주지 않았습니다");
     }
 
     @Test
