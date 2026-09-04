@@ -1,4 +1,38 @@
 services:
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    pid: host
+    mem_limit: 128m
+    cpus: 0.10
+    restart: unless-stopped
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    mem_limit: 256m
+    cpus: 0.25
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v3.14.0
     command:
@@ -20,6 +54,9 @@ services:
       retries: 5
       start_period: 15s
     restart: unless-stopped
+    depends_on:
+      - node-exporter
+      - cadvisor
 
   grafana:
     image: grafana/grafana:13.2.0

@@ -26,7 +26,8 @@ class DiscordCommandRegistrarTest {
         try {
             new DiscordCommandRegistrar("app", "guild", "token", new ObjectMapper(),
                     HttpClient.newHttpClient(), "http://127.0.0.1:" + server.getAddress().getPort()).run(null);
-            assertThat(body.get()).contains("곡추가", "곡수정", "비밀번호초기화", "미등록목록", "배포버전");
+            assertThat(body.get()).contains("곡추가", "곡수정", "비밀번호초기화", "미등록목록", "배포버전",
+                    "성능대시보드", "오류알림테스트");
             var commands = new ObjectMapper().readTree(body.get());
             assertThat(commands.get(0).path("options").size()).isEqualTo(11);
             assertThat(commands.get(2).path("options").size()).isEqualTo(12);

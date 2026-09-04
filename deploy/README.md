@@ -62,6 +62,12 @@ future catalog edits are not compared against the historical before-state on eve
 
 ## Smoke scenarios
 
+After a successful candidate deployment, the automation creates or updates the open
+`develop` to `main` release pull request with the deployed SHA. Complete the required
+review and checks, then use **Create a merge commit**. A `main` branch ruleset rejects
+squash and rebase for release PRs; feature pull requests into `develop` may still use
+squash merging.
+
 Every smoke request logs its label, HTTP status, time to first byte, total duration,
 and curl exit code. The clear-level page is requested twice (first load and repeat);
 neither request gets a relaxed timeout. The first request is not necessarily a cache
