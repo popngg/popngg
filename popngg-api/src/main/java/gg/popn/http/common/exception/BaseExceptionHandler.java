@@ -1,5 +1,7 @@
 package gg.popn.http.common.exception;
 
+import gg.popn.http.common.config.RequestObservabilityFilter;
+import org.slf4j.MDC;
 import gg.popn.domain.common.exception.BaseException;
 import gg.popn.application.user.exception.UserProfileNotFoundException;
 import gg.popn.application.auth.exception.InvalidPasswordResetTokenException;
@@ -19,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
@@ -174,9 +177,14 @@ public class BaseExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleBaseException(HttpServletRequest request, BaseException e) {
         String traceId = traceId(request);
         if (e.getCode().getStatusCode() >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
-            log.error("BaseException occurred. traceId={}, requestURL={}, method={}",
-                    traceId, request.getRequestURL(), request.getMethod(), e);
-            notifyError(request, e, traceId);
+            putExceptionContext(request, e);
+            try {
+                log.error("BaseException occurred. traceId={}, requestURL={}, method={}",
+                        traceId, request.getRequestURL(), request.getMethod(), e);
+                notifyError(request, e, traceId);
+            } finally {
+                clearExceptionContext();
+            }
         }
         else {
             log.info("BaseException occurred. requestURL={}, method={}", request.getRequestURL(), request.getMethod(), e);
@@ -193,9 +201,14 @@ public class BaseExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUnexpected(
             HttpServletRequest request, Exception exception) {
         String traceId = traceId(request);
-        log.error("Unexpected server error. traceId={}, path={}, method={}",
-                traceId, request.getRequestURI(), request.getMethod(), exception);
-        notifyError(request, exception, traceId);
+        putExceptionContext(request, exception);
+        try {
+            log.error("Unexpected server error. traceId={}, path={}, method={}",
+                    traceId, request.getRequestURI(), request.getMethod(), exception);
+            notifyError(request, exception, traceId);
+        } finally {
+            clearExceptionContext();
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "code", "INTERNAL_SERVER_ERROR",
                 "message", "An unexpected server error occurred.",
@@ -211,7 +224,24 @@ public class BaseExceptionHandler {
                 traceId);
     }
 
+    private static void putExceptionContext(HttpServletRequest request, Exception exception) {
+        Throwable root = exception;
+        while (root.getCause() != null && root.getCause() != root) root = root.getCause();
+        Object route = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        MDC.put("uri", route == null ? "unmatched" : route.toString());
+        MDC.put("exception", exception.getClass().getSimpleName());
+        MDC.put("rootCause", root.getClass().getSimpleName());
+    }
+
+    private static void clearExceptionContext() {
+        MDC.remove("uri");
+        MDC.remove("exception");
+        MDC.remove("rootCause");
+    }
+
     private static String traceId(HttpServletRequest request) {
+        Object generated = request.getAttribute(RequestObservabilityFilter.TRACE_ID_ATTRIBUTE);
+        if (generated instanceof String value) return value;
         String supplied = request.getHeader("X-Request-Id");
         if (supplied != null && supplied.matches("[A-Za-z0-9._:-]{1,100}")) return supplied;
         return UUID.randomUUID().toString();

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import pathlib
 import unittest
 from unittest.mock import MagicMock, patch
@@ -42,6 +43,17 @@ class IncidentBotTest(unittest.TestCase):
         with patch.object(incident_bot, 'WEBHOOK', ''), patch.object(incident_bot, 'BOT_TOKEN', ''):
             with self.assertRaises(RuntimeError):
                 incident_bot.open_thread('manual', 'test', 'detail', True)
+
+    def test_summarizes_recent_structured_errors(self):
+        result = {'data': {'result': [{'values': [["1", json.dumps({
+            'message': 'Database timeout', 'uri': '/api/v1/renewals', 'traceId': 'trace-1'
+        })]]}]}}
+        with patch.object(incident_bot, 'request_json', return_value=result):
+            summary = incident_bot.recent_error_summary(1000)
+
+        self.assertIn('/api/v1/renewals', summary)
+        self.assertIn('Database timeout', summary)
+        self.assertIn('trace-1', summary)
 
 
 if __name__ == '__main__':

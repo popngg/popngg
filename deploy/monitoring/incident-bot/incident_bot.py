@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PROMETHEUS = os.getenv("PROMETHEUS_URL", "http://prometheus:9090").rstrip("/")
+LOKI = os.getenv("LOKI_URL", "http://loki:3100").rstrip("/")
 WEBHOOK = os.getenv("DISCORD_ERROR_WEBHOOK_URL", "").strip()
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "").strip()
 GRAFANA = os.getenv("GRAFANA_PUBLIC_URL", "https://grafana.popn.gg").rstrip("/")
@@ -57,6 +58,40 @@ def dashboard_url(now):
     return f"{GRAFANA}/d/popngg-production-overview/popn-gg-production-overview?from={start}&to={end}&timezone=browser&var-job=popngg-api"
 
 
+def recent_error_summary(now=None):
+    end = now or time.time()
+    params = urllib.parse.urlencode({
+        "query": '{job="popngg-api"} | json | level="ERROR"',
+        "start": str(int((end - 300) * 1_000_000_000)),
+        "end": str(int(end * 1_000_000_000)),
+        "limit": "20",
+        "direction": "backward",
+    })
+    try:
+        streams = request_json(LOKI + "/loki/api/v1/query_range?" + params).get("data", {}).get("result", [])
+        entries = []
+        for stream in streams:
+            for _, line in stream.get("values", []):
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                message = str(event.get("message", "error"))[:120].replace("`", "'")
+                route = str(event.get("uri", "unknown"))[:80]
+                trace = str(event.get("traceId", "-"))[:40]
+                item = f"- `{route}` · {message} · trace `{trace}`"
+                if item not in entries:
+                    entries.append(item)
+                if len(entries) == 5:
+                    break
+            if len(entries) == 5:
+                break
+        return "\n".join(entries) if entries else "- 최근 5분간 구조화된 ERROR 로그 없음"
+    except Exception as exception:
+        print(f"Loki error summary failed: {exception}", flush=True)
+        return "- Loki 오류 요약 조회 실패 (Grafana에서 직접 확인 필요)"
+
+
 def webhook_url(thread_id=None):
     separator = "&" if "?" in WEBHOOK else "?"
     suffix = "wait=true"
@@ -70,10 +105,11 @@ def open_thread(key, title, detail, test=False):
         raise RuntimeError("Discord webhook or bot token is not configured")
     now = time.time()
     prefix = "🧪 장애 알림 스레드 테스트" if test else "🔴 장애 감지"
+    summary = "- 테스트 요청에서는 실제 로그를 첨부하지 않음" if test else recent_error_summary(now)
     message = request_json(webhook_url(), {
         "username": "popngg incident monitor",
         "allowed_mentions": {"parse": []},
-        "content": f"**{prefix}: {title}**\n{detail}\n[Grafana에서 확인]({dashboard_url(now)})",
+        "content": f"**{prefix}: {title}**\n{detail}\n\n**최근 5분 ERROR 요약**\n{summary}\n[Grafana에서 확인]({dashboard_url(now)})",
     })
     channel_id, message_id = str(message["channel_id"]), str(message["id"])
     thread = request_json(

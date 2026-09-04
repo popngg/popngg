@@ -30,6 +30,10 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://popn.gg,https://www.popn.gg}
 
+popngg:
+  monitoring:
+    slow-request-millis: ${SLOW_REQUEST_MILLIS:1000}
+
 management:
   health:
     redis:
