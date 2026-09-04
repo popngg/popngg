@@ -64,6 +64,8 @@ public class DiscordInteractionController {
     private final AdminPasswordResetUseCase adminPasswordReset;
     private final DeploymentVersion deploymentVersion;
     private final ErrorNotificationPort errorNotification;
+    private final PerformanceDiagnostics performanceDiagnostics;
+    private final IncidentThreadTestClient incidentThreadTestClient;
     private final String grafanaUrl;
     private final JacketDownloader jacketDownloader;
     private final byte[] publicKey;
@@ -83,13 +85,16 @@ public class DiscordInteractionController {
             AdminPasswordResetUseCase adminPasswordReset,
             DeploymentVersion deploymentVersion,
             ErrorNotificationPort errorNotification,
+            PerformanceDiagnostics performanceDiagnostics,
+            IncidentThreadTestClient incidentThreadTestClient,
             @Value("${popngg.discord.public-key:}") String publicKey,
             @Value("${popngg.discord.guild-id:}") String guildId,
             @Value("${popngg.discord.admin-role-id:}") String adminRoleId,
             @Value("${popngg.monitoring.grafana-url:https://grafana.popn.gg}") String grafanaUrl) {
         this(mapper, createSong, findSongs, jacketStorage, findSongDetail, updateSong,
                 adminNotification, unknownChartReport, adminPasswordReset, deploymentVersion,
-                errorNotification, publicKey, guildId, adminRoleId, grafanaUrl,
+                errorNotification, performanceDiagnostics, incidentThreadTestClient,
+                publicKey, guildId, adminRoleId, grafanaUrl,
                 DiscordInteractionController::downloadPng);
     }
 
@@ -100,6 +105,8 @@ public class DiscordInteractionController {
             AdminPasswordResetUseCase adminPasswordReset,
             DeploymentVersion deploymentVersion,
             ErrorNotificationPort errorNotification,
+            PerformanceDiagnostics performanceDiagnostics,
+            IncidentThreadTestClient incidentThreadTestClient,
             String publicKey, String guildId, String adminRoleId, String grafanaUrl,
             JacketDownloader jacketDownloader) {
         this.mapper = mapper;
@@ -113,6 +120,8 @@ public class DiscordInteractionController {
         this.adminPasswordReset = adminPasswordReset;
         this.deploymentVersion = deploymentVersion;
         this.errorNotification = errorNotification;
+        this.performanceDiagnostics = performanceDiagnostics;
+        this.incidentThreadTestClient = incidentThreadTestClient;
         this.publicKey = publicKey.isBlank() ? new byte[0] : HexFormat.of().parseHex(publicKey.strip());
         this.guildId = guildId;
         this.adminRoleId = adminRoleId;
@@ -134,18 +143,29 @@ public class DiscordInteractionController {
             return ResponseEntity.ok(ephemeral(deploymentVersion.message()));
         }
         if (type == 2 && "성능대시보드".equals(root.path("data").path("name").asText())) {
-            String dashboard = grafanaUrl + "/d/popngg-production-overview/popn-gg-production-overview"
-                    + "?from=now-6h&to=now&timezone=browser&var-job=popngg-api&refresh=30s";
-            return ResponseEntity.ok(ephemeral("**현재 운영 성능 대시보드**\n[Grafana에서 열기](" + dashboard + ")"));
+            PerformanceDiagnostics.Snapshot snapshot = performanceDiagnostics.snapshot();
+            return ResponseEntity.ok(ephemeral(performanceMessage(snapshot, false)));
         }
-        if (type == 2 && "오류알림테스트".equals(root.path("data").path("name").asText())) {
+        if (type == 2 && "장애상태확인".equals(root.path("data").path("name").asText())) {
+            PerformanceDiagnostics.Snapshot snapshot = performanceDiagnostics.snapshot();
+            return ResponseEntity.ok(ephemeral(performanceMessage(snapshot, true)));
+        }
+        if (type == 2 && "장애알림테스트".equals(root.path("data").path("name").asText())) {
+            boolean accepted = incidentThreadTestClient.requestTest();
+            String result = accepted
+                    ? "**장애 알림 스레드 테스트를 요청했습니다.**\nerror-log 채널에 테스트 부모 메시지와 스레드가 생성되는지 확인해 주세요."
+                    : "**장애 알림 테스트 요청에 실패했습니다.**\nincident-bot 상태와 Discord Bot 권한을 확인해 주세요.";
+            return ResponseEntity.ok(ephemeral(result));
+        }
+        if (type == 2 && "에러알림테스트".equals(root.path("data").path("name").asText())) {
             String traceId = "diagnostic-" + UUID.randomUUID();
             log.warn("Synthetic Discord error notification test. traceId={}, requestedBy={}",
                     traceId, actorId(root));
             errorNotification.notifyServerError("SYNTHETIC", "/diagnostics/discord",
                     "DiagnosticTestException", "관리자 요청으로 생성된 오류 알림 테스트입니다.",
                     "-", traceId);
-            return ResponseEntity.ok(ephemeral("오류 알림 테스트를 전송했습니다.\n추적 ID: `" + traceId
+            return ResponseEntity.ok(ephemeral("**API 에러 알림 테스트**를 error-log Webhook으로 전송했습니다.\n"
+                    + "이 테스트는 장애 감지나 스레드 생성을 검증하지 않습니다.\n추적 ID: `" + traceId
                     + "`\n같은 테스트 알림은 5분 동안 중복 억제됩니다."));
         }
         if (type == 2 && "비밀번호초기화".equals(root.path("data").path("name").asText())) {
@@ -761,6 +781,51 @@ public class DiscordInteractionController {
         String stripped = value.strip();
         while (stripped.endsWith("/")) stripped = stripped.substring(0, stripped.length() - 1);
         return stripped;
+    }
+
+    private String performanceMessage(PerformanceDiagnostics.Snapshot snapshot, boolean diagnose) {
+        String dashboard = grafanaUrl + "/d/popngg-production-overview/popn-gg-production-overview"
+                + "?from=now-6h&to=now&timezone=browser&var-job=popngg-api&refresh=30s";
+        if (!snapshot.available()) {
+            return "**운영 지표 조회 실패**\n" + snapshot.error()
+                    + " API 서비스에는 영향을 주지 않았습니다.\n[Grafana에서 직접 확인](" + dashboard + ")";
+        }
+        String status = diagnose ? diagnosticStatus(snapshot) : "현재 성능 요약";
+        return "**" + status + "**\n"
+                + "요청률: `" + number(snapshot.value("requestRate"), " req/s") + "`\n"
+                + "평균 / P95 / P99: `" + number(snapshot.value("averageMs"), " ms") + " / "
+                + number(snapshot.value("p95Ms"), " ms") + " / "
+                + number(snapshot.value("p99Ms"), " ms") + "`\n"
+                + "5xx: `" + percent(snapshot.value("errorRate")) + "`\n"
+                + "API / 시스템 CPU: `" + percent(snapshot.value("apiCpu")) + " / "
+                + percent(snapshot.value("systemCpu")) + "`\n"
+                + "Hikari 대기 / JVM blocked: `" + number(snapshot.value("hikariPending"), "") + " / "
+                + number(snapshot.value("blockedThreads"), "") + "`\n\n"
+                + (diagnose ? "※ 읽기 전용 순간 지표 판정입니다. 장애 알림이나 Discord 스레드는 생성하지 않으며, 지속 시간은 Grafana에서 확인해야 합니다.\n" : "")
+                + "[Grafana 상세 대시보드](" + dashboard + ")";
+    }
+
+    private static String diagnosticStatus(PerformanceDiagnostics.Snapshot snapshot) {
+        if (atLeast(snapshot, "errorRate", 0.05) || atLeast(snapshot, "p95Ms", 5000)
+                || atLeast(snapshot, "hikariPending", 1)) return "🔴 장애 의심";
+        if (atLeast(snapshot, "p95Ms", 1000) || atLeast(snapshot, "apiCpu", 0.85)
+                || atLeast(snapshot, "systemCpu", 0.85) || atLeast(snapshot, "blockedThreads", 1)) {
+            return "🟡 성능 저하 의심";
+        }
+        return "🟢 현재 장애 징후 없음";
+    }
+
+    private static boolean atLeast(PerformanceDiagnostics.Snapshot snapshot, String name, double threshold) {
+        Double value = snapshot.value(name);
+        return value != null && value >= threshold;
+    }
+
+    private static String number(Double value, String unit) {
+        return value == null ? "-" : "%.1f%s".formatted(value, unit);
+    }
+
+    private static String percent(Double value) {
+        return value == null ? "-" : "%.1f%%".formatted(value * 100);
     }
 
     private static String actorId(JsonNode root) {

@@ -1,4 +1,31 @@
 services:
+  api:
+    environment:
+      INCIDENT_BOT_URL: http://incident-bot:8080
+
+  incident-bot:
+    build:
+      context: ./monitoring/incident-bot
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+      DISCORD_ERROR_WEBHOOK_URL: ${DISCORD_ERROR_WEBHOOK_URL:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      GRAFANA_PUBLIC_URL: ${GRAFANA_PUBLIC_URL:-https://grafana.popn.gg}
+    mem_limit: 96m
+    cpus: 0.10
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   node-exporter:
     image: prom/node-exporter:v1.12.1
     command:

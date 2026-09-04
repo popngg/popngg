@@ -193,6 +193,61 @@
       "description": "A drop to zero marks an API restart or deployment and allows direct comparison with CPU and latency spikes.",
       "gridPos": {"h": 8, "w": 8, "x": 16, "y": 74}, "fieldConfig": {"defaults": {"unit": "s", "min": 0}},
       "targets": [{"refId": "A", "expr": "time() - process_start_time_seconds{job=\"$job\"}", "legendFormat": "API uptime"}]
+    },
+    {
+      "type": "logs", "title": "Application logs", "id": 30,
+      "description": "Application log stream collected by Alloy and stored in Loki.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 12, "w": 16, "x": 0, "y": 82},
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
+      "targets": [{"refId": "A", "expr": "{job=\"popngg-api\", environment=\"production\"} | json", "queryType": "range"}]
+    },
+    {
+      "type": "logs", "title": "Application warnings and errors", "id": 31,
+      "description": "WARN and ERROR application events collected by Alloy and stored in Loki.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 12, "w": 8, "x": 16, "y": 82},
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
+      "targets": [{"refId": "A", "expr": "{job=\"popngg-api\", environment=\"production\", detected_level=~\"warn|error\"} | json", "queryType": "range"}]
+    },
+    {"type": "row", "title": "Structured Loki diagnostics", "id": 32, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 94}, "collapsed": false, "panels": []},
+    {
+      "type": "timeseries", "title": "WARN / ERROR volume", "id": 33,
+      "description": "Structured application events grouped by severity.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 95},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}},
+      "targets": [{"refId": "A", "expr": "sum by (level) (count_over_time({job=\"popngg-api\", environment=\"production\", level=~\"WARN|ERROR\"}[$__interval]))", "legendFormat": "{{level}}", "queryType": "range"}]
+    },
+    {
+      "type": "barchart", "title": "Top exception types", "id": 34,
+      "description": "Top structured exception and root-cause types in the selected range.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 95},
+      "targets": [{"refId": "A", "expr": "topk(10, sum by (exception, rootCause) (count_over_time({job=\"popngg-api\", environment=\"production\", level=\"ERROR\"} | json | exception!=\"\" [$__range])))", "legendFormat": "{{exception}} / {{rootCause}}", "queryType": "instant"}]
+    },
+    {
+      "type": "barchart", "title": "5xx logs by route", "id": 35,
+      "description": "Uses URI templates rather than raw URLs to avoid user-specific cardinality.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 95},
+      "targets": [{"refId": "A", "expr": "topk(10, sum by (uri) (count_over_time({job=\"popngg-api\", environment=\"production\"} | json | status=~\"5..\" [$__range])))", "legendFormat": "{{uri}}", "queryType": "instant"}]
+    },
+    {
+      "type": "logs", "title": "Slow requests (>= 1s)", "id": 36,
+      "description": "Slow request warnings with route, duration, trace ID, status and release fields.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 103},
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
+      "targets": [{"refId": "A", "expr": "{job=\"popngg-api\", environment=\"production\"} | json | durationMs >= 1000", "queryType": "range"}]
+    },
+    {
+      "type": "logs", "title": "Errors with trace and release", "id": 37,
+      "description": "Correlate an error with its trace ID and deployed release without storing either as a Loki index label.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 103},
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
+      "targets": [{"refId": "A", "expr": "{job=\"popngg-api\", environment=\"production\", level=\"ERROR\"} | json", "queryType": "range"}]
     }
   ],
   "refresh": "30s",
@@ -203,10 +258,10 @@
       {"name": "job", "label": "Prometheus job", "type": "query", "datasource": {"type": "prometheus", "uid": "prometheus"}, "query": {"query": "label_values(up, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "current": {"text": "popngg-api", "value": "popngg-api"}, "refresh": 1}
     ]
   },
-  "time": {"from": "now-6h", "to": "now"},
+  "time": {"from": "now-24h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
   "title": "POPN.GG Production Overview",
   "uid": "popngg-production-overview",
-  "version": 1
+  "version": 2
 }

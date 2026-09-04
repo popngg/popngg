@@ -4,12 +4,37 @@ loki.source.file "popngg_api" {
 		job         = "popngg-api",
 		environment = "production",
 	}]
-	forward_to = [loki.write.local.receiver]
+	forward_to = [loki.process.popngg_api.receiver]
 
 	file_match {
 		enabled     = true
 		sync_period = "10s"
 	}
+}
+
+loki.process "popngg_api" {
+	stage.json {
+		expressions = {
+			level      = "level",
+			logger     = "logger_name",
+			trace_id   = "traceId",
+			method     = "method",
+			uri        = "uri",
+			status     = "status",
+			duration_ms = "durationMs",
+			release    = "release",
+			exception  = "exception",
+			root_cause = "rootCause",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level = "",
+		}
+	}
+
+	forward_to = [loki.write.local.receiver]
 }
 
 loki.write "local" {
