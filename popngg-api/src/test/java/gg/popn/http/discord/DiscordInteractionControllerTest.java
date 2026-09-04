@@ -43,6 +43,7 @@ class DiscordInteractionControllerTest {
     private final AdminPasswordResetUseCase passwordReset = mock(AdminPasswordResetUseCase.class);
     private final ErrorNotificationPort errorNotification = mock(ErrorNotificationPort.class);
     private final PerformanceDiagnostics performanceDiagnostics = mock(PerformanceDiagnostics.class);
+    private final IncidentThreadTestClient incidentThreadTestClient = mock(IncidentThreadTestClient.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
 
@@ -55,7 +56,8 @@ class DiscordInteractionControllerTest {
         controller = new DiscordInteractionController(mapper, createSong, findSongs, jackets,
                 findDetail, updateSong, admin, unknown, passwordReset,
                 new DeploymentVersion("2026.09.02.194605-60b34ec", "60b34ec", "2026-09-02T10:46:05Z"),
-                errorNotification, performanceDiagnostics, rawPublicKey, "guild", "admin", "https://grafana.example/",
+                errorNotification, performanceDiagnostics, incidentThreadTestClient,
+                rawPublicKey, "guild", "admin", "https://grafana.example/",
                 url -> new byte[]{1});
     }
 
@@ -102,6 +104,18 @@ class DiscordInteractionControllerTest {
                 Instant.now(), Map.of(), "Prometheus 지표를 조회하지 못했습니다."));
         assertThat(content(call(command("성능대시보드"))))
                 .contains("운영 지표 조회 실패", "API 서비스에는 영향을 주지 않았습니다");
+    }
+
+    @Test
+    void requestsIncidentThreadTestWithoutCausingAnOutage() throws Exception {
+        when(incidentThreadTestClient.requestTest()).thenReturn(true);
+        assertThat(content(call(command("장애알림테스트"))))
+                .contains("장애 알림 스레드 테스트", "error-log");
+        verify(incidentThreadTestClient).requestTest();
+
+        when(incidentThreadTestClient.requestTest()).thenReturn(false);
+        assertThat(content(call(command("장애알림테스트"))))
+                .contains("요청에 실패", "incident-bot", "Discord Bot 권한");
     }
 
     @Test

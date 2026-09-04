@@ -65,6 +65,7 @@ public class DiscordInteractionController {
     private final DeploymentVersion deploymentVersion;
     private final ErrorNotificationPort errorNotification;
     private final PerformanceDiagnostics performanceDiagnostics;
+    private final IncidentThreadTestClient incidentThreadTestClient;
     private final String grafanaUrl;
     private final JacketDownloader jacketDownloader;
     private final byte[] publicKey;
@@ -85,13 +86,15 @@ public class DiscordInteractionController {
             DeploymentVersion deploymentVersion,
             ErrorNotificationPort errorNotification,
             PerformanceDiagnostics performanceDiagnostics,
+            IncidentThreadTestClient incidentThreadTestClient,
             @Value("${popngg.discord.public-key:}") String publicKey,
             @Value("${popngg.discord.guild-id:}") String guildId,
             @Value("${popngg.discord.admin-role-id:}") String adminRoleId,
             @Value("${popngg.monitoring.grafana-url:https://grafana.popn.gg}") String grafanaUrl) {
         this(mapper, createSong, findSongs, jacketStorage, findSongDetail, updateSong,
                 adminNotification, unknownChartReport, adminPasswordReset, deploymentVersion,
-                errorNotification, performanceDiagnostics, publicKey, guildId, adminRoleId, grafanaUrl,
+                errorNotification, performanceDiagnostics, incidentThreadTestClient,
+                publicKey, guildId, adminRoleId, grafanaUrl,
                 DiscordInteractionController::downloadPng);
     }
 
@@ -103,6 +106,7 @@ public class DiscordInteractionController {
             DeploymentVersion deploymentVersion,
             ErrorNotificationPort errorNotification,
             PerformanceDiagnostics performanceDiagnostics,
+            IncidentThreadTestClient incidentThreadTestClient,
             String publicKey, String guildId, String adminRoleId, String grafanaUrl,
             JacketDownloader jacketDownloader) {
         this.mapper = mapper;
@@ -117,6 +121,7 @@ public class DiscordInteractionController {
         this.deploymentVersion = deploymentVersion;
         this.errorNotification = errorNotification;
         this.performanceDiagnostics = performanceDiagnostics;
+        this.incidentThreadTestClient = incidentThreadTestClient;
         this.publicKey = publicKey.isBlank() ? new byte[0] : HexFormat.of().parseHex(publicKey.strip());
         this.guildId = guildId;
         this.adminRoleId = adminRoleId;
@@ -144,6 +149,13 @@ public class DiscordInteractionController {
         if (type == 2 && "장애상태확인".equals(root.path("data").path("name").asText())) {
             PerformanceDiagnostics.Snapshot snapshot = performanceDiagnostics.snapshot();
             return ResponseEntity.ok(ephemeral(performanceMessage(snapshot, true)));
+        }
+        if (type == 2 && "장애알림테스트".equals(root.path("data").path("name").asText())) {
+            boolean accepted = incidentThreadTestClient.requestTest();
+            String result = accepted
+                    ? "**장애 알림 스레드 테스트를 요청했습니다.**\nerror-log 채널에 테스트 부모 메시지와 스레드가 생성되는지 확인해 주세요."
+                    : "**장애 알림 테스트 요청에 실패했습니다.**\nincident-bot 상태와 Discord Bot 권한을 확인해 주세요.";
+            return ResponseEntity.ok(ephemeral(result));
         }
         if (type == 2 && "에러알림테스트".equals(root.path("data").path("name").asText())) {
             String traceId = "diagnostic-" + UUID.randomUUID();

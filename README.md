@@ -81,6 +81,9 @@ They can also use `/성능대시보드` for a live Prometheus summary, `/장애�
 read-only threshold-based health classification, and `/에러알림테스트` to verify the Discord
 API-error webhook and its trace-linked Loki view. Automatic outage alerts and Discord
 incident threads are not created by these commands.
+The monitoring Compose stack runs an independent incident-bot that creates and resolves
+Discord threads when Prometheus thresholds remain unhealthy. Administrators can verify
+that delivery path safely with `/장애알림테스트`.
 The private reply includes the release version, full Git commit, image build time, and
 server start time (KST). Existing Discord guild, role, and signature checks still apply.
 
