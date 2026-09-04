@@ -58,7 +58,8 @@ if [[ -n "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
   if "${monitoring[@]}" run --rm --no-deps loki-init \
     && "${monitoring[@]}" up -d --no-deps loki \
     && wait_for_loki \
-    && "${monitoring[@]}" up -d --wait prometheus alloy grafana; then
+    && "${monitoring[@]}" build incident-bot \
+    && "${monitoring[@]}" up -d --wait prometheus alloy grafana incident-bot; then
     monitoring_status=healthy
   else
     monitoring_status=failed

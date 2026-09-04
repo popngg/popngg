@@ -15,6 +15,19 @@ may use the commands.
 - `/미등록목록` shows recently unmatched renewal rows. Selecting a row opens the same
   creation form with song, genre, artist, and UPPER prefilled. Its compact level field is
   prefilled as `L:[], N:[], H:[], EX:[]`; put a number inside a bracket or leave it empty.
+- `/성능대시보드` queries Prometheus and privately reports the current request rate,
+  average/P95/P99 latency, 5xx ratio, API/system CPU, Hikari pending connections, and
+  blocked JVM threads. It also includes the full Grafana dashboard link.
+- `/장애상태확인` safely classifies the same current snapshot as normal, degraded, or
+  suspected outage. It is a read-only check: it never raises a real exception, consumes
+  CPU, stops a service, sends an incident alert, or creates a Discord thread. Sustained
+  impact must be confirmed in Grafana.
+- `/장애알림테스트` asks the independent incident-bot to create a synthetic parent message
+  and thread in `error-log`. It causes no production load or outage and verifies the same
+  Discord Webhook and Bot API path used by automatic incident alerts.
+- `/에러알림테스트` verifies delivery of an API exception alert to the error webhook without returning an actual
+  HTTP 500. It writes a synthetic trace ID to Loki so the notification's log link can be
+  checked end to end. It does not test automatic outage detection or thread creation.
 
 Chart input uses `N:30,H:42,EX:48`; prefix it with `UPPER` for Upper charts.
 Creation and modification require a preview confirmation. Drafts expire after 15 minutes.
@@ -26,7 +39,18 @@ errors use `DISCORD_ERROR_WEBHOOK_URL`; identical method, path, and exception co
 are suppressed for five minutes. Request bodies, cookies, authorization values, and query
 strings are never included in error notifications.
 
-Command responses are public in the Discord channel. Unknown-song reports only display
+The independent incident-bot polls Prometheus every 30 seconds. It opens an `error-log`
+thread only after an unhealthy value remains above its configured duration, and posts a
+recovery message to the same thread. Default rules are API down for two minutes, 5xx above
+5% for three minutes, P95 above five seconds for five minutes, Hikari pending for two
+minutes, and system CPU above 85% for ten minutes. Because it runs outside the API
+container, it can report a complete API outage.
+
+Thread creation requires the configured Discord bot to have `Send Messages`, `Create
+Public Threads`, and `Send Messages in Threads` permissions in the webhook channel.
+
+Diagnostic and sensitive administrator command responses are private to the caller.
+Other command responses can be public in the Discord channel. Unknown-song reports only display
 metadata available from the renewal page; they do not claim a difficulty or UPPER state.
 GitHub PR, merge, CI, and deployment notifications require an Actions repository secret
 named `DISCORD_ADMIN_WEBHOOK_URL` containing the administrator-channel webhook URL.
