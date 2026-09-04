@@ -18,12 +18,13 @@ may use the commands.
 - `/성능대시보드` queries Prometheus and privately reports the current request rate,
   average/P95/P99 latency, 5xx ratio, API/system CPU, Hikari pending connections, and
   blocked JVM threads. It also includes the full Grafana dashboard link.
-- `/장애진단테스트` safely classifies the same current snapshot as normal, degraded, or
-  suspected outage. It never raises a real exception, consumes CPU, or stops a service;
-  the reply reminds operators that sustained impact must be confirmed in Grafana.
-- `/오류알림테스트` verifies delivery to the error webhook without returning an actual
+- `/장애상태확인` safely classifies the same current snapshot as normal, degraded, or
+  suspected outage. It is a read-only check: it never raises a real exception, consumes
+  CPU, stops a service, sends an incident alert, or creates a Discord thread. Sustained
+  impact must be confirmed in Grafana.
+- `/에러알림테스트` verifies delivery of an API exception alert to the error webhook without returning an actual
   HTTP 500. It writes a synthetic trace ID to Loki so the notification's log link can be
-  checked end to end.
+  checked end to end. It does not test automatic outage detection or thread creation.
 
 Chart input uses `N:30,H:42,EX:48`; prefix it with `UPPER` for Upper charts.
 Creation and modification require a preview confirmation. Drafts expire after 15 minutes.
@@ -34,6 +35,10 @@ Catalog and administrator actions use `DISCORD_ADMIN_WEBHOOK_URL`. Unexpected AP
 errors use `DISCORD_ERROR_WEBHOOK_URL`; identical method, path, and exception combinations
 are suppressed for five minutes. Request bodies, cookies, authorization values, and query
 strings are never included in error notifications.
+
+There is currently no automatic Prometheus threshold monitor or Discord incident-thread
+creator. Those are separate from API exception notifications and the read-only diagnostic
+commands above.
 
 Diagnostic and sensitive administrator command responses are private to the caller.
 Other command responses can be public in the Discord channel. Unknown-song reports only display

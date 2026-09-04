@@ -81,11 +81,11 @@ class DiscordInteractionControllerTest {
                 .contains("https://grafana.example/d/popngg-production-overview")
                 .contains("from=now-6h", "var-job=popngg-api", "0.2 req/s", "320.0 ms", "0.0%");
 
-        assertThat(content(call(command("장애진단테스트"))))
-                .contains("현재 장애 징후 없음", "순간 지표 진단");
+        assertThat(content(call(command("장애상태확인"))))
+                .contains("현재 장애 징후 없음", "읽기 전용 순간 지표 판정", "스레드는 생성하지 않으며");
 
-        String response = content(call(command("오류알림테스트")));
-        assertThat(response).contains("오류 알림 테스트를 전송했습니다", "diagnostic-");
+        String response = content(call(command("에러알림테스트")));
+        assertThat(response).contains("API 에러 알림 테스트", "error-log Webhook", "스레드 생성을 검증하지 않습니다", "diagnostic-");
         verify(errorNotification).notifyServerError(
                 eq("SYNTHETIC"), eq("/diagnostics/discord"), eq("DiagnosticTestException"),
                 contains("오류 알림 테스트"), eq("-"), startsWith("diagnostic-"));
@@ -95,7 +95,7 @@ class DiscordInteractionControllerTest {
     void classifiesCriticalMetricsAndReportsPrometheusFailure() throws Exception {
         when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
                 Instant.now(), Map.of("p95Ms", 6200.0, "errorRate", 0.08), null));
-        assertThat(content(call(command("장애진단테스트"))))
+        assertThat(content(call(command("장애상태확인"))))
                 .contains("장애 의심", "6200.0 ms", "8.0%");
 
         when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(

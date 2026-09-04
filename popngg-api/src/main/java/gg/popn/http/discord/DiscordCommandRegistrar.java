@@ -68,8 +68,8 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                     Map.of("name", "미등록목록", "description", "최근 미등록 곡과 채보 조회", "type", 1),
                     Map.of("name", "배포버전", "description", "현재 실행 중인 API 버전과 커밋 확인", "type", 1),
                     Map.of("name", "성능대시보드", "description", "현재 운영 성능 Grafana 대시보드 열기", "type", 1),
-                    Map.of("name", "장애진단테스트", "description", "현재 운영 지표로 장애 여부 안전 진단", "type", 1),
-                    Map.of("name", "오류알림테스트", "description", "관리자 전용 Discord 오류 알림 전송 테스트", "type", 1)));
+                    Map.of("name", "장애상태확인", "description", "현재 지표 판정만 확인하며 알림은 전송하지 않음", "type", 1),
+                    Map.of("name", "에러알림테스트", "description", "API 예외용 error-log Webhook 전달 테스트", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")
                                 .formatted(applicationId, guildId)))

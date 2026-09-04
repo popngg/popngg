@@ -141,18 +141,19 @@ public class DiscordInteractionController {
             PerformanceDiagnostics.Snapshot snapshot = performanceDiagnostics.snapshot();
             return ResponseEntity.ok(ephemeral(performanceMessage(snapshot, false)));
         }
-        if (type == 2 && "장애진단테스트".equals(root.path("data").path("name").asText())) {
+        if (type == 2 && "장애상태확인".equals(root.path("data").path("name").asText())) {
             PerformanceDiagnostics.Snapshot snapshot = performanceDiagnostics.snapshot();
             return ResponseEntity.ok(ephemeral(performanceMessage(snapshot, true)));
         }
-        if (type == 2 && "오류알림테스트".equals(root.path("data").path("name").asText())) {
+        if (type == 2 && "에러알림테스트".equals(root.path("data").path("name").asText())) {
             String traceId = "diagnostic-" + UUID.randomUUID();
             log.warn("Synthetic Discord error notification test. traceId={}, requestedBy={}",
                     traceId, actorId(root));
             errorNotification.notifyServerError("SYNTHETIC", "/diagnostics/discord",
                     "DiagnosticTestException", "관리자 요청으로 생성된 오류 알림 테스트입니다.",
                     "-", traceId);
-            return ResponseEntity.ok(ephemeral("오류 알림 테스트를 전송했습니다.\n추적 ID: `" + traceId
+            return ResponseEntity.ok(ephemeral("**API 에러 알림 테스트**를 error-log Webhook으로 전송했습니다.\n"
+                    + "이 테스트는 장애 감지나 스레드 생성을 검증하지 않습니다.\n추적 ID: `" + traceId
                     + "`\n같은 테스트 알림은 5분 동안 중복 억제됩니다."));
         }
         if (type == 2 && "비밀번호초기화".equals(root.path("data").path("name").asText())) {
@@ -788,7 +789,7 @@ public class DiscordInteractionController {
                 + percent(snapshot.value("systemCpu")) + "`\n"
                 + "Hikari 대기 / JVM blocked: `" + number(snapshot.value("hikariPending"), "") + " / "
                 + number(snapshot.value("blockedThreads"), "") + "`\n\n"
-                + (diagnose ? "※ 순간 지표 진단이며 지속 시간은 Grafana에서 확인해야 합니다.\n" : "")
+                + (diagnose ? "※ 읽기 전용 순간 지표 판정입니다. 장애 알림이나 Discord 스레드는 생성하지 않으며, 지속 시간은 Grafana에서 확인해야 합니다.\n" : "")
                 + "[Grafana 상세 대시보드](" + dashboard + ")";
     }
 
