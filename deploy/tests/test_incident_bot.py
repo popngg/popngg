@@ -1,7 +1,7 @@
 import importlib.util
 import pathlib
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
 MODULE_PATH = pathlib.Path(__file__).parents[1] / 'monitoring' / 'incident-bot' / 'incident_bot.py'
@@ -11,6 +11,16 @@ SPEC.loader.exec_module(incident_bot)
 
 
 class IncidentBotTest(unittest.TestCase):
+    def test_request_json_identifies_client_to_discord(self):
+        response = MagicMock()
+        response.read.return_value = b'{}'
+        response.__enter__.return_value = response
+        with patch.object(incident_bot.urllib.request, 'urlopen', return_value=response) as urlopen:
+            incident_bot.request_json('https://discord.com/api/v10/users/@me')
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(incident_bot.USER_AGENT, request.get_header('User-agent'))
+
     def test_creates_parent_thread_and_initial_reply(self):
         responses = [
             {'channel_id': 'channel-1', 'id': 'message-1'},
