@@ -1,6 +1,7 @@
 package gg.popn.infra.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gg.popn.application.playdata.dto.query.FindUserRecordsQuery;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.infra.db.adapter.PlaydataQueryJdbcAdapter;
 import java.time.Duration;
@@ -85,6 +86,25 @@ class CachedPlaydataQueryAdapterTest {
         assertThat(disabled.findPopclass("0000")).isEqualTo(actual);
         disabled.refresh("0000");
         org.mockito.Mockito.verifyNoInteractions(redis);
+    }
+
+    @Test
+    void delegatesQueriesThatAreNotCached() {
+        var recordsQuery = mock(FindUserRecordsQuery.class);
+
+        adapter.findUserPlaydata("0000");
+        adapter.count("0000", "LEVEL", "MEDAL");
+        adapter.findUserRecords("0000", recordsQuery);
+        adapter.findProgress("0000", "LEVEL");
+        adapter.findLegacyPopclassTargets("0000");
+        adapter.findChartRankings(1L, 10);
+
+        verify(delegate).findUserPlaydata("0000");
+        verify(delegate).count("0000", "LEVEL", "MEDAL");
+        verify(delegate).findUserRecords("0000", recordsQuery);
+        verify(delegate).findProgress("0000", "LEVEL");
+        verify(delegate).findLegacyPopclassTargets("0000");
+        verify(delegate).findChartRankings(1L, 10);
     }
 
     private static PlaydataQueryResults.Popclass result(int value) {
