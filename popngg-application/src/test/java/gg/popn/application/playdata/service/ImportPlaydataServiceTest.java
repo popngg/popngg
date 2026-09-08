@@ -4,6 +4,7 @@ import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
+import gg.popn.application.playdata.port.out.PopclassCachePort;
 import gg.popn.application.playdata.port.out.UnknownChartNotifier;
 import gg.popn.application.playdata.port.out.UnknownChartReportPort;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,9 @@ class ImportPlaydataServiceTest {
     private final PlaydataImportPort port = mock(PlaydataImportPort.class);
     private final UnknownChartNotifier notifier = mock(UnknownChartNotifier.class);
     private final UnknownChartReportPort reportPort = mock(UnknownChartReportPort.class);
-    private final ImportPlaydataService service = new ImportPlaydataService(port, notifier, reportPort);
+    private final PopclassCachePort cachePort = mock(PopclassCachePort.class);
+    private final ImportPlaydataService service =
+            new ImportPlaydataService(port, notifier, reportPort, cachePort);
 
     @Test
     void validatesAndDelegatesImport() {
@@ -31,6 +34,7 @@ class ImportPlaydataServiceTest {
 
         assertThat(service.importPlaydata(command)).isEqualTo(expected);
         verify(port).execute(command);
+        verify(cachePort).refresh(command.poptomoId());
     }
 
     @Test

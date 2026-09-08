@@ -5,6 +5,7 @@ import gg.popn.application.playdata.dto.result.ImportPlaydataResult;
 import gg.popn.application.playdata.exception.DuplicatePlaydataRowIdentityException;
 import gg.popn.application.playdata.port.in.ImportPlaydataUseCase;
 import gg.popn.application.playdata.port.out.PlaydataImportPort;
+import gg.popn.application.playdata.port.out.PopclassCachePort;
 import gg.popn.application.playdata.port.out.UnknownChartNotifier;
 import gg.popn.application.playdata.port.out.UnknownChartReportPort;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ImportPlaydataService implements ImportPlaydataUseCase {
     private final PlaydataImportPort importPort;
     private final UnknownChartNotifier unknownChartNotifier;
     private final UnknownChartReportPort unknownChartReportPort;
+    private final PopclassCachePort popclassCachePort;
 
     @Override
     public ImportPlaydataResult importPlaydata(ImportPlaydataCommand command) {
@@ -40,6 +42,7 @@ public class ImportPlaydataService implements ImportPlaydataUseCase {
             }
         }
         ImportPlaydataResult result = importPort.execute(command);
+        popclassCachePort.refresh(command.poptomoId());
         List<ImportPlaydataCommand.Row> unknownRows = result.unmatched().stream()
                 .filter(row -> "CHART_NOT_FOUND".equals(row.reason()))
                 .map(row -> command.rows().get(row.rowIndex()))
