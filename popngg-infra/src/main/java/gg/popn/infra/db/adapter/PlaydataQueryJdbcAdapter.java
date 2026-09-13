@@ -340,6 +340,47 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
     }
 
     @Override
+    public PlaydataQueryResults.ChartRankingsPage findChartRankings(
+            String songHash, int difficulty, String axis, int page, int size) {
+        var charts = jdbc.query("""
+                SELECT c.chart_id FROM charts c JOIN songs s ON s.song_id = c.song_id
+                 WHERE s.song_hash = ? AND c.difficulty_code = ? AND c.is_deleted = FALSE
+                """, (rs, rowNum) -> rs.getLong("chart_id"), songHash, difficulty);
+        if (charts.isEmpty()) {
+            throw new gg.popn.application.playdata.exception.ChartNotFoundException();
+        }
+        long chartId = charts.getFirst();
+        String order = switch (axis) {
+            case "SCORE" -> "p.all_time_score DESC";
+            case "MEDAL" -> "COALESCE(p.medal_code, 13) ASC";
+            default -> throw new IllegalArgumentException("Unsupported ranking axis.");
+        };
+        String from = """
+                 FROM playdata p
+                 JOIN users u ON u.user_id = p.user_id
+                 JOIN user_profiles up ON up.user_id = p.user_id
+                 JOIN charts c ON c.chart_id = p.chart_id
+                WHERE p.chart_id = ? AND up.is_hidden = FALSE
+                """;
+        long total = jdbc.queryForObject("SELECT COUNT(*) " + from, Long.class, chartId);
+        var items = jdbc.query("""
+                SELECT RANK() OVER (ORDER BY %s) AS position,
+                       u.poptomo_id, up.user_name, up.profile_image_url, up.display_popclass,
+                       c.level, p.all_time_score, COALESCE(p.all_time_rank_code, 13) AS rank_code,
+                       COALESCE(p.medal_code, 13) AS medal_code
+                """.formatted(order) + from
+                + " ORDER BY " + order + ", p.all_time_score DESC, u.poptomo_id ASC LIMIT ? OFFSET ?",
+                (rs, rowNum) -> new PlaydataQueryResults.ChartRankingEntry(
+                        rs.getLong("position"), rs.getString("poptomo_id"), rs.getString("user_name"),
+                        rs.getString("profile_image_url"), rs.getInt("display_popclass") / 10,
+                        Math.toIntExact(popclassPolicy.newChartPointHundredths(
+                                rs.getInt("level"), rs.getInt("all_time_score"), rs.getInt("medal_code"))),
+                        rs.getInt("all_time_score"), rs.getInt("rank_code"), rs.getInt("medal_code")),
+                chartId, size, (long) (page - 1) * size);
+        return new PlaydataQueryResults.ChartRankingsPage(items, total);
+    }
+
+    @Override
     public PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit) {
         requireChart(chartId);
         List<PlaydataQueryResults.RankingEntry> current = queryRankings("""

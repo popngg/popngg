@@ -1,83 +1,72 @@
 package gg.popn.http.playdata;
 
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
-import gg.popn.application.playdata.port.in.PlaydataQueryUseCase;
-import gg.popn.application.song.dto.result.ChartMetadataView;
-import gg.popn.application.song.dto.result.DifficultyView;
-import gg.popn.application.song.dto.result.SongDetailView;
-import gg.popn.application.song.port.in.FindSongDetailUseCase;
+import gg.popn.application.playdata.port.out.PlaydataQueryPort;
+import gg.popn.application.playdata.service.PlaydataQueryService;
+import gg.popn.application.playdata.exception.ChartNotFoundException;
 import gg.popn.http.common.exception.BaseExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
 import java.util.List;
-
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ChartRankingControllerTest {
-    private static final String HASH = "0544caf88393e7028ffe914449a57541febc230d373723bafc62bb0a0df29130";
-    private final FindSongDetailUseCase songs = mock(FindSongDetailUseCase.class);
-    private final PlaydataQueryUseCase rankings = mock(PlaydataQueryUseCase.class);
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new ChartRankingController(songs, rankings))
+    private final PlaydataQueryPort port = mock(PlaydataQueryPort.class);
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(
+            new ChartRankingController(new PlaydataQueryService(port)))
             .setControllerAdvice(new BaseExceptionHandler()).build();
 
-    @ParameterizedTest
-    @CsvSource({"easy,1", "e,1", "normal,2", "n,2", "hyper,3", "h,3", "ex,4", "EX,4"})
-    void resolvesHashAndDifficulty(String difficulty, int code) throws Exception {
-        when(songs.findSong(HASH)).thenReturn(new SongDetailView(null,
-                List.of(chart(99, code, true), chart(42, code, false), chart(43, code == 4 ? 3 : 4, false))));
-        var entry = new PlaydataQueryResults.RankingEntry(1, "1234", "player", 10, 99000, 1, 2, 29);
-        when(rankings.findChartRankings(42, 100)).thenReturn(
-                new PlaydataQueryResults.ChartRankings(42, List.of(entry), List.of(entry)));
-        mvc.perform(get("/api/v1/charts/{hash}/{difficulty}/rankings", HASH, difficulty))
+    @Test
+    void exposesExactContractWithDefaults() throws Exception {
+        var entry = new PlaydataQueryResults.ChartRankingEntry(1, "1234-5678-9012", "ABC", null,
+                19000, 17000, 100000, 1, 1);
+        when(port.findChartRankings("hash", 4, "SCORE", 1, 20)).thenReturn(
+                new PlaydataQueryResults.ChartRankingsPage(List.of(entry), 100));
+        mvc.perform(get("/api/v1/charts/hash/4/rankings"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.chartId").value(42))
-                .andExpect(jsonPath("$.data.currentVersion[0].score").value(99000))
-                .andExpect(jsonPath("$.data.allTime[0].ranking").value(1));
-        verify(rankings).findChartRankings(42, 100);
-    }
-
-    @Test
-    void forwardsExplicitLimit() throws Exception {
-        when(songs.findSong(HASH)).thenReturn(new SongDetailView(null, List.of(chart(42, 4, false))));
-        when(rankings.findChartRankings(42, 20)).thenReturn(new PlaydataQueryResults.ChartRankings(42, List.of(), List.of()));
-        mvc.perform(get("/api/v1/charts/{hash}/ex/rankings", HASH).param("limit", "20"))
-                .andExpect(status().isOk());
-        verify(rankings).findChartRankings(42, 20);
+                .andExpect(content().json("""
+                        {"code":"SUCCESS","message":"The request is successful.","data":{
+                          "items":[{"position":1,"id":"1234-5678-9012","name":"ABC","avatarUrl":null,
+                          "userPopnClass":19000,"popnClass":17000,"score":100000,"rank":1,"medal":1}],
+                          "totalItems":100,"totalPages":5,"hasPrev":false,"hasNext":true}}
+                        """, true));
     }
 
     @ParameterizedTest
-    @CsvSource({"ex,0", "ex,101", "invalid,10"})
-    void rejectsInvalidParameters(String difficulty, int limit) throws Exception {
-        mvc.perform(get("/api/v1/charts/{hash}/{difficulty}/rankings", HASH, difficulty)
-                        .param("limit", Integer.toString(limit)))
+    @CsvSource({"score,20", "medal,50", "medal,100"})
+    void forwardsAxisAndPagination(String axis, int size) throws Exception {
+        when(port.findChartRankings("hash", 1, axis.toUpperCase(), 2, size)).thenReturn(
+                new PlaydataQueryResults.ChartRankingsPage(List.of(), 0));
+        mvc.perform(get("/api/v1/charts/hash/1/rankings").param("axis", axis)
+                        .param("page", "2").param("size", Integer.toString(size)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.hasPrev").value(true))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.totalPages").value(0));
+        verify(port).findChartRankings("hash", 1, axis.toUpperCase(), 2, size);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,score,1,20", "5,score,1,20", "4,invalid,1,20", "4,score,0,20",
+            "4,score,1,0", "4,score,1,101", "ex,score,1,20"})
+    void rejectsInvalidParameters(String difficulty, String axis, String page, String size) throws Exception {
+        mvc.perform(get("/api/v1/charts/hash/{difficulty}/rankings", difficulty)
+                        .param("axis", axis).param("page", page).param("size", size))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(songs, rankings);
+        verifyNoInteractions(port);
     }
 
     @Test
-    void unknownHashReturnsNotFound() throws Exception {
-        when(songs.findSong(HASH)).thenThrow(
-                new gg.popn.application.song.exception.CatalogItemNotFoundException("Song", HASH));
-        mvc.perform(get("/api/v1/charts/{hash}/ex/rankings", HASH)).andExpect(status().isNotFound());
-        verifyNoInteractions(rankings);
-    }
-
-    @Test
-    void missingOrDeletedDifficultyReturnsNotFound() throws Exception {
-        when(songs.findSong(HASH)).thenReturn(new SongDetailView(null,
-                List.of(chart(42, 4, true), chart(43, 3, false))));
-        mvc.perform(get("/api/v1/charts/{hash}/ex/rankings", HASH)).andExpect(status().isNotFound());
-        verifyNoInteractions(rankings);
-    }
-
-    private static ChartMetadataView chart(long id, int code, boolean deleted) {
-        return new ChartMetadataView(id, new DifficultyView(code, "", "", code),
-                48, 29, false, false, false, deleted);
+    void missingChartReturnsExact404() throws Exception {
+        when(port.findChartRankings("hash", 4, "SCORE", 1, 20)).thenThrow(new ChartNotFoundException());
+        mvc.perform(get("/api/v1/charts/hash/4/rankings"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().json("""
+                        {"code":"NOT_FOUND","message":"Chart not found.","data":null}
+                        """, true));
     }
 }
