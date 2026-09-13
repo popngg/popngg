@@ -126,6 +126,15 @@ public class BaseExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("code", "ALREADY_REGISTERED", "message", "The poptomo ID is already registered."));
     }
+    @ExceptionHandler(gg.popn.application.playdata.exception.ChartNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleChartNotFound() {
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("code", "NOT_FOUND");
+        body.put("message", "Chart not found.");
+        body.put("data", null);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
     @ExceptionHandler(CatalogItemNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleCatalogItemNotFound(CatalogItemNotFoundException exception) {
         return ResponseEntity

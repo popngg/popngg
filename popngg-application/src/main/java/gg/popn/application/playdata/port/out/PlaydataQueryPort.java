@@ -20,5 +20,8 @@ public interface PlaydataQueryPort {
     java.util.List<PlaydataQueryResults.ChartPlaydata> findLegacyPopclassTargets(
             String poptomoId);
 
+    PlaydataQueryResults.ChartRankingsPage findChartRankings(
+            String songHash, int difficulty, String axis, int page, int size);
+
     PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit);
 }

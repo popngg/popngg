@@ -47,6 +47,15 @@ class CachedPlaydataQueryAdapterTest {
     }
 
     @Test
+    void delegatesChartRankingPagesWithoutCaching() {
+        var page = new PlaydataQueryResults.ChartRankingsPage(List.of(), 0);
+        when(delegate.findChartRankings("hash", 4, "SCORE", 1, 20)).thenReturn(page);
+        assertThat(adapter.findChartRankings("hash", 4, "SCORE", 1, 20)).isSameAs(page);
+        assertThat(adapter.findChartRankings("hash", 4, "SCORE", 1, 20)).isSameAs(page);
+        verify(delegate, times(2)).findChartRankings("hash", 4, "SCORE", 1, 20);
+    }
+
+    @Test
     void cachesEachPopclassViewForThirtyMinutes() {
         assertThat(adapter.findPopclass("0000")).isEqualTo(actual);
         assertThat(adapter.findPopclass("0000")).isEqualTo(actual);

@@ -54,6 +54,7 @@ class PlaydataQueryJdbcAdapterTest {
                   popclass_bucket_rank INT)
                 """);
         seed();
+        jdbc.execute("ALTER TABLE user_profiles ADD profile_image_url VARCHAR(512)");
         adapter = new PlaydataQueryJdbcAdapter(jdbc, 29);
     }
 
@@ -229,6 +230,65 @@ class PlaydataQueryJdbcAdapterTest {
 
         assertThatThrownBy(() -> adapter.findPopclass("0000"))
                 .isInstanceOf(ActualPopclassUnavailableException.class);
+    }
+
+    @Test
+    void ranksAllTimeScoresAcrossPagesAndConvertsClasses() {
+        jdbc.update("UPDATE playdata SET all_time_score = 99000 WHERE chart_id = 100");
+        jdbc.update("UPDATE user_profiles SET display_popclass = 190000 WHERE user_id = 1");
+        jdbc.update("UPDATE playdata SET current_version = 28 WHERE user_id = 1");
+        var first = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 1, 1);
+        var second = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 2, 1);
+        assertThat(first.totalItems()).isEqualTo(2);
+        assertThat(first.items().getFirst().position()).isEqualTo(1);
+        assertThat(second.items().getFirst().position()).isEqualTo(1);
+        assertThat(first.items().getFirst().id()).isEqualTo("0000");
+        assertThat(first.items().getFirst().name()).isEqualTo("first");
+        assertThat(first.items().getFirst().avatarUrl()).isNull();
+        assertThat(first.items().getFirst().userPopnClass()).isEqualTo(19000);
+        assertThat(first.items().getFirst().popnClass()).isEqualTo(new gg.popn.application.playdata.service.PopclassPolicy()
+                .newChartPointHundredths(48, 99000, 2));
+    }
+
+    @Test
+    void ranksMedalsAndSkipsCompetitionPositionsWithStableScoreOrder() {
+        jdbc.update("INSERT INTO users VALUES (3, '2222')");
+        jdbc.update("INSERT INTO user_profiles(user_id, user_name, is_hidden, display_popclass) VALUES (3, 'third', FALSE, 0)");
+        jdbc.update("INSERT INTO playdata(user_id, chart_id, all_time_score, medal_code) VALUES (3, 100, 80000, 4)");
+        jdbc.update("UPDATE playdata SET medal_code = 2 WHERE user_id = 2");
+        var medals = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "MEDAL", 1, 20);
+        assertThat(medals.items()).extracting(row -> row.position()).containsExactly(1L, 1L, 3L);
+        assertThat(medals.items()).extracting(row -> row.id()).containsExactly("1111", "0000", "2222");
+        jdbc.update("UPDATE playdata SET all_time_score = 99000 WHERE user_id = 1 AND chart_id = 100");
+        var scores = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 2, 2);
+        assertThat(scores.items()).extracting(row -> row.position()).containsExactly(3L);
+    }
+
+    @Test
+    void excludesHiddenUsersBeforeRankingAndNormalizesMissingCodes() {
+        jdbc.update("UPDATE user_profiles SET is_hidden = TRUE WHERE user_id = 2");
+        jdbc.update("UPDATE playdata SET medal_code = NULL, all_time_rank_code = NULL WHERE user_id = 1");
+        var result = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "MEDAL", 1, 20);
+        assertThat(result.totalItems()).isEqualTo(1);
+        assertThat(result.items().getFirst().position()).isEqualTo(1);
+        assertThat(result.items().getFirst().rank()).isEqualTo(13);
+        assertThat(result.items().getFirst().medal()).isEqualTo(13);
+        assertThat(adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 3, 20).items()).isEmpty();
+        jdbc.update("DELETE FROM playdata");
+        assertThat(adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 1, 20).totalItems()).isZero();
+    }
+
+    @Test
+    void rejectsMissingOrDeletedChartsAndUnknownAxis() {
+        assertThatThrownBy(() -> adapter.findChartRankings("missing", 3, "SCORE", 1, 20))
+                .isInstanceOf(gg.popn.application.playdata.exception.ChartNotFoundException.class);
+        assertThatThrownBy(() -> adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 4, "SCORE", 1, 20))
+                .isInstanceOf(gg.popn.application.playdata.exception.ChartNotFoundException.class);
+        assertThatThrownBy(() -> adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "INVALID", 1, 20))
+                .isInstanceOf(IllegalArgumentException.class);
+        jdbc.update("UPDATE charts SET is_deleted = TRUE");
+        assertThatThrownBy(() -> adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 1, 20))
+                .isInstanceOf(gg.popn.application.playdata.exception.ChartNotFoundException.class);
     }
 
     private void seed() {
