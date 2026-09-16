@@ -97,6 +97,7 @@ public class DiscordUnknownChartNotifier implements UnknownChartNotifier {
         if (items.size() > MAX_ROWS) {
             message.append("\n- 외 ").append(items.size() - MAX_ROWS).append("건");
         }
+        message.append("\n`/미등록목록`에서 곡을 선택하면 공식 정보를 확인하고 자켓 없이 등록할 수 있습니다.");
         return message.toString();
     }
 

@@ -12,9 +12,23 @@ may use the commands.
   and UPPER in one slash command. Omitted values and charts remain unchanged and a JSON
   preview is shown before confirmation.
 - `/곡조회 검색어:<text>` searches the catalog.
-- `/미등록목록` shows recently unmatched renewal rows. Selecting a row opens the same
-  creation form with song, genre, artist, and UPPER prefilled. Its compact level field is
-  prefilled as `L:[], N:[], H:[], EX:[]`; put a number inside a bracket or leave it empty.
+- `/미등록목록` shows recently unmatched renewal rows. Selecting a row fetches the official
+  [music list](https://p.eagate.573.jp/game/popn/popn29/music/list.html) and privately shows
+  a registration proposal with title, genre, artist, version category, UPPER and available
+  chart levels. No jacket is fetched, uploaded or required in this flow. Nothing is saved
+  until the requesting administrator opens **확인 후 등록** and submits the confirmation.
+  The confirmation asks for chart debut versions (initially the official category), strict
+  gauge/judgement difficulties (explicit `없음` if none), and optional release date. These
+  facts are not supplied by the official list; a blank date uses the DB registration time,
+  not an asserted official release date.
+  Lookup runs in a bounded background queue and immediately defers the Discord interaction;
+  it never slows the user's renewal. Complete official catalog snapshots are cached for
+  15 minutes. Missing, ambiguous or unavailable official data leaves the report for manual
+  `/곡추가`. Existing title/artist/UPPER matches, including deleted charts and old genres,
+  direct administrators to `/곡수정` instead of creating a duplicate. Registration rechecks
+  duplicates under the catalog write lock and resolves the selected report atomically.
+  Proposals expire after 15 minutes or an API restart and can only be submitted by their
+  requesting administrator. After registration the user must renew again to import scores.
 - `/성능대시보드` queries Prometheus and privately reports the current request rate,
   average/P95/P99 latency, 5xx ratio, API/system CPU, Hikari pending connections, and
   blocked JVM threads. It also includes the full Grafana dashboard link.
