@@ -131,6 +131,8 @@ jobs:
             raise SystemExit('the distroless Loki image cannot run a shell/wget healthcheck')
         if 'node-exporter:' not in monitoring or 'cadvisor:' not in monitoring:
             raise SystemExit('host and container metric exporters are missing')
+        if 'incident-bot:' not in monitoring or 'DISCORD_BOT_TOKEN' not in monitoring:
+            raise SystemExit('Discord incident thread service is missing')
 
         prometheus = Path('deploy/monitoring/prometheus/prometheus.yml').read_text()
         if 'job_name: node-exporter' not in prometheus or 'job_name: cadvisor' not in prometheus:

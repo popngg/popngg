@@ -42,6 +42,8 @@ class DiscordInteractionControllerTest {
     private final UnknownChartReportPort unknown = mock(UnknownChartReportPort.class);
     private final AdminPasswordResetUseCase passwordReset = mock(AdminPasswordResetUseCase.class);
     private final ErrorNotificationPort errorNotification = mock(ErrorNotificationPort.class);
+    private final PerformanceDiagnostics performanceDiagnostics = mock(PerformanceDiagnostics.class);
+    private final IncidentThreadTestClient incidentThreadTestClient = mock(IncidentThreadTestClient.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
 
@@ -54,8 +56,33 @@ class DiscordInteractionControllerTest {
         controller = new DiscordInteractionController(mapper, createSong, findSongs, jackets,
                 findDetail, updateSong, admin, unknown, passwordReset,
                 new DeploymentVersion("2026.09.02.194605-60b34ec", "60b34ec", "2026-09-02T10:46:05Z"),
-                errorNotification, rawPublicKey, "guild", "admin", "https://grafana.example/",
+                errorNotification, performanceDiagnostics, incidentThreadTestClient,
+                rawPublicKey, "guild", "admin", "https://grafana.example/",
                 url -> new byte[]{1});
+    }
+
+    @Test
+    void officialReviewRunsOnlyBehindSignedAdministratorInteractions() throws Exception {
+        var official = mock(OfficialSongReview.class);
+        controller.setOfficialSongReview(official);
+        when(official.interact(any())).thenReturn(Map.of("type", 4, "data", Map.of("content", "review")));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", "official_review:draft");
+        assertThat(content(call(confirm))).isEqualTo("review");
+        verify(official).interact(any());
+        clearInvocations(official);
+        confirm.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(confirm))).contains("관리자 역할");
+        verifyNoInteractions(official);
+
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(7,"Song","Genre","Artist",null,false,false,1,Instant.now())));
+        when(official.start(any(),any())).thenReturn(Map.of("type",5,"data",Map.of("flags",64)));
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id","unknown_song_select").putArray("values").add("7");
+        assertThat(body(call(selection)).get("type")).isEqualTo(5);
+        verify(official).start(any(),any());
+        verifyNoInteractions(createSong, jackets);
     }
 
     @Test
@@ -72,15 +99,47 @@ class DiscordInteractionControllerTest {
 
     @Test
     void returnsPerformanceDashboardAndSendsSyntheticErrorNotification() throws Exception {
+        when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
+                Instant.now(), Map.of("requestRate", 0.2, "averageMs", 45.0, "p95Ms", 320.0,
+                        "p99Ms", 480.0, "errorRate", 0.0, "apiCpu", 0.04,
+                        "systemCpu", 0.12, "hikariPending", 0.0, "blockedThreads", 0.0), null));
         assertThat(content(call(command("성능대시보드"))))
                 .contains("https://grafana.example/d/popngg-production-overview")
-                .contains("from=now-6h", "var-job=popngg-api");
+                .contains("from=now-6h", "var-job=popngg-api", "0.2 req/s", "320.0 ms", "0.0%");
 
-        String response = content(call(command("오류알림테스트")));
-        assertThat(response).contains("오류 알림 테스트를 전송했습니다", "diagnostic-");
+        assertThat(content(call(command("장애상태확인"))))
+                .contains("현재 장애 징후 없음", "읽기 전용 순간 지표 판정", "스레드는 생성하지 않으며");
+
+        String response = content(call(command("에러알림테스트")));
+        assertThat(response).contains("API 에러 알림 테스트", "error-log Webhook", "스레드 생성을 검증하지 않습니다", "diagnostic-");
         verify(errorNotification).notifyServerError(
                 eq("SYNTHETIC"), eq("/diagnostics/discord"), eq("DiagnosticTestException"),
                 contains("오류 알림 테스트"), eq("-"), startsWith("diagnostic-"));
+    }
+
+    @Test
+    void classifiesCriticalMetricsAndReportsPrometheusFailure() throws Exception {
+        when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
+                Instant.now(), Map.of("p95Ms", 6200.0, "errorRate", 0.08), null));
+        assertThat(content(call(command("장애상태확인"))))
+                .contains("장애 의심", "6200.0 ms", "8.0%");
+
+        when(performanceDiagnostics.snapshot()).thenReturn(new PerformanceDiagnostics.Snapshot(
+                Instant.now(), Map.of(), "Prometheus 지표를 조회하지 못했습니다."));
+        assertThat(content(call(command("성능대시보드"))))
+                .contains("운영 지표 조회 실패", "API 서비스에는 영향을 주지 않았습니다");
+    }
+
+    @Test
+    void requestsIncidentThreadTestWithoutCausingAnOutage() throws Exception {
+        when(incidentThreadTestClient.requestTest()).thenReturn(true);
+        assertThat(content(call(command("장애알림테스트"))))
+                .contains("장애 알림 스레드 테스트", "error-log");
+        verify(incidentThreadTestClient).requestTest();
+
+        when(incidentThreadTestClient.requestTest()).thenReturn(false);
+        assertThat(content(call(command("장애알림테스트"))))
+                .contains("요청에 실패", "incident-bot", "Discord Bot 권한");
     }
 
     @Test

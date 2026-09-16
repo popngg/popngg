@@ -82,6 +82,13 @@ public final class PlaydataQueryResults {
     ) {
     }
 
+    public record ChartRankingEntry(long position, String id, String name, String avatarUrl,
+                                    int userPopnClass, int popnClass, int score, int rank, int medal) {
+    }
+
+    public record ChartRankingsPage(List<ChartRankingEntry> items, long totalItems) {
+    }
+
     public record ChartRankings(long chartId, List<RankingEntry> currentVersion,
                                 List<RankingEntry> allTime) {
     }

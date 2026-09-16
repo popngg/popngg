@@ -2,6 +2,7 @@ package gg.popn.application.playdata.service;
 
 import gg.popn.application.playdata.dto.result.PopclassRecalculationResult;
 import gg.popn.application.playdata.port.out.PopclassRecalculationPort;
+import gg.popn.application.playdata.port.out.PopclassCachePort;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,8 +12,9 @@ import static org.mockito.Mockito.when;
 
 class PopclassRecalculationServiceTest {
     private final PopclassRecalculationPort port = mock(PopclassRecalculationPort.class);
+    private final PopclassCachePort cachePort = mock(PopclassCachePort.class);
     private final PopclassRecalculationService service =
-            new PopclassRecalculationService(port);
+            new PopclassRecalculationService(port, cachePort);
 
     @Test
     void delegatesAuthenticatedUserRecalculation() {
@@ -21,6 +23,7 @@ class PopclassRecalculationServiceTest {
         when(port.recalculate("0000")).thenReturn(expected);
 
         assertThat(service.recalculate("0000")).isSameAs(expected);
+        org.mockito.Mockito.verify(cachePort).refresh("0000");
     }
 
     @Test

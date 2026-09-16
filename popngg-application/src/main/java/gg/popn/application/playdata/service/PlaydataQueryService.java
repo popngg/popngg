@@ -72,6 +72,20 @@ public class PlaydataQueryService implements PlaydataQueryUseCase {
     }
 
     @Override
+    public PlaydataQueryResults.ChartRankingsPage findChartRankings(
+            String songHash, int difficulty, String axis, int page, int size) {
+        if (difficulty < 1 || difficulty > 4) {
+            throw new IllegalArgumentException("difficulty must be between 1 and 4");
+        }
+        if (page < 1) throw new IllegalArgumentException("page must be one or greater");
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException("size must be between 1 and 100");
+        }
+        return port.findChartRankings(songHash, difficulty,
+                normalize(axis, "SCORE", "MEDAL"), page, size);
+    }
+
+    @Override
     public PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit) {
         if (limit < 1 || limit > 100) {
             throw new IllegalArgumentException("limit must be between 1 and 100.");

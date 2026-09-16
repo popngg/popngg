@@ -20,6 +20,25 @@ class PlaydataQueryServiceTest {
     private final PlaydataQueryService service = new PlaydataQueryService(port);
 
     @Test
+    void validatesAndNormalizesChartRankingPages() {
+        var page = new PlaydataQueryResults.ChartRankingsPage(List.of(), 0);
+        when(port.findChartRankings("hash", 4, "MEDAL", 2, 50)).thenReturn(page);
+        assertThat(service.findChartRankings("hash", 4, "medal", 2, 50)).isSameAs(page);
+        assertThatThrownBy(() -> service.findChartRankings("hash", 0, "score", 1, 20))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findChartRankings("hash", 5, "score", 1, 20))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findChartRankings("hash", 4, "score", 0, 20))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findChartRankings("hash", 4, "score", 1, 0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findChartRankings("hash", 4, "score", 1, 101))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findChartRankings("hash", 4, "bad", 1, 20))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void normalizesCountOptionsAndDelegates() {
         var expected = new PlaydataQueryResults.Counts(List.of());
         when(port.count("0000", "LEVEL", "MEDAL")).thenReturn(expected);

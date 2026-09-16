@@ -30,6 +30,8 @@ popngg:
   renewal:
     collector-version: ${RENEWAL_COLLECTOR_VERSION:1}
     game: ${RENEWAL_GAME:popn29}
+  popclass:
+    cache-enabled: ${POPCLASS_CACHE_ENABLED:true}
   discord:
     application-id: ${DISCORD_APPLICATION_ID:}
     public-key: ${DISCORD_PUBLIC_KEY:}

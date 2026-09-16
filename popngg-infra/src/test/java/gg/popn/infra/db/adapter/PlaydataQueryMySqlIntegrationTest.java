@@ -52,6 +52,20 @@ class PlaydataQueryMySqlIntegrationTest extends MySqlIntegrationTestSupport {
                 .containsExactly(1, 2);
     }
 
+    @Test
+    void ranksTiesAcrossPagesUsingMySqlWindowFunction() {
+        jdbc.update("UPDATE playdata SET all_time_score = 99000, medal_code = 2 WHERE chart_id = 100");
+        var page = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 2, 1);
+        assertThat(page.totalItems()).isEqualTo(2);
+        assertThat(page.items().getFirst().position()).isEqualTo(1);
+        assertThat(page.items().getFirst().id()).isEqualTo("1111-1111-1111");
+        var medals = adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "MEDAL", 1, 20);
+        assertThat(medals.items()).extracting(row -> row.position()).containsExactly(1L, 1L);
+        jdbc.update("UPDATE user_profiles SET is_hidden = TRUE WHERE user_id = 1");
+        assertThat(adapter.findChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE", 1, 20)
+                .totalItems()).isEqualTo(1);
+    }
+
     private void seed() {
         jdbc.update("""
                 INSERT INTO users

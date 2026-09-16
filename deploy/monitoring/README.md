@@ -19,6 +19,11 @@ Spring Boot API :9091/actuator/prometheus (Compose network only)
                   grafana.popn.gg
 
 Spring Boot JSON file log -> Alloy -> Loki -> Grafana Explore
+
+Production request logs include structured `traceId`, `method`, URI template, HTTP
+`status`, `durationMs`, and immutable `release` fields. Query strings, raw parameterized
+URLs, and user IDs are intentionally excluded. Alloy indexes only the bounded `level`
+field; the remaining fields stay in the JSON payload to avoid high-cardinality labels.
 ```
 
 The API's main port remains bound to host loopback for Nginx. Only the detail-free
@@ -185,6 +190,20 @@ curl -fsSG http://127.0.0.1:9090/api/v1/query \
 curl -fsS http://127.0.0.1:3100/ready
 curl -fsSG http://127.0.0.1:3100/loki/api/v1/query \
   --data-urlencode 'query={job="popngg-api"}'
+
+Useful structured queries:
+
+```logql
+{job="popngg-api", environment="production", level="ERROR"} | json
+{job="popngg-api", environment="production"} | json | status=~"5.."
+{job="popngg-api", environment="production"} | json | durationMs >= 1000
+{job="popngg-api", environment="production"} | json | traceId="<trace-id>"
+```
+
+When a Prometheus incident rule opens a Discord thread, the incident monitor queries
+Loki for up to five distinct ERROR events from the preceding five minutes and includes
+their URI template, message, and trace ID. Failure to query Loki never prevents the
+incident thread from opening.
 curl -fsS -H 'Host: grafana.popn.gg' http://127.0.0.1:3000/api/health
 curl -fsS https://grafana.popn.gg/api/health
 ```
