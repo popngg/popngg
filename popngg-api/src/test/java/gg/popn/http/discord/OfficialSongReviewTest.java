@@ -26,6 +26,56 @@ class OfficialSongReviewTest {
             "https://p.eagate.573.jp/game/popn/popn29/music/list.html?version=29");
     private final UnknownChartReportPort.Report report = new UnknownChartReportPort.Report(7, "Song", "old", "Artist", null, false, false, 1, Instant.now());
 
+    @Test void confirmationButtonRegistersImmediatelyWithVisibleDefaultsAndNoModal() {
+        String id = start();
+        assertThat(replies.getLast().toString()).contains("기본값", "공식 제공 정보 아님", "특수 게이지·판정: 없음", "정보 수정");
+        when(registration.register(eq(7L), any())).thenAnswer(invocation -> {
+            var command = invocation.getArgument(1, gg.popn.application.song.dto.command.CreateSongCommand.class);
+            assertThat(command.jacketUrl()).isNull();
+            assertThat(command.createdAt()).isNull();
+            assertThat(command.charts()).allSatisfy(chart -> {
+                assertThat(chart.chartVersion()).isEqualTo(29);
+                assertThat(chart.hasStrictGauge()).isFalse();
+                assertThat(chart.hasStrictJudgement()).isFalse();
+            });
+            return new CreateSongResult(55,List.of(1L,2L));
+        });
+        var confirm = request(3,"official_confirm:"+id);
+        assertThat(review.interact(confirm).get("type")).isEqualTo(5);
+        assertThat(replies.getLast().toString()).contains("등록 완료");
+        review.interact(confirm);
+        verify(registration,times(1)).register(eq(7L),any());
+    }
+
+    @Test void directConfirmationRejectsAnotherAdministratorAndCancelledDraft() {
+        String id = start();
+        var other = request(3,"official_confirm:"+id);
+        other.withObject("member").withObject("user").put("id","another");
+        assertThat(review.interact(other).toString()).contains("본인의 요청");
+        review.interact(request(3,"official_cancel:"+id));
+        review.interact(request(3,"official_confirm:"+id));
+        verify(registration,never()).register(anyLong(),any());
+    }
+
+    @Test void busyQueueKeepsConfirmationDraftAvailableForRetry() {
+        var accept = new java.util.concurrent.atomic.AtomicBoolean(true);
+        var retryable = new OfficialSongReview(source, registration, task -> {
+            if (!accept.get()) throw new RejectedExecutionException();
+            task.run();
+        }, (root,data) -> replies.add(data));
+        when(source.find(anyString(),anyString(),any())).thenReturn(List.of(song));
+        retryable.start(request(3,"select"),report);
+        String id=mapper.valueToTree(replies.getLast()).path("components").get(0).path("components").get(0)
+                .path("custom_id").asText().split(":")[1];
+        accept.set(false);
+        assertThat(retryable.interact(request(3,"official_confirm:"+id)).toString()).contains("요청이 많습니다");
+        verify(registration,never()).register(anyLong(),any());
+        accept.set(true);
+        when(registration.register(eq(7L),any())).thenReturn(new CreateSongResult(55,List.of(1L,2L)));
+        assertThat(retryable.interact(request(3,"official_confirm:"+id)).get("type")).isEqualTo(5);
+        verify(registration).register(eq(7L),any());
+    }
+
     @Test void previewsWithoutWritesAndRegistersOnceOnlyAfterOwnerSubmitsConfirmation() {
         String id = start();
         verify(registration, never()).register(anyLong(), any());

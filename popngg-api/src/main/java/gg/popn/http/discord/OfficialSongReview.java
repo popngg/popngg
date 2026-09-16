@@ -93,16 +93,19 @@ public class OfficialSongReview {
             return message("곡 등록을 취소했습니다.");
         }
         if (root.path("type").asInt() == 3 && parts[0].equals("official_review")) return modal(parts[1], draft.song());
-        if (root.path("type").asInt() != 5 || !parts[0].equals("official_submit")) return message("지원하지 않는 등록 요청입니다.");
+        boolean direct = root.path("type").asInt() == 3 && parts[0].equals("official_confirm");
+        if (!direct && (root.path("type").asInt() != 5 || !parts[0].equals("official_submit"))) return message("지원하지 않는 등록 요청입니다.");
         final CreateSongCommand command;
-        try { command = command(draft.song(), root); }
-        catch (RuntimeException exception) { return message("입력 오류: " + exception.getMessage() + " 등록안의 확인 버튼을 다시 눌러 주세요."); }
+        try { command = direct ? defaultCommand(draft.song()) : command(draft.song(), root); }
+        catch (RuntimeException exception) { return message("입력 오류: " + exception.getMessage() + " 등록안의 정보 수정 버튼을 다시 눌러 주세요."); }
         if (!drafts.remove(parts[1], draft)) return message("이미 처리된 등록 요청입니다.");
-        return defer(root, () -> {
+        var response = defer(root, () -> {
             var result = registration.register(draft.reportId(), command);
             return data("곡 등록 완료: **" + draft.song().title().replace("`", "'") + "** (`songId="
                     + result.songId() + "`, 채보 " + result.chartIds().size() + "개, 자켓 없음)\n점수 반영을 위해 다시 갱신해 주세요.");
         });
+        if (Integer.valueOf(4).equals(response.get("type"))) drafts.putIfAbsent(parts[1], draft);
+        return response;
     }
 
     private Map<String, Object> defer(JsonNode root, Work work) {
@@ -129,22 +132,30 @@ public class OfficialSongReview {
         List<Map<String, Object>> fields = List.of(field("곡명", song.title()), field("장르", song.genre()),
                 field("아티스트", song.artist()), field("공식 버전 분류 / UPPER", song.version() + " / " + song.upper()),
                 field("채보 레벨", song.charts().stream().map(c -> LABELS.get(c.difficulty() - 1) + ":" + c.level()).collect(Collectors.joining(", "))),
-                field("자켓", "등록하지 않음"));
+                field("자켓", "등록하지 않음"),
+                field("바로 등록 기본값 (공식 제공 정보 아님)", "특수 게이지·판정: 없음\n채보 추가 버전: 공식 버전 분류와 동일\n추가일: 등록 시각"));
         return Map.of("content", "공식 정보로 만든 등록안입니다. 아직 등록되지 않았습니다.",
                 "allowed_mentions", Map.of("parse", List.of()),
                 "embeds", List.of(Map.of("title", "공식 곡 정보 확인", "url", song.sourceUrl(), "fields", fields,
-                        "description", "실제 추가일·채보 추가 버전·특수 게이지/판정은 공식 목록에서 확인할 수 없습니다. 확인 버튼에서 입력 후 제출하면 등록됩니다. (15분 유효)")),
+                        "description", "아래 기본값이 맞으면 확인·등록을 누르세요. 추가 입력 없이 등록됩니다. 특수 게이지·판정, 채보 추가 버전, 추가일을 바꾸려면 정보 수정을 선택하세요. (15분 유효)")),
                 "components", List.of(Map.of("type", 1, "components", List.of(
-                        Map.of("type", 2, "style", 3, "label", "확인 후 등록", "custom_id", "official_review:" + id),
+                        Map.of("type", 2, "style", 3, "label", "확인·등록", "custom_id", "official_confirm:" + id),
+                        Map.of("type", 2, "style", 2, "label", "정보 수정", "custom_id", "official_review:" + id),
                         Map.of("type", 2, "style", 4, "label", "취소", "custom_id", "official_cancel:" + id)))));
+    }
+
+    private static CreateSongCommand defaultCommand(OfficialSongSource.Song song) {
+        return new CreateSongCommand(null, song.genre(), song.title(), song.artist(), song.version(), null, null,
+                song.charts().stream().map(c -> new CreateSongCommand.CreateChartCommand(
+                        c.difficulty(), c.level(), song.version(), song.upper(), false, false)).toList());
     }
 
     private Map<String, Object> modal(String id, OfficialSongSource.Song song) {
         String versions = song.charts().stream().map(c -> LABELS.get(c.difficulty() - 1) + ":" + song.version()).collect(Collectors.joining(","));
         return Map.of("type", 9, "data", Map.of("custom_id", "official_submit:" + id, "title", "자켓 없이 곡 등록 확인",
                 "components", List.of(input("versions", "채보 추가 버전 확인 (공식 분류로 초안)", versions, true),
-                        input("gauge", "특수 게이지 채보 (L,N,H,EX 또는 없음)", "", true),
-                        input("judgement", "특수 판정 채보 (L,N,H,EX 또는 없음)", "", true),
+                        input("gauge", "특수 게이지 채보 (L,N,H,EX 또는 없음)", "없음", true),
+                        input("judgement", "특수 판정 채보 (L,N,H,EX 또는 없음)", "없음", true),
                         input("date", "추가일 YYYY-MM-DD (모르면 공란)", "", false))));
     }
 

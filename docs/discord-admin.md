@@ -16,11 +16,13 @@ may use the commands.
   [music list](https://p.eagate.573.jp/game/popn/popn29/music/list.html) and privately shows
   a registration proposal with title, genre, artist, version category, UPPER and available
   chart levels. No jacket is fetched, uploaded or required in this flow. Nothing is saved
-  until the requesting administrator opens **확인 후 등록** and submits the confirmation.
-  The confirmation asks for chart debut versions (initially the official category), strict
-  gauge/judgement difficulties (explicit `없음` if none), and optional release date. These
-  facts are not supplied by the official list; a blank date uses the DB registration time,
-  not an asserted official release date.
+  until the requesting administrator clicks **확인·등록**. This registers immediately,
+  without a modal, using the defaults explicitly shown in the proposal: no strict
+  gauge/judgement, chart debut versions equal to the official category, and the DB
+  registration time as the added date. These defaults are not claimed as official facts.
+  **정보 수정** optionally opens a form for chart debut versions, strict gauge/judgement
+  difficulties (`없음` if none) and release date before registration. No extra input is
+  required when the displayed defaults are correct.
   Lookup runs in a bounded background queue and immediately defers the Discord interaction;
   it never slows the user's renewal. Complete official catalog snapshots are cached for
   15 minutes. Missing, ambiguous or unavailable official data leaves the report for manual
