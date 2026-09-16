@@ -62,6 +62,30 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void officialReviewRunsOnlyBehindSignedAdministratorInteractions() throws Exception {
+        var official = mock(OfficialSongReview.class);
+        controller.setOfficialSongReview(official);
+        when(official.interact(any())).thenReturn(Map.of("type", 4, "data", Map.of("content", "review")));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", "official_review:draft");
+        assertThat(content(call(confirm))).isEqualTo("review");
+        verify(official).interact(any());
+        clearInvocations(official);
+        confirm.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(confirm))).contains("관리자 역할");
+        verifyNoInteractions(official);
+
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(7,"Song","Genre","Artist",null,false,false,1,Instant.now())));
+        when(official.start(any(),any())).thenReturn(Map.of("type",5,"data",Map.of("flags",64)));
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id","unknown_song_select").putArray("values").add("7");
+        assertThat(body(call(selection)).get("type")).isEqualTo(5);
+        verify(official).start(any(),any());
+        verifyNoInteractions(createSong, jackets);
+    }
+
+    @Test
     void reportsRunningImageVersionOnlyToAuthorizedAdmin() throws Exception {
         var request = command("배포버전");
         var data = (Map<?, ?>) body(call(request)).get("data");

@@ -74,6 +74,12 @@ public class DiscordInteractionController {
     private final Map<String, Draft> drafts = new ConcurrentHashMap<>();
     private final Map<String, PreDraft> preDrafts = new ConcurrentHashMap<>();
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
+    private OfficialSongReview officialSongReview;
+
+    @Autowired
+    void setOfficialSongReview(OfficialSongReview officialSongReview) {
+        this.officialSongReview = officialSongReview;
+    }
 
     @Autowired
     public DiscordInteractionController(ObjectMapper mapper, CreateSongUseCase createSong,
@@ -139,6 +145,10 @@ public class DiscordInteractionController {
         int type = root.path("type").asInt();
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
+        if ((type == 3 || type == 5) && root.path("data").path("custom_id").asText().startsWith("official_")
+                && officialSongReview != null) {
+            return ResponseEntity.ok(officialSongReview.interact(root));
+        }
         if (type == 2 && "배포버전".equals(root.path("data").path("name").asText())) {
             return ResponseEntity.ok(ephemeral(deploymentVersion.message()));
         }
@@ -221,7 +231,7 @@ public class DiscordInteractionController {
                     "label", truncate(report.songName(), 100), "description", truncate(report.genreName(), 100),
                     "value", Long.toString(report.reportId()))).toList();
             return ResponseEntity.ok(Map.of("type", 4, "data", Map.of(
-                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 선택하면 곡 추가 창이 열립니다.",
+                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 선택하면 공식 정보를 조회합니다. 확인 후 자켓 없이 등록할 수 있습니다.",
                     "components", List.of(Map.of("type", 1, "components", List.of(Map.of(
                             "type", 3, "custom_id", "unknown_song_select", "placeholder", "추가할 곡 선택",
                             "min_values", 1, "max_values", 1, "options", choices)))))));
@@ -262,6 +272,7 @@ public class DiscordInteractionController {
                     .filter(report -> report.reportId() == reportId).findFirst();
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
+            if (officialSongReview != null) return ResponseEntity.ok(officialSongReview.start(root, report));
             String id = UUID.randomUUID().toString();
             Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
                     Boolean.TRUE.equals(report.upper()));
