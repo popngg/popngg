@@ -231,7 +231,7 @@ public class DiscordInteractionController {
                     "label", truncate(report.songName(), 100), "description", truncate(report.genreName(), 100),
                     "value", Long.toString(report.reportId()))).toList();
             return ResponseEntity.ok(Map.of("type", 4, "data", Map.of(
-                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 선택하면 공식 정보를 조회합니다. 확인 후 자켓 없이 등록할 수 있습니다.",
+                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 곡을 선택하고 난이도별 레벨과 버전을 수기로 입력해 주세요. 입력 내용을 확인한 뒤 자켓 없이 등록합니다.",
                     "components", List.of(Map.of("type", 1, "components", List.of(Map.of(
                             "type", 3, "custom_id", "unknown_song_select", "placeholder", "추가할 곡 선택",
                             "min_values", 1, "max_values", 1, "options", choices)))))));
