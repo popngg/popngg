@@ -31,6 +31,7 @@ public class OfficialSongReview {
     private final Executor executor;
     private final Reply reply;
     private final Map<String, Draft> drafts = new ConcurrentHashMap<>();
+    private final Map<String, Operation> operations = new ConcurrentHashMap<>();
     private static final List<String> LABELS = List.of("L", "N", "H", "EX");
 
     @Autowired
@@ -86,6 +87,19 @@ public class OfficialSongReview {
         cleanup();
         String custom = root.path("data").path("custom_id").asText();
         String[] parts = custom.split(":", 2);
+        if (parts.length == 2 && parts[0].equals("official_status") && root.path("type").asInt() == 3) {
+            Operation operation = operations.get(parts[1]);
+            if (operation == null || !operation.owner.equals(owner(root)))
+                return message("처리 상태가 만료되었거나 본인의 요청이 아닙니다. `/미등록목록`에서 다시 확인해 주세요.");
+            var result = operation.result;
+            if (result == null) {
+                String content = operation.createdAt.isBefore(Instant.now().minusSeconds(150))
+                        ? "처리가 예상보다 오래 걸리고 있습니다. 등록을 다시 누르지 말고 잠시 후 상태를 확인해 주세요."
+                        : "공식 정보 조회 또는 등록을 처리 중입니다. 아직 결과가 없습니다. 잠시 후 다시 확인해 주세요.";
+                return Map.of("type", 7, "data", pending(parts[1], content));
+            }
+            return Map.of("type", 7, "data", result);
+        }
         Draft draft = parts.length == 2 ? drafts.get(parts[1]) : null;
         if (draft == null || !draft.owner().equals(owner(root))) return message("등록안이 만료되었거나 본인의 요청이 아닙니다. `/미등록목록`에서 다시 선택해 주세요.");
         if (root.path("type").asInt() == 3 && parts[0].equals("official_cancel")) {
@@ -104,11 +118,17 @@ public class OfficialSongReview {
             return data("곡 등록 완료: **" + draft.song().title().replace("`", "'") + "** (`songId="
                     + result.songId() + "`, 채보 " + result.chartIds().size() + "개, 자켓 없음)\n점수 반영을 위해 다시 갱신해 주세요.");
         });
-        if (Integer.valueOf(4).equals(response.get("type"))) drafts.putIfAbsent(parts[1], draft);
+        if (((Map<?, ?>) response.get("data")).get("components") instanceof List<?> components && components.isEmpty())
+            drafts.putIfAbsent(parts[1], draft);
         return response;
     }
 
     private Map<String, Object> defer(JsonNode root, Work work) {
+        cleanup();
+        if (operations.size() >= 128) return message("처리 대기 요청이 많습니다. 잠시 후 다시 시도해 주세요.");
+        String operationId = UUID.randomUUID().toString();
+        Operation operation = new Operation(owner(root), Instant.now());
+        operations.put(operationId, operation);
         try {
             executor.execute(() -> {
                 Map<String, Object> result;
@@ -118,14 +138,28 @@ public class OfficialSongReview {
                             + "이미 등록된 곡이거나 공식 사이트가 일시적으로 응답하지 않을 수 있습니다.");
                     LoggerFactory.getLogger(OfficialSongReview.class).warn("Official song review failed: {}", exception.getClass().getSimpleName());
                 }
+                // Keep the result before sending: a failed webhook must not hide success or cause a second write.
+                operation.result = result;
                 try { reply.send(root, result); }
                 catch (Exception exception) {
                     // Never log interaction tokens or URLs. A committed registration is not rolled back for a reply failure.
-                    LoggerFactory.getLogger(OfficialSongReview.class).warn("Could not deliver official song review reply");
+                    LoggerFactory.getLogger(OfficialSongReview.class).warn("Could not deliver official song review reply; result available via status button ({})", exception.getClass().getSimpleName());
                 }
             });
-            return Map.of("type", 5, "data", Map.of("flags", 64));
-        } catch (RejectedExecutionException exception) { return message("조회 요청이 많습니다. 잠시 후 다시 시도해 주세요."); }
+            var pending = new HashMap<>(pending(operationId,
+                    "공식 정보 조회 또는 등록을 처리 중입니다. 첫 조회에는 시간이 걸릴 수 있습니다. 결과가 자동으로 표시되지 않으면 아래에서 확인해 주세요. 곡 선택만으로는 등록되지 않습니다."));
+            pending.put("flags", 64);
+            return Map.of("type", 4, "data", pending);
+        } catch (RejectedExecutionException exception) {
+            operations.remove(operationId, operation);
+            return message("조회 요청이 많습니다. 잠시 후 다시 시도해 주세요.");
+        }
+    }
+
+    private static Map<String, Object> pending(String id, String content) {
+        return Map.of("content", content, "allowed_mentions", Map.of("parse", List.of()),
+                "components", List.of(Map.of("type", 1, "components", List.of(
+                        Map.of("type", 2, "style", 2, "label", "처리 상태 확인", "custom_id", "official_status:" + id)))));
     }
 
     private Map<String, Object> preview(String id, OfficialSongSource.Song song) {
@@ -203,11 +237,21 @@ public class OfficialSongReview {
     }
     private static Map<String, Object> field(String name, String value) { return Map.of("name", name, "value", value); }
     private static String owner(JsonNode root) { return root.path("guild_id").asText() + ":" + root.path("member").path("user").path("id").asText(); }
-    private void cleanup() { drafts.entrySet().removeIf(e -> e.getValue().createdAt().isBefore(Instant.now().minusSeconds(900))); }
+    private void cleanup() {
+        Instant expiry = Instant.now().minusSeconds(900);
+        drafts.entrySet().removeIf(e -> e.getValue().createdAt().isBefore(expiry));
+        operations.entrySet().removeIf(e -> e.getValue().createdAt.isBefore(expiry));
+    }
     private static Map<String, Object> data(String content) { return Map.of("content", content, "components", List.of(), "embeds", List.of(), "allowed_mentions", Map.of("parse", List.of())); }
     private static Map<String, Object> message(String content) { var data = new HashMap<>(data(content)); data.put("flags", 64); return Map.of("type", 4, "data", data); }
     @PreDestroy void close() { if (executor instanceof ExecutorService service) service.shutdownNow(); }
     private record Draft(OfficialSongSource.Song song, long reportId, String owner, Instant createdAt) {}
+    private static final class Operation {
+        final String owner;
+        final Instant createdAt;
+        volatile Map<String, Object> result;
+        Operation(String owner, Instant createdAt) { this.owner = owner; this.createdAt = createdAt; }
+    }
     @FunctionalInterface interface Reply { void send(JsonNode root, Map<String, Object> data) throws Exception; }
     @FunctionalInterface private interface Work { Map<String, Object> run(); }
 }

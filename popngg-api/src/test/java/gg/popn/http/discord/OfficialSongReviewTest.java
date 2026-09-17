@@ -16,6 +16,46 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 class OfficialSongReviewTest {
+    @Test void pendingLookupAcknowledgesImmediatelyAndStatusReturnsLevelsEvenWhenWebhookFails() {
+        List<Runnable> tasks = new ArrayList<>();
+        var disconnected = new OfficialSongReview(source, registration, tasks::add, (r,d) -> { throw new IllegalStateException(); });
+        doReturn(List.of(song)).when(source).find(anyString(),anyString(),any());
+        var response = disconnected.start(request(3,"select"), report);
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(response.toString()).contains("처리 상태 확인", "곡 선택만으로는 등록되지 않습니다");
+        String statusId = mapper.valueToTree(response).path("data").path("components").get(0).path("components").get(0).path("custom_id").asText();
+        assertThat(disconnected.interact(request(3,statusId)).toString()).contains("처리 중");
+        var other = request(3,statusId);
+        other.withObject("member").withObject("user").put("id","another");
+        assertThat(disconnected.interact(other).toString()).contains("본인의 요청");
+        tasks.removeFirst().run();
+        var completed = disconnected.interact(request(3,statusId));
+        assertThat(completed.get("type")).isEqualTo(7);
+        assertThat(completed.toString()).contains("채보 레벨", "N:25", "EX:49", "확인·등록");
+        verify(registration,never()).register(anyLong(),any());
+        assertThat(disconnected.interact(request(3,"official_status:missing")).toString()).contains("만료");
+    }
+
+    @Test void failedLookupAndSuccessfulRegistrationRemainReadableWithoutRepeatingWrites() {
+        var disconnected = new OfficialSongReview(source, registration, Runnable::run, (r,d) -> { throw new IllegalStateException(); });
+        when(source.find(anyString(),anyString(),any())).thenThrow(new IllegalStateException());
+        var failed = disconnected.start(request(3,"select"),report);
+        String failureId = mapper.valueToTree(failed).path("data").path("components").get(0).path("components").get(0).path("custom_id").asText();
+        assertThat(disconnected.interact(request(3,failureId)).toString()).contains("완료하지 못했습니다");
+
+        doReturn(List.of(song)).when(source).find(anyString(),anyString(),any());
+        var lookup = disconnected.start(request(3,"select"),report);
+        String lookupId = mapper.valueToTree(lookup).path("data").path("components").get(0).path("components").get(0).path("custom_id").asText();
+        var preview = disconnected.interact(request(3,lookupId));
+        String confirmId = mapper.valueToTree(preview).path("data").path("components").get(0).path("components").get(0).path("custom_id").asText();
+        when(registration.register(eq(7L),any())).thenReturn(new CreateSongResult(55,List.of(1L,2L)));
+        var submitted = disconnected.interact(request(3,confirmId));
+        String statusId = mapper.valueToTree(submitted).path("data").path("components").get(0).path("components").get(0).path("custom_id").asText();
+        assertThat(disconnected.interact(request(3,statusId)).toString()).contains("등록 완료", "songId=55");
+        disconnected.interact(request(3,statusId));
+        disconnected.interact(request(3,confirmId));
+        verify(registration,times(1)).register(eq(7L),any());
+    }
     private final ObjectMapper mapper = new ObjectMapper();
     private final OfficialSongSource source = mock(OfficialSongSource.class);
     private final ReviewedSongRegistrationPort registration = mock(ReviewedSongRegistrationPort.class);
@@ -41,7 +81,7 @@ class OfficialSongReviewTest {
             return new CreateSongResult(55,List.of(1L,2L));
         });
         var confirm = request(3,"official_confirm:"+id);
-        assertThat(review.interact(confirm).get("type")).isEqualTo(5);
+        assertThat(review.interact(confirm).get("type")).isEqualTo(4);
         assertThat(replies.getLast().toString()).contains("등록 완료");
         review.interact(confirm);
         verify(registration,times(1)).register(eq(7L),any());
@@ -63,7 +103,7 @@ class OfficialSongReviewTest {
             if (!accept.get()) throw new RejectedExecutionException();
             task.run();
         }, (root,data) -> replies.add(data));
-        when(source.find(anyString(),anyString(),any())).thenReturn(List.of(song));
+        doReturn(List.of(song)).when(source).find(anyString(),anyString(),any());
         retryable.start(request(3,"select"),report);
         String id=mapper.valueToTree(replies.getLast()).path("components").get(0).path("components").get(0)
                 .path("custom_id").asText().split(":")[1];
@@ -72,7 +112,7 @@ class OfficialSongReviewTest {
         verify(registration,never()).register(anyLong(),any());
         accept.set(true);
         when(registration.register(eq(7L),any())).thenReturn(new CreateSongResult(55,List.of(1L,2L)));
-        assertThat(retryable.interact(request(3,"official_confirm:"+id)).get("type")).isEqualTo(5);
+        assertThat(retryable.interact(request(3,"official_confirm:"+id)).get("type")).isEqualTo(4);
         verify(registration).register(eq(7L),any());
     }
 
@@ -91,7 +131,7 @@ class OfficialSongReviewTest {
             return new CreateSongResult(55, List.of(1L,2L));
         });
         var submit = submission(id);
-        assertThat(review.interact(submit).get("type")).isEqualTo(5);
+        assertThat(review.interact(submit).get("type")).isEqualTo(4);
         assertThat(replies.getLast().get("content").toString()).contains("등록 완료", "자켓 없음");
         review.interact(submit);
         verify(registration, times(1)).register(eq(7L),any());
@@ -114,7 +154,7 @@ class OfficialSongReviewTest {
         when(source.find(anyString(),anyString(),any())).thenReturn(List.of());
         review.start(request(3,"select"),report);
         assertThat(replies.getLast().toString()).contains("공식 정보가 없거나");
-        when(source.find(anyString(),anyString(),any())).thenReturn(List.of(song));
+        doReturn(List.of(song)).when(source).find(anyString(),anyString(),any());
         when(registration.findExisting(anyString(),anyString(),anyBoolean())).thenReturn(List.of(55L));
         review.start(request(3,"select"),report);
         assertThat(replies.getLast().toString()).contains("이미 등록", "곡수정");
@@ -141,15 +181,15 @@ class OfficialSongReviewTest {
     @Test void boundedQueueAndReplyFailuresNeverTriggerRegistrationDuringLookup() {
         var busy=new OfficialSongReview(source,registration,r->{throw new RejectedExecutionException();},(r,d)->{});
         assertThat(busy.start(request(3,"select"),report).toString()).contains("조회 요청이 많습니다");
-        when(source.find(anyString(),anyString(),any())).thenReturn(List.of(song));
+        doReturn(List.of(song)).when(source).find(anyString(),anyString(),any());
         var disconnected=new OfficialSongReview(source,registration,Runnable::run,(r,d)->{throw new IllegalStateException();});
-        assertThat(disconnected.start(request(3,"select"),report).get("type")).isEqualTo(5);
+        assertThat(disconnected.start(request(3,"select"),report).get("type")).isEqualTo(4);
         verify(registration,never()).register(anyLong(),any());
     }
 
     private String start() {
-        when(source.find(anyString(),anyString(),any())).thenReturn(List.of(song));
-        assertThat(review.start(request(3,"select"),report).get("type")).isEqualTo(5);
+        doReturn(List.of(song)).when(source).find(anyString(),anyString(),any());
+        assertThat(review.start(request(3,"select"),report).get("type")).isEqualTo(4);
         var json=mapper.valueToTree(replies.getLast());
         return json.path("components").get(0).path("components").get(0).path("custom_id").asText().split(":")[1];
     }
