@@ -45,7 +45,6 @@ public class OfficialSongListClient implements OfficialSongSource {
 
     private List<Song> load() {
         Instant deadline = Instant.now().plusSeconds(120);
-        int currentVersion = -1, currentPage = -1, requests = 0;
         try {
             Document home = reader.read(BASE);
             var options = home.select("select[name=version] option");
@@ -54,15 +53,13 @@ public class OfficialSongListClient implements OfficialSongSource {
                     .filter(v -> v >= 0).distinct().toList();
             if (versions.size() < 29 || versions.size() > 50) throw new IllegalStateException("Unexpected versions");
             List<Song> songs = new ArrayList<>();
+            int requests = 0;
             for (int version : versions) {
-                currentVersion = version;
-                currentPage = 0;
                 String url = BASE + "?version=" + version;
                 Document first = reader.read(url);
                 var pages = first.select("select[name=page_sl] option");
                 if (pages.isEmpty() || pages.size() > 20) throw new IllegalStateException("Missing pagination");
                 for (int page = 0; page < pages.size(); page++) {
-                    currentPage = page;
                     if (++requests > 150 || Instant.now().isAfter(deadline))
                         throw new IllegalStateException("Official catalog request limit");
                     if (!pages.get(page).attr("value").equals(Integer.toString(page)))
@@ -75,9 +72,6 @@ public class OfficialSongListClient implements OfficialSongSource {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Official lookup interrupted", exception);
         } catch (Exception exception) {
-            org.slf4j.LoggerFactory.getLogger(OfficialSongListClient.class).warn(
-                    "Official catalog failed: version={}, page={}, requests={}, cause={}",
-                    currentVersion, currentPage, requests, exception.getClass().getSimpleName());
             throw new IllegalStateException("공식 목록을 읽지 못했습니다. 잠시 후 다시 시도하거나 `/곡추가`를 이용해 주세요.", exception);
         }
     }

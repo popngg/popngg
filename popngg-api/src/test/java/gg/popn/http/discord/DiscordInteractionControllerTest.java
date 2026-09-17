@@ -77,10 +77,10 @@ class DiscordInteractionControllerTest {
 
         when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7,"Song","Genre","Artist",null,false,false,1,Instant.now())));
-        when(official.start(any(),any())).thenReturn(Map.of("type",5,"data",Map.of("flags",64)));
+        when(official.start(any(),any())).thenReturn(Map.of("type",9,"data",Map.of("title","미등록 곡 레벨 수동 입력")));
         ObjectNode selection = interaction(3);
         selection.withObject("data").put("custom_id","unknown_song_select").putArray("values").add("7");
-        assertThat(body(call(selection)).get("type")).isEqualTo(5);
+        assertThat(body(call(selection)).get("type")).isEqualTo(9);
         verify(official).start(any(),any());
         verifyNoInteractions(createSong, jackets);
     }
@@ -185,7 +185,7 @@ class DiscordInteractionControllerTest {
                 new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
                         4, true, false, 3, Instant.now())));
         assertThat(content(call(command("미등록목록")))).contains("new song", "3회")
-                .doesNotContain("난이도", "UPPER");
+                .contains("수기로 입력").doesNotContain("UPPER");
 
         ObjectNode selection = interaction(3);
         selection.withObject("data").put("custom_id", "unknown_song_select")
