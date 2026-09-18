@@ -231,7 +231,7 @@ public class DiscordInteractionController {
                     "label", truncate(report.songName(), 100), "description", truncate(report.genreName(), 100),
                     "value", Long.toString(report.reportId()))).toList();
             return ResponseEntity.ok(Map.of("type", 4, "data", Map.of(
-                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 곡을 선택하고 난이도별 레벨과 버전을 수기로 입력해 주세요. 입력 내용을 확인한 뒤 자켓 없이 등록합니다.",
+                    "content", "**최근 미등록 곡/채보**\n" + content + "\n아래에서 곡을 선택하고 정보를 수기로 입력해 주세요. 자켓은 선택 사항입니다.",
                     "components", List.of(Map.of("type", 1, "components", List.of(Map.of(
                             "type", 3, "custom_id", "unknown_song_select", "placeholder", "추가할 곡 선택",
                             "min_values", 1, "max_values", 1, "options", choices)))))));
@@ -272,11 +272,10 @@ public class DiscordInteractionController {
                     .filter(report -> report.reportId() == reportId).findFirst();
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
-            if (officialSongReview != null) return ResponseEntity.ok(officialSongReview.start(root, report));
             String id = UUID.randomUUID().toString();
             Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
                     Boolean.TRUE.equals(report.upper()));
-            preDrafts.put(id, new PreDraft(prefill, Instant.now()));
+            preDrafts.put(id, new PreDraft(prefill, Instant.now(), report.reportId()));
             return ResponseEntity.ok(unknownSongModal(id, prefill));
         }
         if (type == 2 && "곡수정".equals(root.path("data").path("name").asText())) {
@@ -396,19 +395,25 @@ public class DiscordInteractionController {
                 String songHash = SongHashGenerator.generate(draft.command().genreName(),
                         draft.command().songName(), draft.command().artistName(),
                         draft.command().version(), upper);
-                byte[] png = jacketDownloader.download(draft.attachmentUrl());
-                String jacketUrl = jacketStorage.uploadPng(songHash, png);
+                String jacketUrl = null;
+                boolean uploadedJacket = false;
+                if (draft.attachmentUrl() != null) {
+                    byte[] png = jacketDownloader.download(draft.attachmentUrl());
+                    jacketUrl = jacketStorage.uploadPng(songHash, png);
+                    uploadedJacket = true;
+                }
                 var command = new CreateSongCommand(songHash, draft.command().genreName(),
                         draft.command().songName(), draft.command().artistName(), draft.command().version(),
                         jacketUrl, draft.command().createdAt(), draft.command().charts());
                 try {
                     var result = createSong.execute(command);
+                    if (draft.reportId() != null) unknownChartReport.resolve(draft.reportId());
                     adminNotification.send("**[곡 추가]** 관리자: `<@%s>` / songId: `%d` / 곡명: **%s** / songHash: `%s`".formatted(
                             actorId(root), result.songId(), command.songName(), songHash));
                     return ResponseEntity.ok(message("곡 등록 완료: **%s** (`songId=%d`, 채보 %d개)".formatted(
                             command.songName(), result.songId(), result.chartIds().size())));
                 } catch (RuntimeException exception) {
-                    jacketStorage.delete(songHash);
+                    if (uploadedJacket) jacketStorage.delete(songHash);
                     throw exception;
                 }
             } catch (Exception exception) {
@@ -463,17 +468,18 @@ public class DiscordInteractionController {
         }
         return Map.of("type", 9, "data", Map.of("custom_id", "song_create:" + id, "title", "곡 추가",
                 "components", List.of(
-                        fileInput("jacket", "자켓"),
+                        fileInput("jacket", "자켓 (선택)", false),
                         modernInput("date", "추가일", "YYYY-MM-DD", "", true),
                         modernTextArea("metadata", "곡 기본정보 JSON", metadata),
                         modernInput("version", "버전", "예: 29", "", true),
-                        modernInput("levels", "난이도", "대괄호 안에 숫자 입력, 없으면 공백",
+                        modernInput("levels", "레벨", "대괄호 안에 숫자 입력, 없는 채보는 공백",
                                 "L:[], N:[], H:[], EX:[]", true))));
     }
 
-    private static Map<String, Object> fileInput(String id, String label) {
+    private static Map<String, Object> fileInput(String id, String label, boolean required) {
         return Map.of("type", 18, "label", label, "component", Map.of(
-                "type", 19, "custom_id", id, "min_values", 1, "max_values", 1, "required", true));
+                "type", 19, "custom_id", id, "min_values", required ? 1 : 0,
+                "max_values", 1, "required", required));
     }
 
     private static Map<String, Object> modernInput(String id, String label, String placeholder,
@@ -583,7 +589,7 @@ public class DiscordInteractionController {
         String attachmentUrl = requiredAttachmentUrl(root, "자켓");
         var command = new CreateSongCommand(null, optionText(root, "장르"), optionText(root, "곡명"),
                 optionText(root, "아티스트"), version, null, date, List.copyOf(charts));
-        return new Draft(command, attachmentUrl, Instant.now());
+        return new Draft(command, attachmentUrl, Instant.now(), null);
     }
 
     private UpdateSongCommand updateCommandFromOptions(JsonNode root, SongDetailView current, Instant date) {
@@ -692,18 +698,15 @@ public class DiscordInteractionController {
         List<CreateSongCommand.CreateChartCommand> charts = new ArrayList<>();
         parseLevels(values.get("levels"), version, upper, charts);
         if (charts.isEmpty()) throw new IllegalArgumentException("L/N/H/EX 중 하나 이상 입력해 주세요.");
-        JsonNode upload = findModalComponent(root, "jacket");
-        String attachmentId = upload.path("values").path(0).asText();
-        JsonNode attachment = root.path("data").path("resolved").path("attachments").path(attachmentId);
-        if (!attachment.path("content_type").asText().startsWith("image/")
-                || attachment.path("size").asLong() > 5 * 1024 * 1024L)
-            throw new IllegalArgumentException("자켓은 5MB 이하 이미지여야 합니다.");
+        JsonNode upload = findOptionalModalComponent(root, "jacket");
+        String attachmentId = upload == null ? "" : upload.path("values").path(0).asText();
+        String attachmentUrl = attachmentId.isBlank() ? null : attachmentUrl(root, attachmentId);
         Instant createdAt = LocalDate.parse(values.get("date"))
                 .atStartOfDay(ZoneOffset.UTC).toInstant();
         return new Draft(new CreateSongCommand(null, requiredText(metadata, "genreName"),
                 requiredText(metadata, "songName"), requiredText(metadata, "artistName"),
                 version, null, createdAt, List.copyOf(charts)),
-                attachment.path("url").asText(), Instant.now());
+                attachmentUrl, Instant.now(), preDraft.reportId());
     }
 
     private static void parseLevels(String spec, int version, boolean upper,
@@ -741,7 +744,8 @@ public class DiscordInteractionController {
         Map<String, Integer> levels = new java.util.LinkedHashMap<>();
         String[] names = {"L", "N", "H", "EX"};
         draft.command().charts().forEach(chart -> levels.put(names[chart.difficulty() - 1], chart.level()));
-        json.put("levels", levels); json.put("jacket", "첨부됨");
+        json.put("levels", levels);
+        json.put("jacket", draft.attachmentUrl() == null ? "없음" : "첨부됨");
         String preview;
         try { preview = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json); }
         catch (Exception exception) { throw new IllegalStateException("JSON 미리보기를 만들 수 없습니다.", exception); }
@@ -780,6 +784,14 @@ public class DiscordInteractionController {
             if (id.equals(component.path("custom_id").asText())) return component;
         }
         throw new IllegalArgumentException("입력 항목이 없습니다: " + id);
+    }
+
+    private static JsonNode findOptionalModalComponent(JsonNode root, String id) {
+        for (JsonNode row : root.path("data").path("components")) {
+            JsonNode component = row.has("component") ? row.path("component") : row.path("components").path(0);
+            if (id.equals(component.path("custom_id").asText())) return component;
+        }
+        return null;
     }
 
     private static String truncate(String value, int length) {
@@ -868,8 +880,8 @@ public class DiscordInteractionController {
     }
 
     private record Prefill(String song, String genre, String artist, boolean upper) {}
-    private record PreDraft(Prefill prefill, Instant requestedAt) {}
-    private record Draft(CreateSongCommand command, String attachmentUrl, Instant createdAt) {}
+    private record PreDraft(Prefill prefill, Instant requestedAt, Long reportId) {}
+    private record Draft(CreateSongCommand command, String attachmentUrl, Instant createdAt, Long reportId) {}
     private record EditDraft(SongDetailView current, UpdateSongCommand command, String attachmentUrl,
                              Instant requestedCreatedAt, Instant requestedAt, Long reportId) {}
     @FunctionalInterface interface JacketDownloader { byte[] download(String url) throws Exception; }

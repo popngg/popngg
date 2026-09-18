@@ -62,7 +62,7 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
-    void officialReviewRunsOnlyBehindSignedAdministratorInteractions() throws Exception {
+    void legacyOfficialReviewInteractionsRemainAdminOnlyButNewSelectionsUseManualModal() throws Exception {
         var official = mock(OfficialSongReview.class);
         controller.setOfficialSongReview(official);
         when(official.interact(any())).thenReturn(Map.of("type", 4, "data", Map.of("content", "review")));
@@ -77,11 +77,14 @@ class DiscordInteractionControllerTest {
 
         when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7,"Song","Genre","Artist",null,false,false,1,Instant.now())));
-        when(official.start(any(),any())).thenReturn(Map.of("type",9,"data",Map.of("title","미등록 곡 레벨 수동 입력")));
         ObjectNode selection = interaction(3);
         selection.withObject("data").put("custom_id","unknown_song_select").putArray("values").add("7");
-        assertThat(body(call(selection)).get("type")).isEqualTo(9);
-        verify(official).start(any(),any());
+        Map<?, ?> modal = body(call(selection));
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(modal.toString()).contains(
+                "자켓 (선택)", "곡 기본정보 JSON", "레벨",
+                "대괄호 안에 숫자 입력", "L:[], N:[], H:[], EX:[]");
+        verify(official, never()).start(any(),any());
         verifyNoInteractions(createSong, jackets);
     }
 
@@ -206,7 +209,49 @@ class DiscordInteractionControllerTest {
         submit.withObject("data").withObject("resolved").withObject("attachments")
                 .putObject("unknown-file").put("size", 100).put("content_type", "image/png")
                 .put("url", "https://cdn.discordapp.com/unknown.png");
-        assertThat(content(call(submit))).contains("곡 등록 JSON", "new song");
+        Map<?, ?> preview = body(call(submit));
+        assertThat(((Map<?, ?>) preview.get("data")).get("content").toString())
+                .contains("곡 등록 JSON", "new song", "첨부됨");
+
+        when(jackets.uploadPng(anyString(), any())).thenReturn("https://static.popn.gg/hash.png");
+        when(createSong.execute(any())).thenReturn(new CreateSongResult(99, List.of(1L, 2L, 3L)));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("곡 등록 완료", "99");
+        verify(jackets).uploadPng(anyString(), any());
+        verify(createSong).execute(argThat(command -> command.jacketUrl() != null));
+        verify(unknown).resolve(7);
+    }
+
+    @Test
+    void createsUnknownSongWithoutJacketWhenOptionalUploadIsEmpty() throws Exception {
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
+                        null, false, false, 1, Instant.now())));
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("7");
+        Map<?, ?> modal = body(call(selection));
+        Map<?, ?> modalData = (Map<?, ?>) modal.get("data");
+        assertThat(modalData.toString()).contains("min_values=0", "required=false");
+
+        ObjectNode submit = interaction(5);
+        submit.withObject("data").put("custom_id", modalData.get("custom_id").toString());
+        ArrayNode fields = submit.withObject("data").putArray("components");
+        modalModernValue(fields, "date", "2026-08-30");
+        modalModernValue(fields, "metadata", "{\"songName\":\"new song\",\"genreName\":\"new genre\",\"artistName\":\"artist\",\"upper\":false}");
+        modalModernValue(fields, "version", "29");
+        modalModernValue(fields, "levels", "N:[30], H:[42], EX:[48]");
+        Map<?, ?> preview = body(call(submit));
+        assertThat(((Map<?, ?>) preview.get("data")).get("content").toString()).contains("\"jacket\" : \"없음\"");
+
+        when(createSong.execute(any())).thenReturn(new CreateSongResult(100, List.of(4L, 5L, 6L)));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("곡 등록 완료", "100");
+        verify(createSong).execute(argThat(command -> command.jacketUrl() == null));
+        verifyNoInteractions(jackets);
+        verify(unknown).resolve(7);
     }
 
     @Test
