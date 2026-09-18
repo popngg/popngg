@@ -145,7 +145,8 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
         String sql = """
                 SELECT %s AS group_code, COALESCE(p.all_time_score, 0) AS all_time_score,
                        COALESCE(p.medal_code, 13) AS medal_code,
-                       COALESCE(p.all_time_rank_code, 13) AS rank_code
+                       COALESCE(p.all_time_rank_code, 13) AS rank_code,
+                       p.playdata_id IS NOT NULL AS played
                   FROM charts c
                   LEFT JOIN playdata p
                     ON p.chart_id = c.chart_id
@@ -160,9 +161,10 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
             int score = rs.getInt("all_time_score");
             int medal = rs.getInt("medal_code");
             int rank = rs.getInt("rank_code");
+            boolean played = rs.getBoolean("played");
             rows.computeIfAbsent(key, ignored -> new ProgressAccumulator())
-                    .add(score, medal, rank);
-            summary.add(score, medal, rank);
+                    .add(score, medal, rank, played);
+            summary.add(score, medal, rank, played);
         }, user.userId());
         var resultRows = rows.entrySet().stream()
                 .map(entry -> entry.getValue().toRow(entry.getKey()))
@@ -208,29 +210,33 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
 
     private static final class ProgressAccumulator {
         private int total;
+        private int played;
         private long scoreSum;
         private final Map<Integer, Integer> medals = new java.util.TreeMap<>();
         private final Map<Integer, Integer> ranks = new java.util.TreeMap<>();
 
-        void add(int score, int medal, int rank) {
+        void add(int score, int medal, int rank, boolean hasPlayed) {
             total++;
             scoreSum += score;
+            if (hasPlayed) played++;
             medals.merge(medal, 1, Integer::sum);
             ranks.merge(rank, 1, Integer::sum);
         }
 
         PlaydataQueryResults.ProgressRow toRow(int key) {
             return new PlaydataQueryResults.ProgressRow(
-                    key, total, average(), codeCounts(medals), codeCounts(ranks));
+                    key, total, average(total), average(played),
+                    codeCounts(medals), codeCounts(ranks));
         }
 
         PlaydataQueryResults.ProgressCounts toCounts() {
             return new PlaydataQueryResults.ProgressCounts(
-                    total, average(), codeCounts(medals), codeCounts(ranks));
+                    total, average(total), average(played),
+                    codeCounts(medals), codeCounts(ranks));
         }
 
-        private int average() {
-            return total == 0 ? 0 : (int) Math.round((double) scoreSum / total);
+        private int average(int divisor) {
+            return divisor == 0 ? 0 : (int) Math.round((double) scoreSum / divisor);
         }
 
         private static List<PlaydataQueryResults.CodeCount> codeCounts(

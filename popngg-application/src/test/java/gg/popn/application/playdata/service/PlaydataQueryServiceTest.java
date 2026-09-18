@@ -79,7 +79,7 @@ class PlaydataQueryServiceTest {
                 0, 100_000, "level", "desc", 0, 20);
         var records = new PlaydataQueryResults.UserRecords(List.of(), 0, 0, 20);
         var progress = new PlaydataQueryResults.Progress(List.of(),
-                new PlaydataQueryResults.ProgressCounts(0, 0, List.of(), List.of()));
+                new PlaydataQueryResults.ProgressCounts(0, 0, 0, List.of(), List.of()));
         when(port.findUserRecords("0000", new FindUserRecordsQuery(
                 null, 29, 1, 50, null, null, null, 0, 100_000,
                 "LEVEL", "DESC", 0, 20))).thenReturn(records);
