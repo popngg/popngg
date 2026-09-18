@@ -472,8 +472,7 @@ public class DiscordInteractionController {
                         modernInput("date", "추가일", "YYYY-MM-DD", "", true),
                         modernTextArea("metadata", "곡 기본정보 JSON", metadata),
                         modernInput("version", "버전", "예: 29", "", true),
-                        modernInput("levels", "난이도", "대괄호 안에 숫자 입력, 없으면 공백",
-                                "L:[], N:[], H:[], EX:[]", true))));
+                        modernInput("levels", "레벨", "예: N:25,H:38,EX:45", "", true))));
     }
 
     private static Map<String, Object> fileInput(String id, String label, boolean required) {

@@ -81,7 +81,9 @@ class DiscordInteractionControllerTest {
         selection.withObject("data").put("custom_id","unknown_song_select").putArray("values").add("7");
         Map<?, ?> modal = body(call(selection));
         assertThat(modal.get("type")).isEqualTo(9);
-        assertThat(modal.toString()).contains("자켓 (선택)", "곡 기본정보 JSON", "난이도");
+        assertThat(modal.toString())
+                .contains("자켓 (선택)", "곡 기본정보 JSON", "레벨", "예: N:25,H:38,EX:45")
+                .doesNotContain("L:[], N:[], H:[], EX:[]");
         verify(official, never()).start(any(),any());
         verifyNoInteractions(createSong, jackets);
     }
