@@ -63,6 +63,9 @@ analysis and uploads replace latest. Failed partial attempts may remain in S3 bu
 are not published. Configure S3 lifecycle retention and local output retention for
 the deployment; raw snapshots can be large. Local files default to the ignored
 `build/analysis/cpi-spi/` directory. The raw record limit defaults to 3,000,000;
+The deployment container uses `/tmp/popngg-analysis` because `/app` is owned by
+root and the application runs as UID 10001. Successfully uploaded snapshots are
+durable in S3; local temporary files do not survive container replacement.
 exceeding it fails explicitly rather than truncating data. Memory use includes
 per-group integer score arrays and membership sets; size the worker heap using an
 actual snapshot before enabling scheduled runs on the API host.

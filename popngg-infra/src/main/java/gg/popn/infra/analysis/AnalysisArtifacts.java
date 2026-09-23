@@ -18,7 +18,7 @@ public class AnalysisArtifacts {
     public AnalysisArtifacts(S3Client s3,ObjectMapper mapper,
             @Value("${popngg.analysis.bucket:}") String bucket,
             @Value("${popngg.analysis.prefix:cpi-spi}") String prefix,
-            @Value("${APP_VERSION:unknown}") String build) {
+            @Value("${POPNGG_GIT_SHA:unknown}") String build) {
         this.s3=s3;this.mapper=mapper;this.bucket=bucket;this.prefix=prefix.replaceAll("^/+|/+$","");this.build=build;
     }
     public void checkPrivateBucket() {
