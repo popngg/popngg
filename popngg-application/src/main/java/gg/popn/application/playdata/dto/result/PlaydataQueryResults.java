@@ -57,11 +57,11 @@ public final class PlaydataQueryResults {
     public record Progress(List<ProgressRow> rows, ProgressCounts summary) {
     }
 
-    public record ProgressRow(int key, int total, int averageScore,
+    public record ProgressRow(int key, int total, int averageScore, int playedAverageScore,
                               List<CodeCount> medals, List<CodeCount> ranks) {
     }
 
-    public record ProgressCounts(int total, int averageScore,
+    public record ProgressCounts(int total, int averageScore, int playedAverageScore,
                                  List<CodeCount> medals, List<CodeCount> ranks) {
     }
 

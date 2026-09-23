@@ -91,6 +91,7 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(progress.rows()).hasSize(2);
         assertThat(progress.summary().total()).isEqualTo(2);
         assertThat(progress.summary().averageScore()).isEqualTo(93_500);
+        assertThat(progress.summary().playedAverageScore()).isEqualTo(93_500);
         assertThat(progress.summary().ranks()).extracting(row -> row.code())
                 .containsExactlyInAnyOrder(1, 3);
         assertThat(popclass.targets()).hasSize(1);
@@ -119,6 +120,7 @@ class PlaydataQueryJdbcAdapterTest {
 
         assertThat(level48.total()).isEqualTo(2);
         assertThat(level48.averageScore()).isEqualTo(48_500);
+        assertThat(level48.playedAverageScore()).isEqualTo(97_000);
         assertThat(level48.medals()).containsExactlyInAnyOrder(
                 new PlaydataQueryResults.CodeCount(2, 1),
                 new PlaydataQueryResults.CodeCount(13, 1));
@@ -127,6 +129,7 @@ class PlaydataQueryJdbcAdapterTest {
                 new PlaydataQueryResults.CodeCount(13, 1));
         assertThat(progress.summary().total()).isEqualTo(3);
         assertThat(progress.summary().averageScore()).isEqualTo(62_333);
+        assertThat(progress.summary().playedAverageScore()).isEqualTo(93_500);
         assertThat(progress.summary().medals()).containsExactlyInAnyOrder(
                 new PlaydataQueryResults.CodeCount(2, 1),
                 new PlaydataQueryResults.CodeCount(4, 1),
@@ -160,6 +163,7 @@ class PlaydataQueryJdbcAdapterTest {
 
         assertThat(light.total()).isEqualTo(1);
         assertThat(light.averageScore()).isZero();
+        assertThat(light.playedAverageScore()).isZero();
         assertThat(light.medals()).containsExactly(
                 new PlaydataQueryResults.CodeCount(13, 1));
         assertThat(light.ranks()).containsExactly(
