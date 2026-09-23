@@ -47,6 +47,24 @@ class DiscordInteractionControllerTest {
     private KeyPair keys;
     private DiscordInteractionController controller;
 
+    @Test
+    void analysisAcknowledgesImmediatelyWithoutDeferredLoadingAndRequiresAdmin() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        when(jobs.submit("DISCORD", "discord:1234")).thenReturn(
+                new gg.popn.application.analysis.AnalysisJobs.Submission("job-1", "QUEUED", false));
+        var request = command("실력분석최신화");
+        request.put("id", "1234");
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(response.toString()).contains("job-1", "admin bot", "JSON");
+        verify(jobs).submit("DISCORD", "discord:1234");
+        clearInvocations(jobs);
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할");
+        verifyNoInteractions(jobs);
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         keys = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
