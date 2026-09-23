@@ -37,8 +37,8 @@ public class Version implements Validatable {
             throw new InvalidArgumentException("version", "It should not be empty.");
         }
 
-        if ((version < 1 || version > 28) && version != 99) {
-            throw new InvalidArgumentException("version", "Version should be between 1 and 28 or 99.");
+        if ((version < 1 || version > 29) && version != 99) {
+            throw new InvalidArgumentException("version", "Version should be between 1 and 29 or 99.");
         }
     }
 
@@ -62,8 +62,9 @@ public class Version implements Validatable {
             case 26 -> "解明リドルズ";
             case 27 -> "UniLab";
             case 28 -> "Jam&Fizz";
+            case 29 -> "High☆Cheers!!";
             case 99 -> "ETC";
-            default -> throw new InvalidArgumentException("version", "Version should be between 1 and 28 or 99.");
+            default -> throw new InvalidArgumentException("version", "Version should be between 1 and 29 or 99.");
         };
     }
 }
