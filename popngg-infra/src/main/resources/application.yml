@@ -19,6 +19,13 @@ jwt:
   issuer: ${JWT_ISSUER:popngg}
 
 popngg:
+  analysis:
+    enabled: ${ANALYSIS_ENABLED:false}
+    bucket: ${ANALYSIS_S3_BUCKET:}
+    prefix: ${ANALYSIS_S3_PREFIX:cpi-spi}
+    output: ${ANALYSIS_OUTPUT:build/analysis/cpi-spi}
+    max-records: ${ANALYSIS_MAX_RECORDS:3000000}
+    cron: ${ANALYSIS_CRON:0 0 6 * * *}
   auth:
     cookie-secure: ${AUTH_COOKIE_SECURE:true}
     cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
