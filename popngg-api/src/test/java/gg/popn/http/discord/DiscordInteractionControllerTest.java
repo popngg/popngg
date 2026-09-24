@@ -293,6 +293,32 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void labelsMissingVariantsAndEveryReportedDifficulty() throws Exception {
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(1, "upper", "genre", "artist",
+                        4, true, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(2, "regular", "genre", "artist",
+                        4, false, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(3, "easy", "genre", "artist",
+                        1, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(4, "normal", "genre", "artist",
+                        2, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(5, "hyper", "genre", "artist",
+                        3, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(6, "unknown", "genre", "artist",
+                        null, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(7, "future", "genre", "artist",
+                        5, false, false, 10L, 1, Instant.now())));
+
+        String result = content(call(command("미등록목록")));
+
+        assertThat(result).contains(
+                "[UPPER 누락]", "[일반 버전 누락]", "[EASY 채보 누락]",
+                "[NORMAL 채보 누락]", "[HYPER 채보 누락]", "[미등록 채보 누락]",
+                "[난이도 5 채보 누락]");
+    }
+
+    @Test
     void acceptsNonSquareJacketImages() throws Exception {
         BufferedImage image = new BufferedImage(2, 1, BufferedImage.TYPE_INT_ARGB);
         ByteArrayOutputStream source = new ByteArrayOutputStream();
