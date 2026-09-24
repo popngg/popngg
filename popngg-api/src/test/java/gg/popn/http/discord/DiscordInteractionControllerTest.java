@@ -273,6 +273,26 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void opensExistingSongEditForAMissingDifficulty() throws Exception {
+        var report = new UnknownChartReportPort.Report(8, "known song", "genre", "artist",
+                4, false, true, 12L, 2, Instant.now());
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(report));
+        when(findDetail.findSong(12)).thenReturn(detail("known song", "known-hash"));
+
+        assertThat(content(call(command("미등록목록")))).contains("known song", "[EX 채보 누락]");
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("8");
+
+        Map<?, ?> modal = body(call(selection));
+
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(modal.toString()).contains("곡 수정", "known song", "N:30,H:42");
+        verify(findDetail).findSong(12);
+        verifyNoInteractions(createSong);
+    }
+
+    @Test
     void acceptsNonSquareJacketImages() throws Exception {
         BufferedImage image = new BufferedImage(2, 1, BufferedImage.TYPE_INT_ARGB);
         ByteArrayOutputStream source = new ByteArrayOutputStream();

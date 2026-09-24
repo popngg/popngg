@@ -25,7 +25,7 @@ class UnknownChartReportJdbcAdapterTest {
                 CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_name VARCHAR(255),
                 genre_name VARCHAR(255), artist_name VARCHAR(255))
                 """);
-        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT, is_upper BOOLEAN, is_deleted BOOLEAN)");
+        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT, difficulty_code INT, is_upper BOOLEAN, is_deleted BOOLEAN)");
         var adapter = new UnknownChartReportJdbcAdapter(jdbc);
         var row = new ImportPlaydataCommand.Row(null, null, 4, false, null,
                 "song", "genre", 1, 1, 1, null, false, null);
@@ -52,9 +52,9 @@ class UnknownChartReportJdbcAdapterTest {
                 CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_name VARCHAR(255),
                 genre_name VARCHAR(255), artist_name VARCHAR(255))
                 """);
-        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT, is_upper BOOLEAN, is_deleted BOOLEAN)");
+        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT, difficulty_code INT, is_upper BOOLEAN, is_deleted BOOLEAN)");
         jdbc.update("INSERT INTO songs VALUES (7,'song','genre',NULL)");
-        jdbc.update("INSERT INTO charts VALUES (70,7,FALSE,FALSE)");
+        jdbc.update("INSERT INTO charts VALUES (70,7,4,FALSE,FALSE)");
         var adapter = new UnknownChartReportJdbcAdapter(jdbc);
         var row = new ImportPlaydataCommand.Row(null, null, 4, false, null,
                 "song", "genre", 1, 1, 1, null, false, "reported artist");
@@ -93,9 +93,9 @@ class UnknownChartReportJdbcAdapterTest {
                 CREATE TABLE songs(song_id BIGINT PRIMARY KEY, song_name VARCHAR(255),
                 genre_name VARCHAR(255), artist_name VARCHAR(255))
                 """);
-        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT, is_upper BOOLEAN, is_deleted BOOLEAN)");
+        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY, song_id BIGINT, difficulty_code INT, is_upper BOOLEAN, is_deleted BOOLEAN)");
         jdbc.update("INSERT INTO songs VALUES (7,'TWINKLING','genre','artist')");
-        jdbc.update("INSERT INTO charts VALUES (70,7,FALSE,FALSE)");
+        jdbc.update("INSERT INTO charts VALUES (70,7,4,FALSE,FALSE)");
         var adapter = new UnknownChartReportJdbcAdapter(jdbc);
         var upper = new ImportPlaydataCommand.Row(null, null, 4, true, null,
                 "TWINKLING", "genre", 1, 1, 1, null, false, "artist");
@@ -107,6 +107,35 @@ class UnknownChartReportJdbcAdapterTest {
             assertThat(report.upper()).isTrue();
             assertThat(report.missingVariant()).isTrue();
             assertThat(report.difficultyCode()).isEqualTo(4);
+        });
+    }
+
+    @Test
+    void refreshesMigratedNullIdentityAndListsTheCurrentlyDetectedChart() {
+        JdbcTemplate jdbc = new JdbcTemplate(new DriverManagerDataSource(
+                "jdbc:h2:mem:restored-" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", ""));
+        jdbc.execute("""
+                CREATE TABLE unknown_chart_reports(report_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                renew_log_id BIGINT,poptomo_id VARCHAR(64),song_name VARCHAR(255),genre_name VARCHAR(255),
+                artist_name VARCHAR(255),difficulty_code INT,is_upper BOOLEAN,occurrences INT,resolved BOOLEAN,
+                first_seen_at TIMESTAMP,last_seen_at TIMESTAMP,
+                UNIQUE(song_name,genre_name,artist_name))
+                """);
+        jdbc.execute("CREATE TABLE songs(song_id BIGINT PRIMARY KEY,song_name VARCHAR(255),genre_name VARCHAR(255),artist_name VARCHAR(255))");
+        jdbc.execute("CREATE TABLE charts(chart_id BIGINT PRIMARY KEY,song_id BIGINT,difficulty_code INT,is_upper BOOLEAN,is_deleted BOOLEAN)");
+        jdbc.update("INSERT INTO songs VALUES (7,'song','genre','artist')");
+        jdbc.update("INSERT INTO charts VALUES (70,7,2,FALSE,FALSE)");
+        jdbc.update("INSERT INTO unknown_chart_reports VALUES (1,1,'user','song','genre','artist',NULL,NULL,1,FALSE,NOW(),NOW())");
+        var adapter = new UnknownChartReportJdbcAdapter(jdbc);
+        var detected = new ImportPlaydataCommand.Row(null,null,4,false,null,
+                "song","genre",1,1,1,null,false,"artist");
+
+        adapter.record(2,"user",List.of(detected));
+
+        assertThat(adapter.findRecentUnresolved(10)).singleElement().satisfies(report -> {
+            assertThat(report.difficultyCode()).isEqualTo(4);
+            assertThat(report.upper()).isFalse();
+            assertThat(report.existingVariantSongId()).isEqualTo(7);
         });
     }
 }
