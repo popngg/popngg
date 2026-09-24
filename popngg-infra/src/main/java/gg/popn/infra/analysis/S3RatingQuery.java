@@ -30,7 +30,7 @@ public class S3RatingQuery implements RatingQuery {
                 String snapshotId=String.valueOf(pointer.get("snapshotId"));
                 byte[] bytes=s3.getObjectAsBytes(r->r.bucket(bucket).key(prefix+"/snapshots/"+snapshotId+"/ratings.json")).asByteArray();
                 var raw=mapper.readValue(bytes,RatingSnapshot.class);
-                var snapshot=new RatingSnapshot(snapshotId,raw.generatedAt(),raw.modelVersion(),raw.modelStatus(),raw.minimumPlayers(),raw.charts());
+                var snapshot=new RatingSnapshot(snapshotId,raw.generatedAt(),raw.modelVersion(),raw.modelStatus(),raw.publicationStatus(),raw.minimumPlayers(),raw.charts());
                 cached=new Cached(snapshot,Instant.now().plusSeconds(60));return snapshot;
             } catch(Exception e) {throw new IllegalStateException("RATINGS_NOT_READY",e);}
         }

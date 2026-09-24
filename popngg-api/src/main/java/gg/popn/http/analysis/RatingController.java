@@ -21,14 +21,14 @@ public class RatingController {
         try {
             var snapshot=query.latest();
             var selected=snapshot.charts().stream().filter(c->c.level()==level)
-                    .filter(c->"PUBLISHED".equals(metric==Metric.CPI?c.cpiStatus():c.spiStatus()))
+                    .filter(c->"ELIGIBLE".equals(metric==Metric.CPI?c.cpiEligibilityStatus():c.spiEligibilityStatus()))
                     .sorted(metric.comparator()).toList();
             var entries=new ArrayList<RankedChart>();int rank=0;
             for(var chart:selected)entries.add(new RankedChart(++rank,chart));
             var held=snapshot.charts().stream().filter(c->c.level()==level)
-                    .filter(c->!"PUBLISHED".equals(metric==Metric.CPI?c.cpiStatus():c.spiStatus())).toList();
+                    .filter(c->!"ELIGIBLE".equals(metric==Metric.CPI?c.cpiEligibilityStatus():c.spiEligibilityStatus())).toList();
             return ResponseEntity.ok(success(new RankingResponse(snapshot.snapshotId(),snapshot.generatedAt(),snapshot.modelVersion(),
-                    snapshot.modelStatus(),snapshot.minimumPlayers(),level,metric,entries,held)));
+                    snapshot.modelStatus(),snapshot.publicationStatus(),snapshot.minimumPlayers(),level,metric,entries,held)));
         } catch(IllegalStateException e) {return ResponseEntity.status(503).body(Map.of("error","RATINGS_NOT_READY"));}
     }
 
@@ -46,6 +46,6 @@ public class RatingController {
                 :Comparator.comparing(ChartRating::spi,Comparator.nullsLast(Comparator.reverseOrder())).thenComparingLong(ChartRating::chartId);}
     }
     public record RankedChart(int rank,ChartRating chart){}
-    public record RankingResponse(String snapshotId,String generatedAt,String modelVersion,String modelStatus,int minimumPlayers,
+    public record RankingResponse(String snapshotId,String generatedAt,String modelVersion,String modelStatus,String publicationStatus,int minimumPlayers,
                                   int level,Metric metric,List<RankedChart> rankings,List<ChartRating> held){}
 }

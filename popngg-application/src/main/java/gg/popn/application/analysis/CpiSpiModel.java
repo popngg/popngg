@@ -9,9 +9,9 @@ import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
 
-/** Deterministic v1 candidate model. Values are latent coefficients, not a public 0-100 scale. */
+/** Deterministic experimental model. Values are latent coefficients, not a public 0-100 scale. */
 public final class CpiSpiModel {
-    public static final String VERSION = "cpi-spi-candidate-v1";
+    public static final String VERSION = "cpi-spi-experimental-v1";
     public static final int MIN_PLAYERS = 50;
     private static final int MIN_LEVEL = 48;
     private final ObjectMapper mapper;
@@ -43,80 +43,102 @@ public final class CpiSpiModel {
                 }
             }
         }
-        var cpiDifficulty = fitCpi(cpi);
-        var spiDifficulty = fitSpi(spi);
+        var chartLevels = new HashMap<Long,Integer>();
+        catalog.forEach(c -> chartLevels.put(c.chartId(),c.level()));
+        var cpiDifficulty = fitCpi(cpi,chartLevels);
+        var spiDifficulty = fitSpi(spi,chartLevels);
         var ratings = new ArrayList<ChartRating>();
         for (var chart : catalog) {
             if (chart.level() < MIN_LEVEL || chart.level() > 50) continue;
             var s = stats.getOrDefault(chart.chartId(), new Stats());
-            boolean cpiReady = s.cpiUsers.size() >= MIN_PLAYERS && s.clearCount > 0 && s.clearCount < s.cpiCount;
-            boolean spiReady = s.spiUsers.size() >= MIN_PLAYERS;
+            var cpiReasons=new ArrayList<String>();
+            if(s.cpiUsers.size()<MIN_PLAYERS)cpiReasons.add("INSUFFICIENT_PLAYERS");
+            if(s.cpiCount>0 && (s.clearCount==0 || s.clearCount==s.cpiCount))cpiReasons.add("ONE_SIDED_OUTCOMES");
+            var spiReasons=new ArrayList<String>();
+            if(s.spiUsers.size()<MIN_PLAYERS)spiReasons.add("INSUFFICIENT_PLAYERS");
+            if(!s.scores.isEmpty() && new HashSet<>(s.scores).size()==1)spiReasons.add("CONSTANT_SCORE");
+            boolean cpiReady=cpiReasons.isEmpty(),spiReady=spiReasons.isEmpty();
             var sorted = s.scores.stream().mapToInt(Integer::intValue).sorted().toArray();
             ratings.add(new ChartRating(chart.chartId(),chart.songId(),chart.songName(),chart.genreName(),chart.jacketUrl(),
-                    chart.level(),chart.difficulty(),chart.upper(), cpiReady?"PUBLISHED":"HOLD",
+                    chart.level(),chart.difficulty(),chart.upper(), cpiReady?"ELIGIBLE":"HOLD",List.copyOf(cpiReasons),
                     cpiReady?round(cpiDifficulty.get(chart.chartId())):null,s.cpiUsers.size(),s.clearCount,ratio(s.clearCount,s.cpiCount),
-                    spiReady?"PUBLISHED":"HOLD",spiReady?round(spiDifficulty.get(chart.chartId())):null,s.spiUsers.size(),
+                    spiReady?"ELIGIBLE":"HOLD",List.copyOf(spiReasons),spiReady?round(spiDifficulty.get(chart.chartId())):null,s.spiUsers.size(),
                     ratio(s.scoreSum,s.scores.size()),AnalysisStatistics.percentile(sorted,.5)));
         }
         ratings.sort(Comparator.comparingInt(ChartRating::level).thenComparing(ChartRating::chartId));
-        var snapshot = new RatingSnapshot(null,Instant.now().toString(),VERSION,"CANDIDATE",MIN_PLAYERS,ratings);
+        var snapshot = new RatingSnapshot(null,Instant.now().toString(),VERSION,"EXPERIMENTAL","NOT_VALIDATED",MIN_PLAYERS,ratings);
         mapper.writerWithDefaultPrettyPrinter().writeValue(directory.resolve("ratings.json").toFile(),snapshot);
         writeCsv(directory.resolve("ratings.csv"),ratings);
         var summary = new LinkedHashMap<String,Object>();
         summary.put("ratingModelVersion",VERSION); summary.put("ratingMinimumLevel",MIN_LEVEL);
         summary.put("ratingChartCount",ratings.size());
-        summary.put("publishedCpiChartCount",ratings.stream().filter(r->"PUBLISHED".equals(r.cpiStatus())).count());
-        summary.put("publishedSpiChartCount",ratings.stream().filter(r->"PUBLISHED".equals(r.spiStatus())).count());
+        summary.put("eligibleCpiChartCount",ratings.stream().filter(r->"ELIGIBLE".equals(r.cpiEligibilityStatus())).count());
+        summary.put("eligibleSpiChartCount",ratings.stream().filter(r->"ELIGIBLE".equals(r.spiEligibilityStatus())).count());
         return summary;
     }
 
-    private static Map<Long,Double> fitCpi(List<ClearObs> observations) {
-        var users = new HashMap<Long,Double>(); var charts = new HashMap<Long,Double>();
-        for (var o:observations) { users.putIfAbsent(o.userId(),0d); charts.putIfAbsent(o.chartId(),0d); }
-        for (int iteration=0; iteration<30; iteration++) {
-            var ug=new HashMap<Long,double[]>(); var cg=new HashMap<Long,double[]>();
+    private static Map<Long,Double> fitCpi(List<ClearObs> observations,Map<Long,Integer> chartLevels) {
+        var users=new HashMap<Long,Double>();var levels=new HashMap<Integer,Double>();var deviations=new HashMap<Long,Double>();
+        for(var o:observations){users.putIfAbsent(o.userId(),0d);levels.putIfAbsent(chartLevels.get(o.chartId()),0d);deviations.putIfAbsent(o.chartId(),0d);}
+        for(int iteration=0;iteration<40;iteration++) {
+            var ug=new HashMap<Long,double[]>();var lg=new HashMap<Integer,double[]>();var dg=new HashMap<Long,double[]>();
             for (var o:observations) {
-                double p=sigmoid(users.get(o.userId())-charts.get(o.chartId()));
+                int level=chartLevels.get(o.chartId());
+                double p=sigmoid(users.get(o.userId())-levels.get(level)-deviations.get(o.chartId()));
                 double residual=(o.clear()?1d:0d)-p, weight=Math.max(.01,p*(1-p));
-                add(ug,o.userId(),residual,weight); add(cg,o.chartId(),-residual,weight);
+                add(ug,o.userId(),residual,weight);add(lg,level,-residual,weight);add(dg,o.chartId(),-residual,weight);
             }
-            update(users,ug,2d); update(charts,cg,2d);
+            updatePenalized(users,ug,2d);updateUnpenalized(levels,lg);updatePenalized(deviations,dg,2d);
             double mean=users.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
-            users.replaceAll((k,v)->v-mean); charts.replaceAll((k,v)->v+mean);
+            users.replaceAll((k,v)->v-mean);levels.replaceAll((k,v)->v-mean);
+            centerDeviations(levels,deviations,chartLevels);
         }
-        return charts;
+        var result=new HashMap<Long,Double>();deviations.forEach((id,d)->result.put(id,levels.get(chartLevels.get(id))+d));return result;
     }
 
-    private static Map<Long,Double> fitSpi(List<ScoreObs> observations) {
-        var users=new HashMap<Long,Double>(); var charts=new HashMap<Long,Double>();
+    private static Map<Long,Double> fitSpi(List<ScoreObs> observations,Map<Long,Integer> chartLevels) {
+        var users=new HashMap<Long,Double>();var levels=new HashMap<Integer,Double>();var deviations=new HashMap<Long,Double>();
         double mean=observations.stream().mapToInt(ScoreObs::score).average().orElse(0);
-        for(var o:observations){users.putIfAbsent(o.userId(),0d);charts.putIfAbsent(o.chartId(),0d);}
+        for(var o:observations){users.putIfAbsent(o.userId(),0d);levels.putIfAbsent(chartLevels.get(o.chartId()),0d);deviations.putIfAbsent(o.chartId(),0d);}
         for(int iteration=0;iteration<20;iteration++) {
-            var us=new HashMap<Long,double[]>(); var cs=new HashMap<Long,double[]>();
+            var us=new HashMap<Long,double[]>();var ls=new HashMap<Integer,double[]>();var ds=new HashMap<Long,double[]>();
             for(var o:observations) {
-                var u=us.computeIfAbsent(o.userId(),k->new double[2]);u[0]+=o.score()-mean+charts.get(o.chartId());u[1]++;
+                int level=chartLevels.get(o.chartId());var u=us.computeIfAbsent(o.userId(),k->new double[2]);
+                u[0]+=o.score()-mean+levels.get(level)+deviations.get(o.chartId());u[1]++;
             }
             us.forEach((id,a)->users.put(id,a[0]/(a[1]+5d)));
             for(var o:observations) {
-                var c=cs.computeIfAbsent(o.chartId(),k->new double[2]);c[0]+=mean+users.get(o.userId())-o.score();c[1]++;
+                int level=chartLevels.get(o.chartId());var l=ls.computeIfAbsent(level,k->new double[2]);
+                l[0]+=mean+users.get(o.userId())-deviations.get(o.chartId())-o.score();l[1]++;
             }
-            cs.forEach((id,a)->charts.put(id,a[0]/(a[1]+5d)));
+            ls.forEach((level,a)->levels.put(level,a[0]/a[1]));
+            for(var o:observations){int level=chartLevels.get(o.chartId());var d=ds.computeIfAbsent(o.chartId(),k->new double[2]);d[0]+=mean+users.get(o.userId())-levels.get(level)-o.score();d[1]++;}
+            ds.forEach((id,a)->deviations.put(id,a[0]/(a[1]+5d)));
+            double userMean=users.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            users.replaceAll((k,v)->v-userMean);levels.replaceAll((k,v)->v-userMean);
+            centerDeviations(levels,deviations,chartLevels);
         }
-        return charts;
+        var result=new HashMap<Long,Double>();deviations.forEach((id,d)->result.put(id,levels.get(chartLevels.get(id))+d));return result;
     }
-    private static void add(Map<Long,double[]> map,long id,double gradient,double weight){var a=map.computeIfAbsent(id,k->new double[2]);a[0]+=gradient;a[1]+=weight;}
-    private static void update(Map<Long,Double> values,Map<Long,double[]> steps,double regularization){steps.forEach((id,a)->values.compute(id,(k,v)->v+a[0]/(a[1]+regularization)));}
+    private static <K> void add(Map<K,double[]> map,K id,double gradient,double weight){var a=map.computeIfAbsent(id,k->new double[2]);a[0]+=gradient;a[1]+=weight;}
+    private static <K> void updatePenalized(Map<K,Double> values,Map<K,double[]> steps,double lambda){steps.forEach((id,a)->values.compute(id,(k,v)->v+(a[0]-lambda*v)/(a[1]+lambda)));}
+    private static <K> void updateUnpenalized(Map<K,Double> values,Map<K,double[]> steps){steps.forEach((id,a)->values.compute(id,(k,v)->v+a[0]/a[1]));}
+    private static void centerDeviations(Map<Integer,Double> levels,Map<Long,Double> deviations,Map<Long,Integer> chartLevels){
+        var sums=new HashMap<Integer,double[]>();deviations.forEach((id,d)->{var a=sums.computeIfAbsent(chartLevels.get(id),k->new double[2]);a[0]+=d;a[1]++;});
+        sums.forEach((level,a)->{double m=a[0]/a[1];deviations.replaceAll((id,d)->chartLevels.get(id).equals(level)?d-m:d);levels.compute(level,(k,v)->v+m);});
+    }
     private static double sigmoid(double x){return x>=0?1/(1+Math.exp(-x)):Math.exp(x)/(1+Math.exp(x));}
     private static Double ratio(long a,long b){return b==0?null:(double)a/b;}
     private static Double round(Double v){return v==null?null:Math.rint(v*1_000_000d)/1_000_000d;}
     private static void writeCsv(Path path,List<ChartRating> rows)throws IOException {
         try(var out=Files.newBufferedWriter(path,StandardCharsets.UTF_8)){
-            out.write("chartId,songId,level,cpiStatus,cpi,cpiSampleCount,clearCount,clearRate,spiStatus,spi,spiSampleCount,averageScore,medianScore\n");
-            for(var r:rows)out.write(String.join(",",Long.toString(r.chartId()),Long.toString(r.songId()),Integer.toString(r.level()),r.cpiStatus(),
-                    Objects.toString(r.cpi(),""),Integer.toString(r.cpiSampleCount()),Integer.toString(r.clearCount()),Objects.toString(r.clearRate(),""),
-                    r.spiStatus(),Objects.toString(r.spi(),""),Integer.toString(r.spiSampleCount()),Objects.toString(r.averageScore(),""),Objects.toString(r.medianScore(),""))+"\n");
+            out.write("chartId,songId,songName,genreName,jacketUrl,level,difficulty,upper,cpiEligibilityStatus,cpiHoldReasons,cpi,cpiSampleCount,clearCount,clearRate,spiEligibilityStatus,spiHoldReasons,spi,spiSampleCount,averageScore,medianScore\n");
+            for(var r:rows)out.write(csv(Arrays.asList(r.chartId(),r.songId(),r.songName(),r.genreName(),r.jacketUrl(),r.level(),r.difficulty(),r.upper(),r.cpiEligibilityStatus(),
+                    String.join("|",r.cpiHoldReasons()),Objects.toString(r.cpi(),""),r.cpiSampleCount(),r.clearCount(),Objects.toString(r.clearRate(),""),r.spiEligibilityStatus(),
+                    String.join("|",r.spiHoldReasons()),Objects.toString(r.spi(),""),r.spiSampleCount(),Objects.toString(r.averageScore(),""),Objects.toString(r.medianScore(),""))));
         }
     }
+    private static String csv(List<?> values){return values.stream().map(v->v==null?"":v.toString()).map(v->"\""+v.replace("\"","\"\"")+"\"").collect(java.util.stream.Collectors.joining(","))+"\n";}
     private record ClearObs(long userId,long chartId,boolean clear){}
     private record ScoreObs(long userId,long chartId,int score){}
     private static final class Stats {final Set<Long> cpiUsers=new HashSet<>(),spiUsers=new HashSet<>();final List<Integer> scores=new ArrayList<>();int cpiCount,clearCount;long scoreSum;}

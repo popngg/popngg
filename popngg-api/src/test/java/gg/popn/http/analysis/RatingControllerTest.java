@@ -8,9 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class RatingControllerTest {
     @Test void returnsRankedAndHeldChartsSeparately() {
-        var published=new ChartRating(1,1,"Song","Genre","jacket",49,4,false,"PUBLISHED",1.2,60,20,.333,"PUBLISHED",1200d,60,95000d,95100d);
-        var held=new ChartRating(2,2,"Sparse","Genre",null,49,4,false,"HOLD",null,12,4,.333,"HOLD",null,12,90000d,90000d);
-        RatingQuery query=()->new RatingSnapshot("snapshot","now","v1","CANDIDATE",50,List.of(held,published));
+        var published=new ChartRating(1,1,"Song","Genre","jacket",49,4,false,"ELIGIBLE",List.of(),1.2,60,20,.333,"ELIGIBLE",List.of(),1200d,60,95000d,95100d);
+        var held=new ChartRating(2,2,"Sparse","Genre",null,49,4,false,"HOLD",List.of("INSUFFICIENT_PLAYERS"),null,12,4,.333,"HOLD",List.of("INSUFFICIENT_PLAYERS"),null,12,90000d,90000d);
+        RatingQuery query=()->new RatingSnapshot("snapshot","now","v1","EXPERIMENTAL","NOT_VALIDATED",50,List.of(held,published));
         var response=new RatingController(query).charts(49,RatingController.Metric.CPI);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         var body=(gg.popn.http.common.response.SuccessResponse<?>)response.getBody();
