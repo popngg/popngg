@@ -6,6 +6,7 @@ import gg.popn.application.playdata.dto.result.PlaydataQueryResults.ChartPlaydat
 import gg.popn.application.playdata.port.in.PlaydataQueryUseCase;
 import gg.popn.domain.common.ResponseCode;
 import gg.popn.domain.common.ResponseMessage;
+import gg.popn.domain.game.policy.MedalPolicy;
 import gg.popn.http.common.response.SuccessResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,8 +59,10 @@ public class RatingController {
     }
     private static UserPerformance performance(String poptomoId,ChartPlaydata record){
         if(poptomoId==null)return null;
-        return record==null?new UserPerformance(poptomoId,false,null,null)
-                :new UserPerformance(poptomoId,true,record.allTimeBest().score(),record.medal().code());
+        if(record==null)return new UserPerformance(poptomoId,false,null,null,null,null);
+        int code=record.medal().code();
+        try{var medal=MedalPolicy.fromCode(code);return new UserPerformance(poptomoId,true,record.allTimeBest().score(),code,medal.name(),medal.getLabel());}
+        catch(IllegalArgumentException ignored){return new UserPerformance(poptomoId,true,record.allTimeBest().score(),code,"UNKNOWN","UNKNOWN");}
     }
     private static boolean validPoptomoId(String value){return value==null || value.matches("^(?:\\d{4}-\\d{4}-\\d{4}|BOT-\\d+-\\d+)$");}
     private static <T> SuccessResponse<T> success(T data){return SuccessResponse.<T>builder().code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS).data(data).build();}
@@ -69,7 +72,7 @@ public class RatingController {
                 ?Comparator.comparing(ChartRating::cpi,Comparator.nullsLast(Comparator.reverseOrder())).thenComparingLong(ChartRating::chartId)
                 :Comparator.comparing(ChartRating::spi,Comparator.nullsLast(Comparator.reverseOrder())).thenComparingLong(ChartRating::chartId);}
     }
-    public record UserPerformance(String poptomoId,boolean played,Integer allTimeScore,Integer medalCode){}
+    public record UserPerformance(String poptomoId,boolean played,Integer allTimeScore,Integer medalCode,String medalName,String medalLabel){}
     public record ChartWithUser(ChartRating chart,UserPerformance userPerformance){}
     public record RankedChart(int rank,ChartRating chart,UserPerformance userPerformance){}
     public record RankingResponse(String snapshotId,String generatedAt,String modelVersion,String modelStatus,String publicationStatus,int minimumPlayers,

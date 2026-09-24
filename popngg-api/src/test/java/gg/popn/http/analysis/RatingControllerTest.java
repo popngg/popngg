@@ -25,6 +25,8 @@ class RatingControllerTest {
         assertThat(data.rankings()).singleElement().satisfies(r->assertThat(r.chart().songName()).isEqualTo("Song"));
         assertThat(data.rankings().getFirst().userPerformance().allTimeScore()).isEqualTo(95000);
         assertThat(data.rankings().getFirst().userPerformance().medalCode()).isEqualTo(6);
+        assertThat(data.rankings().getFirst().userPerformance().medalName()).isEqualTo("BRONZE_DIAMOND");
+        assertThat(data.rankings().getFirst().userPerformance().medalLabel()).isEqualTo("BRONZE DIAMOND");
         assertThat(data.held()).singleElement().satisfies(r->{assertThat(r.chart().songName()).isEqualTo("Sparse");assertThat(r.userPerformance().played()).isFalse();});
     }
 }

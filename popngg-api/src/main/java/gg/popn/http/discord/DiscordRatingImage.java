@@ -60,7 +60,9 @@ public class DiscordRatingImage {
 
         try {
             executor.execute(() -> render(root, level, metric, normalizedId));
-            return Map.of("type", 5, "data", Map.of("flags", 64));
+            // The deferred acknowledgement determines whether the final edited reply is public.
+            // Keep successful tier-list requests public so everyone in the channel can view them.
+            return Map.of("type", 5, "data", Map.of());
         } catch (RejectedExecutionException exception) {
             return message("이미지 생성 요청이 많습니다. 잠시 후 다시 시도해 주세요.");
         }

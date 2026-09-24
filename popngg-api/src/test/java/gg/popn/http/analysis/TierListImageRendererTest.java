@@ -23,8 +23,17 @@ class TierListImageRendererTest {
         var image=ImageIO.read(new ByteArrayInputStream(png));assertThat(image.getWidth()).isEqualTo(1160);assertThat(image.getHeight()).isGreaterThan(400);
     }
     @Test void createsASeparateBandOnlyForOutlierGaps(){
-        var charts=List.of(chart(1,10),chart(2,9.9),chart(3,9.8),chart(4,5));
+        var charts=List.of(chart(1,10),chart(2,9.9),chart(3,9.8),chart(4,5),chart(5,4.9),chart(6,4.8));
         assertThat(TierListImageRenderer.bands(charts,RatingController.Metric.CPI)).hasSize(2);
+    }
+    @Test void doesNotCreateTinyPartitionsAndUsesClearMedalPolicy(){
+        var charts=new ArrayList<ChartRating>();
+        for(int i=0;i<20;i++)charts.add(chart(i+1,20-i-(i>=1?5:0)-(i>=18?5:0)));
+        assertThat(TierListImageRenderer.bands(charts,RatingController.Metric.CPI)).singleElement().satisfies(b->assertThat(b).hasSize(20));
+        assertThat(TierListImageRenderer.isCleared(1)).isTrue();
+        assertThat(TierListImageRenderer.isCleared(11)).isTrue();
+        assertThat(TierListImageRenderer.isCleared(12)).isTrue();
+        assertThat(TierListImageRenderer.isCleared(8)).isFalse();
     }
     private static ChartRating chart(long id,double cpi){return new ChartRating(id,id,"song","genre",null,49,4,false,"ELIGIBLE",List.of(),cpi,60,30,.5,"ELIGIBLE",List.of(),1000d,60,95000d,95000d);}
 }

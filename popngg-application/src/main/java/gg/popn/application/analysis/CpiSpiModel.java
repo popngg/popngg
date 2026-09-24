@@ -8,10 +8,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
 
 /** Deterministic experimental model. Values are latent coefficients, not a public 0-100 scale. */
 public final class CpiSpiModel {
-    public static final String VERSION = "cpi-spi-experimental-v1";
+    public static final String VERSION = "cpi-spi-experimental-v2";
     public static final int MIN_PLAYERS = 50;
     private static final int MIN_LEVEL = 48;
     private final ObjectMapper mapper;
@@ -43,6 +44,16 @@ public final class CpiSpiModel {
                 }
             }
         }
+        var eligibleCpiCharts = new HashSet<Long>();
+        var eligibleSpiCharts = new HashSet<Long>();
+        stats.forEach((chartId,s)->{
+            if(s.cpiUsers.size()>=MIN_PLAYERS && s.cpiCount>0 && s.clearCount>0 && s.clearCount<s.cpiCount)
+                eligibleCpiCharts.add(chartId);
+            if(s.spiUsers.size()>=MIN_PLAYERS && !s.scores.isEmpty() && new HashSet<>(s.scores).size()>1)
+                eligibleSpiCharts.add(chartId);
+        });
+        cpi.removeIf(o->!eligibleCpiCharts.contains(o.chartId()));
+        spi.removeIf(o->!eligibleSpiCharts.contains(o.chartId()));
         var chartLevels = new HashMap<Long,Integer>();
         catalog.forEach(c -> chartLevels.put(c.chartId(),c.level()));
         var cpiDifficulty = fitCpi(cpi,chartLevels);
@@ -80,18 +91,20 @@ public final class CpiSpiModel {
     private static Map<Long,Double> fitCpi(List<ClearObs> observations,Map<Long,Integer> chartLevels) {
         var users=new HashMap<Long,Double>();var levels=new HashMap<Integer,Double>();var deviations=new HashMap<Long,Double>();
         for(var o:observations){users.putIfAbsent(o.userId(),0d);levels.putIfAbsent(chartLevels.get(o.chartId()),0d);deviations.putIfAbsent(o.chartId(),0d);}
-        for(int iteration=0;iteration<40;iteration++) {
-            var ug=new HashMap<Long,double[]>();var lg=new HashMap<Integer,double[]>();var dg=new HashMap<Long,double[]>();
-            for (var o:observations) {
-                int level=chartLevels.get(o.chartId());
-                double p=sigmoid(users.get(o.userId())-levels.get(level)-deviations.get(o.chartId()));
-                double residual=(o.clear()?1d:0d)-p, weight=Math.max(.01,p*(1-p));
-                add(ug,o.userId(),residual,weight);add(lg,level,-residual,weight);add(dg,o.chartId(),-residual,weight);
-            }
-            updatePenalized(users,ug,2d);updateUnpenalized(levels,lg);updatePenalized(deviations,dg,2d);
+        for(int iteration=0;iteration<60;iteration++) {
+            // Block-coordinate Newton updates are intentional. Updating all three blocks from
+            // the same residual is a Jacobi step on strongly coupled parameters and diverges on
+            // the real, sparse user/chart graph even though each diagonal step looks valid.
+            var ug=cpiSteps(observations,chartLevels,users,levels,deviations,ClearObs::userId,1d);
+            double change=updatePenalized(users,ug,2d);
+            var lg=cpiSteps(observations,chartLevels,users,levels,deviations,o->chartLevels.get(o.chartId()),-1d);
+            change=Math.max(change,updateUnpenalized(levels,lg));
+            var dg=cpiSteps(observations,chartLevels,users,levels,deviations,ClearObs::chartId,-1d);
+            change=Math.max(change,updatePenalized(deviations,dg,2d));
             double mean=users.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
             users.replaceAll((k,v)->v-mean);levels.replaceAll((k,v)->v-mean);
             centerDeviations(levels,deviations,chartLevels);
+            if(change<1e-7)break;
         }
         var result=new HashMap<Long,Double>();deviations.forEach((id,d)->result.put(id,levels.get(chartLevels.get(id))+d));return result;
     }
@@ -120,9 +133,28 @@ public final class CpiSpiModel {
         }
         var result=new HashMap<Long,Double>();deviations.forEach((id,d)->result.put(id,levels.get(chartLevels.get(id))+d));return result;
     }
+    private static <K> Map<K,double[]> cpiSteps(List<ClearObs> observations,Map<Long,Integer> chartLevels,
+            Map<Long,Double> users,Map<Integer,Double> levels,Map<Long,Double> deviations,
+            Function<ClearObs,K> key,double direction){
+        Map<K,double[]> result=new HashMap<>();
+        for(var o:observations){
+            int level=chartLevels.get(o.chartId());
+            double p=sigmoid(users.get(o.userId())-levels.get(level)-deviations.get(o.chartId()));
+            double residual=(o.clear()?1d:0d)-p,weight=Math.max(1e-6,p*(1-p));
+            add(result,key.apply(o),direction*residual,weight);
+        }
+        return result;
+    }
     private static <K> void add(Map<K,double[]> map,K id,double gradient,double weight){var a=map.computeIfAbsent(id,k->new double[2]);a[0]+=gradient;a[1]+=weight;}
-    private static <K> void updatePenalized(Map<K,Double> values,Map<K,double[]> steps,double lambda){steps.forEach((id,a)->values.compute(id,(k,v)->v+(a[0]-lambda*v)/(a[1]+lambda)));}
-    private static <K> void updateUnpenalized(Map<K,Double> values,Map<K,double[]> steps){steps.forEach((id,a)->values.compute(id,(k,v)->v+a[0]/a[1]));}
+    private static <K> double updatePenalized(Map<K,Double> values,Map<K,double[]> steps,double lambda){
+        double[] max={0};
+        steps.forEach((id,a)->values.compute(id,(k,v)->{double step=bounded((a[0]-lambda*v)/(a[1]+lambda));max[0]=Math.max(max[0],Math.abs(step));return v+step;}));return max[0];
+    }
+    private static <K> double updateUnpenalized(Map<K,Double> values,Map<K,double[]> steps){
+        double[] max={0};
+        steps.forEach((id,a)->values.compute(id,(k,v)->{double step=bounded(a[0]/a[1]);max[0]=Math.max(max[0],Math.abs(step));return v+step;}));return max[0];
+    }
+    private static double bounded(double step){return Math.max(-1d,Math.min(1d,step));}
     private static void centerDeviations(Map<Integer,Double> levels,Map<Long,Double> deviations,Map<Long,Integer> chartLevels){
         var sums=new HashMap<Integer,double[]>();deviations.forEach((id,d)->{var a=sums.computeIfAbsent(chartLevels.get(id),k->new double[2]);a[0]+=d;a[1]++;});
         sums.forEach((level,a)->{double m=a[0]/a[1];deviations.replaceAll((id,d)->chartLevels.get(id).equals(level)?d-m:d);levels.compute(level,(k,v)->v+m);});
