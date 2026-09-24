@@ -42,6 +42,7 @@ class DiscordRatingImageTest {
         Map<String, Object> response = image.start(root(), 49, "spi", " 1234-5678-9012 ");
 
         assertThat(response.get("type")).isEqualTo(5);
+        assertThat(((Map<?, ?>) response.get("data")).containsKey("flags")).isFalse();
         assertThat(replies).singleElement().satisfies(result -> {
             assertThat(result.content()).contains("테스트 유저", "Lv49 SPI", "최고 기록", "실험 단계");
             assertThat(result.filename()).isEqualTo("popngg-lv49-spi-1234-5678-9012.png");

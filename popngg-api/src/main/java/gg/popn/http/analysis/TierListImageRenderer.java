@@ -4,6 +4,7 @@ import gg.popn.application.analysis.RatingSnapshot;
 import gg.popn.application.analysis.RatingSnapshot.ChartRating;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults.ChartPlaydata;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults.UserPlaydata;
+import gg.popn.domain.game.policy.MedalPolicy;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
@@ -63,10 +64,19 @@ public class TierListImageRenderer {
     static List<List<ChartRating>> bands(List<ChartRating> charts,RatingController.Metric metric){
         if(charts.isEmpty())return List.of();if(charts.size()==1)return List.of(charts);
         var gaps=new ArrayList<Double>();for(int i=0;i<charts.size()-1;i++)gaps.add(Math.abs(value(charts.get(i),metric)-value(charts.get(i+1),metric)));
-        var sorted=new ArrayList<>(gaps);Collections.sort(sorted);double median=quantile(sorted,.5);
-        var deviations=sorted.stream().map(v->Math.abs(v-median)).sorted().toList();double mad=quantile(deviations,.5),threshold=median+3*Math.max(mad,1e-9);
-        var candidates=new ArrayList<Integer>();for(int i=0;i<gaps.size();i++)if(gaps.get(i)>0 && gaps.get(i)>threshold)candidates.add(i);
-        if(candidates.size()>11){candidates.sort(Comparator.comparingDouble((Integer i)->gaps.get(i)).reversed());candidates=new ArrayList<>(candidates.subList(0,11));Collections.sort(candidates);}
+        var sorted=new ArrayList<>(gaps);Collections.sort(sorted);double median=quantile(sorted,.5),q1=quantile(sorted,.25),q3=quantile(sorted,.75);
+        var deviations=sorted.stream().map(v->Math.abs(v-median)).sorted().toList();double mad=quantile(deviations,.5);
+        double threshold=Math.max(median+4*Math.max(mad,1e-9),q3+1.5*Math.max(q3-q1,1e-9));
+        var rankedCandidates=new ArrayList<Integer>();for(int i=0;i<gaps.size();i++)if(gaps.get(i)>threshold)rankedCandidates.add(i);
+        rankedCandidates.sort(Comparator.comparingDouble((Integer i)->gaps.get(i)).reversed());
+        var candidates=new ArrayList<Integer>();
+        for(int candidate:rankedCandidates){
+            int boundary=candidate+1;
+            if(boundary<3 || charts.size()-boundary<3)continue;
+            if(candidates.stream().map(i->i+1).allMatch(existing->Math.abs(existing-boundary)>=3))candidates.add(candidate);
+            if(candidates.size()==7)break;
+        }
+        Collections.sort(candidates);
         var breaks=new HashSet<>(candidates);var result=new ArrayList<List<ChartRating>>();int start=0;
         for(int i=0;i<charts.size()-1;i++)if(breaks.contains(i)){result.add(charts.subList(start,i+1));start=i+1;}
         result.add(charts.subList(start,charts.size()));return result;
@@ -83,7 +93,7 @@ public class TierListImageRenderer {
         font(g,Font.PLAIN,12);g.setColor(MUTED);g.drawString("poptomoId "+user.poptomoId()+"   •   generated "+LocalDate.now(ZoneId.of("Asia/Seoul")),MARGIN+18,y+98);
         fill(g,new Color(228,232,255),MARGIN+SHELL-95,y+45,70,32);font(g,Font.BOLD,12);g.setColor(new Color(21,26,39));center(g,metric.name(),MARGIN+SHELL-95,y+45,70,32);
         g.setColor(BORDER);g.drawLine(MARGIN,y+112,MARGIN+SHELL,y+112);
-        long played=charts.stream().filter(c->records.containsKey(c.chartId())).count();long clear=charts.stream().filter(c->{var r=records.get(c.chartId());return r!=null&&r.medal().code()<=7;}).count();
+        long played=charts.stream().filter(c->records.containsKey(c.chartId())).count();long clear=charts.stream().filter(c->{var r=records.get(c.chartId());return r!=null&&isCleared(r.medal().code());}).count();
         stat(g,"PLAYED",played+" / "+charts.size(),MARGIN+18,y+139);stat(g,"CLEAR",clear+(played==0?"":"  "+String.format("%.1f%%",100d*clear/played)),MARGIN+180,y+139);
         font(g,Font.BOLD,10);g.setColor(new Color(123,135,155));g.drawString(snapshot.modelStatus()+"   •   "+snapshot.publicationStatus(),MARGIN+SHELL-245,y+141);
     }
@@ -104,7 +114,28 @@ public class TierListImageRenderer {
         if(record==null){font(g,Font.BOLD,10);g.setColor(new Color(154,163,178));g.drawString("NO PLAY",x+w-52,y+106);return;}
         drawMedal(g,record.medal().code(),x+w-82,y+94);font(g,Font.BOLD,11);g.setColor(new Color(20,26,38));String score=String.format("%,d",record.allTimeBest().score());g.drawString(score,x+w-7-g.getFontMetrics().stringWidth(score),y+106);
     }
-    private static void drawMedal(Graphics2D g,int code,int x,int y){Color color=code==1?new Color(245,190,55):code<=4?new Color(69,190,217):code<=7?new Color(61,190,114):code<=10?new Color(218,92,83):new Color(148,157,174);g.setColor(color);if(code<=7){var p=new Path2D.Double();p.moveTo(x+7,y);p.lineTo(x+14,y+7);p.lineTo(x+7,y+14);p.lineTo(x,y+7);p.closePath();g.fill(p);}else g.fillOval(x,y,14,14);font(g,Font.BOLD,7);g.setColor(Color.WHITE);center(g,Integer.toString(code),x,y,14,14);}
+    private static void drawMedal(Graphics2D g,int code,int x,int y){
+        MedalPolicy medal;try{medal=MedalPolicy.fromCode(code);}catch(IllegalArgumentException ignored){medal=MedalPolicy.NO_MEDAL;}
+        Color color=switch(medal){
+            case GOLD_STAR->new Color(255,168,38);
+            case SILVER_STAR,SILVER_DIAMOND,SILVER_CIRCLE->new Color(94,181,210);
+            case BRONZE_STAR,BRONZE_DIAMOND,BRONZE_CIRCLE->new Color(41,180,111);
+            case BLACK_STAR,BLACK_DIAMOND,BLACK_CIRCLE->new Color(77,84,98);
+            case EASY_CLEAR->new Color(3,183,93);
+            case LONGOFF_CLEAR->new Color(255,154,0);
+            case NO_MEDAL->new Color(164,171,184);
+        };
+        g.setColor(color);
+        switch(medal){
+            case GOLD_STAR,SILVER_STAR,BRONZE_STAR,BLACK_STAR->g.fill(star(x+7,y+7,7,3.2));
+            case SILVER_DIAMOND,BRONZE_DIAMOND,BLACK_DIAMOND,LONGOFF_CLEAR->{var p=new Path2D.Double();p.moveTo(x+7,y);p.lineTo(x+14,y+7);p.lineTo(x+7,y+14);p.lineTo(x,y+7);p.closePath();g.fill(p);}
+            case SILVER_CIRCLE,BRONZE_CIRCLE,BLACK_CIRCLE,EASY_CLEAR->g.fillOval(x,y,14,14);
+            case NO_MEDAL->{g.setStroke(new BasicStroke(2));g.drawLine(x+2,y+7,x+12,y+7);}
+        }
+        if(medal==MedalPolicy.EASY_CLEAR || medal==MedalPolicy.LONGOFF_CLEAR){font(g,Font.BOLD,7);g.setColor(Color.WHITE);center(g,medal==MedalPolicy.EASY_CLEAR?"E":"L",x,y,14,14);}
+    }
+    private static Shape star(double cx,double cy,double outer,double inner){var p=new Path2D.Double();for(int i=0;i<10;i++){double radius=i%2==0?outer:inner,angle=-Math.PI/2+i*Math.PI/5,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.closePath();return p;}
+    static boolean isCleared(int code){return code>=1&&code<=7 || code==11 || code==12;}
     private static String difficulty(int code){return switch(code){case 1->"E";case 2->"N";case 3->"H";case 4->"EX";default->"?";};}
     private static void drawFooter(Graphics2D g,int level,RatingController.Metric metric,int y){font(g,Font.PLAIN,10);g.setColor(new Color(89,100,119));g.drawString("popn.gg / personal tier map",MARGIN+3,y);String right="Lv"+level+" · "+metric+" · EXPERIMENTAL";g.drawString(right,WIDTH-MARGIN-g.getFontMetrics().stringWidth(right),y);}
 
