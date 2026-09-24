@@ -20,7 +20,7 @@ class SmokeTest(unittest.TestCase):
             def do_GET(self):
                 requests.append(self.path)
                 status = 200
-                if self.path == '/api/v2/chart/all' and mode == 'chart_failure':
+                if self.path == '/api/v1/charts?page=1&size=1' and mode == 'chart_failure':
                     status = 500
                 if self.path.startswith('/api/v1/users?'):
                     if mode == 'failure':
@@ -58,17 +58,16 @@ class SmokeTest(unittest.TestCase):
     def test_success_logs_timings_and_checks_first_and_repeat(self):
         result, requests = self.run_smoke('success')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('/api/v2/chart/all', requests)
-        self.assertIn('/api/v2/chart/recent', requests)
+        self.assertIn('/api/v1/charts?page=1&size=1', requests)
         self.assertEqual(sum(path.startswith('/api/v1/users?') for path in requests), 2)
         self.assertRegex(result.stdout, r'request=users_clear_level_first http=200 first_byte=[0-9.]+s total=[0-9.]+s curl_exit=0')
         self.assertIn('request=users_clear_level_repeat http=200', result.stdout)
 
-    def test_legacy_chart_failure_blocks_deployment(self):
+    def test_chart_failure_blocks_deployment(self):
         result, requests = self.run_smoke('chart_failure')
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('request=legacy_charts http=500', result.stdout)
-        self.assertNotIn('/api/v2/chart/recent', requests)
+        self.assertIn('request=charts http=500', result.stdout)
+        self.assertNotIn('/api/v1/users/rankings?page=0&size=1', requests)
 
     def test_failure_identifies_request_and_does_not_continue(self):
         result, requests = self.run_smoke('failure')
