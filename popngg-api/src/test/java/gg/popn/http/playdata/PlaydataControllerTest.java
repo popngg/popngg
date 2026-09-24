@@ -24,11 +24,11 @@ class PlaydataControllerTest {
                 "0000", "user", 1, 2, 3, List.of());
         var rankings = new PlaydataQueryResults.ChartRankings(1, List.of(), List.of());
         var progressRow = new PlaydataQueryResults.ProgressRow(
-                48, 2, 90_000,
+                48, 2, 90_000, 90_000,
                 List.of(new PlaydataQueryResults.CodeCount(1, 2)),
                 List.of(new PlaydataQueryResults.CodeCount(2, 2)));
         var progress = new PlaydataQueryResults.Progress(List.of(progressRow),
-                new PlaydataQueryResults.ProgressCounts(0, 0, List.of(), List.of()));
+                new PlaydataQueryResults.ProgressCounts(0, 0, 0, List.of(), List.of()));
         when(useCase.findUserPlaydata("0000")).thenReturn(user);
         when(useCase.count("0000", "level", "rank")).thenReturn(counts);
         when(useCase.findPopclass("0000")).thenReturn(popclass);

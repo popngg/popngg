@@ -47,6 +47,24 @@ class DiscordInteractionControllerTest {
     private KeyPair keys;
     private DiscordInteractionController controller;
 
+    @Test
+    void analysisAcknowledgesImmediatelyWithoutDeferredLoadingAndRequiresAdmin() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        when(jobs.submit("DISCORD", "discord:1234")).thenReturn(
+                new gg.popn.application.analysis.AnalysisJobs.Submission("job-1", "QUEUED", false));
+        var request = command("실력분석최신화");
+        request.put("id", "1234");
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(response.toString()).contains("job-1", "admin bot", "JSON");
+        verify(jobs).submit("DISCORD", "discord:1234");
+        clearInvocations(jobs);
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할");
+        verifyNoInteractions(jobs);
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         keys = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
@@ -62,7 +80,7 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
-    void officialReviewRunsOnlyBehindSignedAdministratorInteractions() throws Exception {
+    void legacyOfficialReviewInteractionsRemainAdminOnlyButNewSelectionsUseManualModal() throws Exception {
         var official = mock(OfficialSongReview.class);
         controller.setOfficialSongReview(official);
         when(official.interact(any())).thenReturn(Map.of("type", 4, "data", Map.of("content", "review")));
@@ -77,11 +95,14 @@ class DiscordInteractionControllerTest {
 
         when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
                 new UnknownChartReportPort.Report(7,"Song","Genre","Artist",null,false,false,1,Instant.now())));
-        when(official.start(any(),any())).thenReturn(Map.of("type",5,"data",Map.of("flags",64)));
         ObjectNode selection = interaction(3);
         selection.withObject("data").put("custom_id","unknown_song_select").putArray("values").add("7");
-        assertThat(body(call(selection)).get("type")).isEqualTo(5);
-        verify(official).start(any(),any());
+        Map<?, ?> modal = body(call(selection));
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(modal.toString()).contains(
+                "자켓 (선택)", "곡 기본정보 JSON", "레벨",
+                "대괄호 안에 숫자 입력", "L:[], N:[], H:[], EX:[]");
+        verify(official, never()).start(any(),any());
         verifyNoInteractions(createSong, jackets);
     }
 
@@ -185,7 +206,7 @@ class DiscordInteractionControllerTest {
                 new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
                         4, true, false, 3, Instant.now())));
         assertThat(content(call(command("미등록목록")))).contains("new song", "3회")
-                .doesNotContain("난이도", "UPPER");
+                .contains("수기로 입력").doesNotContain("UPPER");
 
         ObjectNode selection = interaction(3);
         selection.withObject("data").put("custom_id", "unknown_song_select")
@@ -206,7 +227,49 @@ class DiscordInteractionControllerTest {
         submit.withObject("data").withObject("resolved").withObject("attachments")
                 .putObject("unknown-file").put("size", 100).put("content_type", "image/png")
                 .put("url", "https://cdn.discordapp.com/unknown.png");
-        assertThat(content(call(submit))).contains("곡 등록 JSON", "new song");
+        Map<?, ?> preview = body(call(submit));
+        assertThat(((Map<?, ?>) preview.get("data")).get("content").toString())
+                .contains("곡 등록 JSON", "new song", "첨부됨");
+
+        when(jackets.uploadPng(anyString(), any())).thenReturn("https://static.popn.gg/hash.png");
+        when(createSong.execute(any())).thenReturn(new CreateSongResult(99, List.of(1L, 2L, 3L)));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("곡 등록 완료", "99");
+        verify(jackets).uploadPng(anyString(), any());
+        verify(createSong).execute(argThat(command -> command.jacketUrl() != null));
+        verify(unknown).resolve(7);
+    }
+
+    @Test
+    void createsUnknownSongWithoutJacketWhenOptionalUploadIsEmpty() throws Exception {
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(7, "new song", "new genre", "artist",
+                        null, false, false, 1, Instant.now())));
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("7");
+        Map<?, ?> modal = body(call(selection));
+        Map<?, ?> modalData = (Map<?, ?>) modal.get("data");
+        assertThat(modalData.toString()).contains("min_values=0", "required=false");
+
+        ObjectNode submit = interaction(5);
+        submit.withObject("data").put("custom_id", modalData.get("custom_id").toString());
+        ArrayNode fields = submit.withObject("data").putArray("components");
+        modalModernValue(fields, "date", "2026-08-30");
+        modalModernValue(fields, "metadata", "{\"songName\":\"new song\",\"genreName\":\"new genre\",\"artistName\":\"artist\",\"upper\":false}");
+        modalModernValue(fields, "version", "29");
+        modalModernValue(fields, "levels", "N:[30], H:[42], EX:[48]");
+        Map<?, ?> preview = body(call(submit));
+        assertThat(((Map<?, ?>) preview.get("data")).get("content").toString()).contains("\"jacket\" : \"없음\"");
+
+        when(createSong.execute(any())).thenReturn(new CreateSongResult(100, List.of(4L, 5L, 6L)));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("곡 등록 완료", "100");
+        verify(createSong).execute(argThat(command -> command.jacketUrl() == null));
+        verifyNoInteractions(jackets);
+        verify(unknown).resolve(7);
     }
 
     @Test

@@ -33,3 +33,9 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.register('analyzeCpiSpi', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'gg.popn.application.analysis.AnalysisStatistics'
+    args providers.gradleProperty('snapshotDir').getOrElse('build/analysis/cpi-spi/input')
+}

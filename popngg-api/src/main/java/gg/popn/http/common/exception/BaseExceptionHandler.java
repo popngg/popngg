@@ -206,6 +206,13 @@ public class BaseExceptionHandler {
         return ResponseEntity.status(e.getCode().getStatusCode()).body(body);
     }
 
+    @ExceptionHandler({org.springframework.web.servlet.NoHandlerFoundException.class,
+            org.springframework.web.servlet.resource.NoResourceFoundException.class})
+    public ResponseEntity<Map<String, Object>> handleMissingRoute() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "code", "NOT_FOUND", "message", "The requested resource was not found."));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUnexpected(
             HttpServletRequest request, Exception exception) {
