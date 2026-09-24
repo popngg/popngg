@@ -11,7 +11,12 @@ public final class AnalysisStatistics {
     public static final String POLICY = "cpi-spi-descriptive-v1";
     private final ObjectMapper mapper;
     public AnalysisStatistics(ObjectMapper mapper) { this.mapper = mapper; }
-    public record Chart(long chartId, long songId, int level) {}
+    public record Chart(long chartId, long songId, int level, String songName, String genreName,
+                        String jacketUrl, int difficulty, boolean upper) {
+        public Chart(long chartId, long songId, int level) {
+            this(chartId, songId, level, null, null, null, 0, false);
+        }
+    }
     private record UserLevel(long userId, int level) {}
 
     public Map<String, Object> analyze(Path directory, List<Chart> catalog, List<Long> eligibleUsers) throws IOException {
