@@ -75,10 +75,16 @@ public class DiscordInteractionController {
     private final Map<String, PreDraft> preDrafts = new ConcurrentHashMap<>();
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
     private OfficialSongReview officialSongReview;
+    private DiscordRatingImage discordRatingImage;
 
     @Autowired
     void setOfficialSongReview(OfficialSongReview officialSongReview) {
         this.officialSongReview = officialSongReview;
+    }
+
+    @Autowired
+    void setDiscordRatingImage(DiscordRatingImage discordRatingImage) {
+        this.discordRatingImage = discordRatingImage;
     }
     private gg.popn.application.analysis.AnalysisJobs analysisJobs;
 
@@ -150,6 +156,14 @@ public class DiscordInteractionController {
         cleanupDrafts();
         int type = root.path("type").asInt();
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
+        if (type == 2 && "서열표".equals(root.path("data").path("name").asText())) {
+            if (!guildId.equals(root.path("guild_id").asText()))
+                return ResponseEntity.ok(ephemeral("이 서버에서는 사용할 수 없는 명령입니다."));
+            int level = option(root, "레벨").path("value").asInt();
+            String metric = option(root, "기준").path("value").asText();
+            String poptomoId = option(root, "팝토모_id").path("value").asText();
+            return ResponseEntity.ok(discordRatingImage.start(root, level, metric, poptomoId));
+        }
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
         if ((type == 3 || type == 5) && root.path("data").path("custom_id").asText().startsWith("official_")
                 && officialSongReview != null) {

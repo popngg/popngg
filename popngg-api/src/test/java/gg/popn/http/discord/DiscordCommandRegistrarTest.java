@@ -27,10 +27,14 @@ class DiscordCommandRegistrarTest {
             new DiscordCommandRegistrar("app", "guild", "token", new ObjectMapper(),
                     HttpClient.newHttpClient(), "http://127.0.0.1:" + server.getAddress().getPort()).run(null);
             assertThat(body.get()).contains("곡추가", "곡수정", "비밀번호초기화", "미등록목록", "배포버전",
-                    "성능대시보드", "장애상태확인", "장애알림테스트", "에러알림테스트");
+                    "성능대시보드", "장애상태확인", "장애알림테스트", "에러알림테스트", "서열표",
+                    "CPI · 클리어", "SPI · 스코어", "팝토모_id");
             var commands = new ObjectMapper().readTree(body.get());
             assertThat(commands.get(0).path("options").size()).isEqualTo(11);
             assertThat(commands.get(2).path("options").size()).isEqualTo(12);
+            var rating = java.util.stream.StreamSupport.stream(commands.spliterator(), false)
+                    .filter(command -> command.path("name").asText().equals("서열표")).findFirst().orElseThrow();
+            assertThat(rating.path("options").size()).isEqualTo(3);
         } finally { server.stop(0); }
     }
 }
