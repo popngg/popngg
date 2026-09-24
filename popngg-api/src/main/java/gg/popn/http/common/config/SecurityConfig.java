@@ -97,6 +97,7 @@ public class SecurityConfig {
                                 "/api/v1/users/**",
                                 "/api/v1/songs/**",
                                 "/api/v1/charts/**",
+                                "/api/v1/ratings/**",
                                 "/api/v2/chart/**").permitAll()
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()

@@ -2,6 +2,7 @@ package gg.popn.infra.analysis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gg.popn.application.analysis.AnalysisStatistics;
+import gg.popn.application.analysis.CpiSpiModel;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +73,8 @@ public class AnalysisWorker {
             artifacts.checkPrivateBucket();
             var extracted=extractor.extract(directory);
             var summary=new AnalysisStatistics(mapper).analyze(directory,extracted.catalog(),extracted.users());
+            summary.putAll(new CpiSpiModel(mapper).fit(directory,extracted.catalog()));
+            mapper.writerWithDefaultPrettyPrinter().writeValue(directory.resolve("summary.json").toFile(),summary);
             if(!Objects.equals(((Number)summary.get("rawRecordCount")).longValue(),((Number)extracted.metadata().get("extractedRecordCount")).longValue()))
                 throw new IllegalStateException("ANALYSIS_COUNT_MISMATCH");
             String manifest=artifacts.upload(snapshotId,directory,extracted.metadata(),summary);
