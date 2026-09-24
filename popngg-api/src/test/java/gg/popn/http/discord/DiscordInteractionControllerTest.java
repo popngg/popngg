@@ -65,6 +65,26 @@ class DiscordInteractionControllerTest {
         verifyNoInteractions(jobs);
     }
 
+    @Test
+    void ratingImageCommandIsAvailableToGuildMembersAndDefersTheReply() throws Exception {
+        var ratingImage = mock(DiscordRatingImage.class);
+        controller.setDiscordRatingImage(ratingImage);
+        when(ratingImage.start(any(), eq(49), eq("SPI"), eq("1234-5678-9012")))
+                .thenReturn(Map.of("type", 5, "data", Map.of("flags", 64)));
+        ObjectNode request = command("서열표");
+        option(request, "기준", "SPI");
+        option(request, "레벨", 49);
+        option(request, "팝토모_id", "1234-5678-9012");
+        request.withObject("member").withArray("roles").removeAll();
+
+        Map<?, ?> response = body(call(request));
+
+        assertThat(response.get("type")).isEqualTo(5);
+        verify(ratingImage).start(any(), eq(49), eq("SPI"), eq("1234-5678-9012"));
+        request.put("guild_id", "another-guild");
+        assertThat(content(call(request))).contains("이 서버에서는 사용할 수 없는");
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         keys = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
