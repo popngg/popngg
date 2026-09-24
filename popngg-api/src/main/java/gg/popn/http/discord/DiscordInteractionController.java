@@ -240,8 +240,10 @@ public class DiscordInteractionController {
             String content = reports.stream().map(report ->
                     "- `#%d` **%s** %s / %s / %s / %d회".formatted(
                             report.reportId(), report.songName(),
-                            report.missingVariant()
-                                    ? report.upper() ? "[UPPER 누락]" : "[일반 버전 누락]"
+                            report.existingVariantSongId() != null
+                                    ? "[" + difficultyLabel(report.difficultyCode()) + " 채보 누락]"
+                                    : report.missingVariant()
+                                    ? Boolean.TRUE.equals(report.upper()) ? "[UPPER 누락]" : "[일반 버전 누락]"
                                     : "[곡 미등록]",
                             report.genreName(), report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
@@ -290,6 +292,12 @@ public class DiscordInteractionController {
                     .filter(report -> report.reportId() == reportId).findFirst();
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
+            if (report.existingVariantSongId() != null) {
+                SongDetailView current = findSongDetail.findSong(report.existingVariantSongId());
+                String id = UUID.randomUUID().toString();
+                editDrafts.put(id, new EditDraft(current, null, null, null, Instant.now(), report.reportId()));
+                return ResponseEntity.ok(editModal(id, current, null));
+            }
             String id = UUID.randomUUID().toString();
             Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
                     Boolean.TRUE.equals(report.upper()));
@@ -522,6 +530,17 @@ public class DiscordInteractionController {
     private static Map<String, Object> inputValue(String id, String label, String value) {
         return Map.of("type", 1, "components", List.of(Map.of("type", 4, "custom_id", id,
                 "label", label, "style", 1, "required", true, "value", value == null ? "" : value)));
+    }
+
+    private static String difficultyLabel(Integer difficultyCode) {
+        if (difficultyCode == null) return "미등록";
+        return switch (difficultyCode) {
+            case 1 -> "EASY";
+            case 2 -> "NORMAL";
+            case 3 -> "HYPER";
+            case 4 -> "EX";
+            default -> "난이도 " + difficultyCode;
+        };
     }
 
     private static Map<String, Object> editModal(

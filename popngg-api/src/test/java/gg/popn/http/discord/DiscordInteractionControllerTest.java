@@ -273,6 +273,52 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void opensExistingSongEditForAMissingDifficulty() throws Exception {
+        var report = new UnknownChartReportPort.Report(8, "known song", "genre", "artist",
+                4, false, true, 12L, 2, Instant.now());
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(report));
+        when(findDetail.findSong(12)).thenReturn(detail("known song", "known-hash"));
+
+        assertThat(content(call(command("미등록목록")))).contains("known song", "[EX 채보 누락]");
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("8");
+
+        Map<?, ?> modal = body(call(selection));
+
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(modal.toString()).contains("곡 수정", "known song", "N:30,H:42");
+        verify(findDetail).findSong(12);
+        verifyNoInteractions(createSong);
+    }
+
+    @Test
+    void labelsMissingVariantsAndEveryReportedDifficulty() throws Exception {
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(1, "upper", "genre", "artist",
+                        4, true, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(2, "regular", "genre", "artist",
+                        4, false, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(3, "easy", "genre", "artist",
+                        1, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(4, "normal", "genre", "artist",
+                        2, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(5, "hyper", "genre", "artist",
+                        3, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(6, "unknown", "genre", "artist",
+                        null, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(7, "future", "genre", "artist",
+                        5, false, false, 10L, 1, Instant.now())));
+
+        String result = content(call(command("미등록목록")));
+
+        assertThat(result).contains(
+                "[UPPER 누락]", "[일반 버전 누락]", "[EASY 채보 누락]",
+                "[NORMAL 채보 누락]", "[HYPER 채보 누락]", "[미등록 채보 누락]",
+                "[난이도 5 채보 누락]");
+    }
+
+    @Test
     void acceptsNonSquareJacketImages() throws Exception {
         BufferedImage image = new BufferedImage(2, 1, BufferedImage.TYPE_INT_ARGB);
         ByteArrayOutputStream source = new ByteArrayOutputStream();
