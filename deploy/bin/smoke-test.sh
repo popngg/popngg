@@ -20,8 +20,7 @@ check() {
 check health /health
 grep -q '"status":"UP"' "$body_file" || { echo 'smoke health=FAIL'; exit 1; }
 check songs '/api/v1/songs?page=0&size=1'
-check legacy_charts '/api/v2/chart/all'
-check legacy_recent_charts '/api/v2/chart/recent'
+check charts '/api/v1/charts?page=1&size=1'
 check rankings '/api/v1/users/rankings?page=0&size=1'
 check users_clear_level_first '/api/v1/users?sort=clearLevel&order=desc&page=1&size=20'
 check users_clear_level_repeat '/api/v1/users?sort=clearLevel&order=desc&page=1&size=20'

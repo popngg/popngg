@@ -20,7 +20,7 @@ class ChartQueryJdbcAdapterTest {
     }
 
     static void verifyQueries(JdbcTemplate jdbc) {
-        jdbc.update("INSERT INTO songs(song_id,song_hash,genre_name,song_name,version,created_at,updated_at) VALUES (1,'hash-one','genre','song',10,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),(2,'hash-two','genre2','song2',11,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO songs(song_id,song_hash,genre_name,song_name,version,created_at,updated_at) VALUES (1,'hash-one','genre','song',29,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),(2,'hash-two','genre2','song2',11,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         jdbc.update("""
                 INSERT INTO charts(chart_id,song_id,difficulty_code,difficulty_label,level,chart_version,is_upper,is_deleted,created_at,updated_at) VALUES
                 (1,1,3,'HYPER',40,20,FALSE,FALSE,'2026-01-01','2026-01-01'),
@@ -38,7 +38,7 @@ class ChartQueryJdbcAdapterTest {
         assertThat(chart.getSongHash().getValue()).isEqualTo("hash-one");
         assertThat(chart.getSongName().getValue()).isEqualTo("song");
         assertThat(chart.getGenreName().getValue()).isEqualTo("genre");
-        assertThat(chart.getVersion().getValue()).isEqualTo(10);
+        assertThat(chart.getVersion().getValue()).isEqualTo(29);
         assertThat(chart.getIsUpper().getValue()).isZero();
         assertThat(chart.getDifficulty().getValue()).isEqualTo(4);
         assertThatThrownBy(() -> adapter.findBySongHashAndDifficulty(SongHash.of("hash-two"), Difficulty.of(4)))
