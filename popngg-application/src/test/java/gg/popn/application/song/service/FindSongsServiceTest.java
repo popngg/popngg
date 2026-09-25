@@ -1,6 +1,7 @@
 package gg.popn.application.song.service;
 
 import gg.popn.application.song.dto.query.FindSongsQuery;
+import gg.popn.application.song.exception.InvalidSongQueryException;
 import gg.popn.application.song.dto.result.GroupedSongView;
 import gg.popn.application.song.port.out.SongCatalogQueryPort;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,6 @@ class FindSongsServiceTest {
     void rejectsUnboundedPageSize() {
         assertThatThrownBy(() -> new FindSongsQuery(null, null, null, null, null,
                 null, null, null, 0, 101))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(InvalidSongQueryException.class);
     }
 }
