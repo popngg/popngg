@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SpecialChartFlagsMigrationTest extends MySqlIntegrationTestSupport {
 
     @Test
-    void importsCuratedChartFlagsAndExtraMusicCategories() {
+    void importsCuratedValuesIntoANewTableWithoutChangingCatalogTables() {
         var dataSource = mysqlDataSource();
         var flyway = Flyway.configure().dataSource(dataSource)
                 .locations("classpath:db/migration").cleanDisabled(false).load();
@@ -20,28 +20,42 @@ class SpecialChartFlagsMigrationTest extends MySqlIntegrationTestSupport {
 
         insertSong(jdbc, 1, "ordinary");
         insertSong(jdbc, 2, "ordinary two");
-        insertSong(jdbc, 1962, "Asian Trinity");
-        insertSong(jdbc, 2028, "精霊都市リトラ・ミュネ");
         insertChart(jdbc, 29, 1);
         insertChart(jdbc, 783, 2);
 
         flyway.migrate();
 
         assertThat(jdbc.queryForObject(
-                "SELECT has_strict_judgement FROM charts WHERE chart_id = 29", Boolean.class))
+                "SELECT COUNT(*) FROM chart_special_flags", Integer.class))
+                .isEqualTo(82);
+        assertThat(jdbc.queryForObject(
+                "SELECT has_strict_judgement FROM chart_special_flags WHERE chart_id = 29", Boolean.class))
                 .isTrue();
         assertThat(jdbc.queryForObject(
-                "SELECT has_strict_gauge FROM charts WHERE chart_id = 783", Boolean.class))
+                "SELECT has_strict_gauge FROM chart_special_flags WHERE chart_id = 783", Boolean.class))
                 .isTrue();
         assertThat(jdbc.queryForObject(
-                "SELECT extra_type FROM songs WHERE song_id = 1962", String.class))
+                "SELECT extra_type FROM chart_special_flags WHERE chart_id = 6865", String.class))
                 .isEqualTo("EXTRA");
         assertThat(jdbc.queryForObject(
-                "SELECT extra_type FROM songs WHERE song_id = 2028", String.class))
+                "SELECT extra_type FROM chart_special_flags WHERE chart_id = 7133", String.class))
                 .isEqualTo("SUPER_EXTRA");
         assertThat(jdbc.queryForObject(
-                "SELECT extra_type FROM songs WHERE song_id = 1", String.class))
-                .isEqualTo("NONE");
+                "SELECT has_strict_gauge FROM chart_special_flags WHERE chart_id = 7133", Boolean.class))
+                .isTrue();
+
+        assertThat(jdbc.queryForObject(
+                "SELECT has_strict_judgement FROM charts WHERE chart_id = 29", Boolean.class))
+                .isFalse();
+        assertThat(jdbc.queryForObject(
+                "SELECT has_strict_gauge FROM charts WHERE chart_id = 783", Boolean.class))
+                .isFalse();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'songs'
+                  AND column_name = 'extra_type'
+                """, Integer.class)).isZero();
     }
 
     private static void insertSong(JdbcTemplate jdbc, long songId, String songName) {
