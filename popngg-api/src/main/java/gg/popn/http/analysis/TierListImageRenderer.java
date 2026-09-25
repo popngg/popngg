@@ -4,13 +4,11 @@ import gg.popn.application.analysis.RatingSnapshot;
 import gg.popn.application.analysis.RatingSnapshot.ChartRating;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults.ChartPlaydata;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults.UserPlaydata;
-import gg.popn.domain.game.policy.MedalPolicy;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
@@ -28,6 +26,8 @@ public class TierListImageRenderer {
     private static final int MARGIN=28,SHELL=WIDTH-MARGIN*2,LABEL_WIDTH=120,CARD_GAP=4,CARD_COLUMNS=4,CARD_HEIGHT=116;
     private static final Color BG=new Color(9,11,16),PANEL=new Color(17,20,27),BORDER=new Color(43,49,61),TEXT=new Color(240,243,250),MUTED=new Color(115,126,145);
     private static final Color[] ACCENTS={new Color(239,68,68),new Color(249,115,22),new Color(217,70,239),new Color(139,92,246),new Color(59,130,246),new Color(6,182,212),new Color(34,197,94),new Color(234,179,8)};
+    private static final String[] MEDAL_FILES={"none","gold-star","silver-star","silver-diamond","silver-circle","bronze-star","bronze-diamond","bronze-circle","black-star","black-diamond","black-circle","easy","long-off","none"};
+    private static final Map<Integer,BufferedImage> MEDAL_ICONS=loadMedalIcons();
     private final HttpClient http;
     private final ExecutorService jacketExecutor=Executors.newFixedThreadPool(8);
     private final Map<String,BufferedImage> cache=Collections.synchronizedMap(new LinkedHashMap<>(256,.75f,true){
@@ -114,27 +114,16 @@ public class TierListImageRenderer {
         if(record==null){font(g,Font.BOLD,10);g.setColor(new Color(154,163,178));g.drawString("NO PLAY",x+w-52,y+106);return;}
         drawMedal(g,record.medal().code(),x+w-82,y+94);font(g,Font.BOLD,11);g.setColor(new Color(20,26,38));String score=String.format("%,d",record.allTimeBest().score());g.drawString(score,x+w-7-g.getFontMetrics().stringWidth(score),y+106);
     }
-    private static void drawMedal(Graphics2D g,int code,int x,int y){
-        MedalPolicy medal;try{medal=MedalPolicy.fromCode(code);}catch(IllegalArgumentException ignored){medal=MedalPolicy.NO_MEDAL;}
-        Color color=switch(medal){
-            case GOLD_STAR->new Color(255,168,38);
-            case SILVER_STAR,SILVER_DIAMOND,SILVER_CIRCLE->new Color(94,181,210);
-            case BRONZE_STAR,BRONZE_DIAMOND,BRONZE_CIRCLE->new Color(41,180,111);
-            case BLACK_STAR,BLACK_DIAMOND,BLACK_CIRCLE->new Color(77,84,98);
-            case EASY_CLEAR->new Color(3,183,93);
-            case LONGOFF_CLEAR->new Color(255,154,0);
-            case NO_MEDAL->new Color(164,171,184);
-        };
-        g.setColor(color);
-        switch(medal){
-            case GOLD_STAR,SILVER_STAR,BRONZE_STAR,BLACK_STAR->g.fill(star(x+7,y+7,7,3.2));
-            case SILVER_DIAMOND,BRONZE_DIAMOND,BLACK_DIAMOND,LONGOFF_CLEAR->{var p=new Path2D.Double();p.moveTo(x+7,y);p.lineTo(x+14,y+7);p.lineTo(x+7,y+14);p.lineTo(x,y+7);p.closePath();g.fill(p);}
-            case SILVER_CIRCLE,BRONZE_CIRCLE,BLACK_CIRCLE,EASY_CLEAR->g.fillOval(x,y,14,14);
-            case NO_MEDAL->{g.setStroke(new BasicStroke(2));g.drawLine(x+2,y+7,x+12,y+7);}
-        }
-        if(medal==MedalPolicy.EASY_CLEAR || medal==MedalPolicy.LONGOFF_CLEAR){font(g,Font.BOLD,7);g.setColor(Color.WHITE);center(g,medal==MedalPolicy.EASY_CLEAR?"E":"L",x,y,14,14);}
+    private static void drawMedal(Graphics2D g,int code,int x,int y){g.drawImage(MEDAL_ICONS.getOrDefault(code,MEDAL_ICONS.get(13)),x-1,y-1,16,16,null);}
+    static String medalIconResource(int code){int normalized=code>=1&&code<=13?code:13;return "/medals/"+MEDAL_FILES[normalized]+".png";}
+    private static Map<Integer,BufferedImage> loadMedalIcons(){
+        var result=new HashMap<Integer,BufferedImage>();
+        for(int code=1;code<=13;code++)try(var in=TierListImageRenderer.class.getResourceAsStream(medalIconResource(code))){
+            if(in==null)throw new IllegalStateException("Missing medal icon: "+medalIconResource(code));
+            var image=ImageIO.read(in);if(image==null)throw new IllegalStateException("Invalid medal icon: "+medalIconResource(code));result.put(code,image);
+        }catch(IOException exception){throw new UncheckedIOException(exception);}
+        return Map.copyOf(result);
     }
-    private static Shape star(double cx,double cy,double outer,double inner){var p=new Path2D.Double();for(int i=0;i<10;i++){double radius=i%2==0?outer:inner,angle=-Math.PI/2+i*Math.PI/5,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius;if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}p.closePath();return p;}
     static boolean isCleared(int code){return code>=1&&code<=7 || code==11 || code==12;}
     private static String difficulty(int code){return switch(code){case 1->"E";case 2->"N";case 3->"H";case 4->"EX";default->"?";};}
     private static void drawFooter(Graphics2D g,int level,RatingController.Metric metric,int y){font(g,Font.PLAIN,10);g.setColor(new Color(89,100,119));g.drawString("popn.gg / personal tier map",MARGIN+3,y);String right="Lv"+level+" · "+metric+" · EXPERIMENTAL";g.drawString(right,WIDTH-MARGIN-g.getFontMetrics().stringWidth(right),y);}

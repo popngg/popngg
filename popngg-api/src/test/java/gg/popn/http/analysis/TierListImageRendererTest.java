@@ -34,6 +34,9 @@ class TierListImageRendererTest {
         assertThat(TierListImageRenderer.isCleared(11)).isTrue();
         assertThat(TierListImageRenderer.isCleared(12)).isTrue();
         assertThat(TierListImageRenderer.isCleared(8)).isFalse();
+        assertThat(TierListImageRenderer.medalIconResource(1)).isEqualTo("/medals/gold-star.png");
+        assertThat(TierListImageRenderer.medalIconResource(9)).isEqualTo("/medals/black-diamond.png");
+        assertThat(TierListImageRenderer.medalIconResource(99)).isEqualTo("/medals/none.png");
     }
     private static ChartRating chart(long id,double cpi){return new ChartRating(id,id,"song","genre",null,49,4,false,"ELIGIBLE",List.of(),cpi,60,30,.5,"ELIGIBLE",List.of(),1000d,60,95000d,95000d);}
 }
