@@ -36,8 +36,10 @@ class CpiSpiModelTest {
         assertThat(easy.strictJudgement()).isTrue();
         assertThat(easy.strictGauge()).isTrue();
         assertThat(easy.extraType()).isEqualTo("SUPER_EXTRA");
-        assertThat(easy.cpiIndividualityStatus()).isEqualTo("NOT_CALCULATED");
-        assertThat(easy.spiIndividualityStatus()).isEqualTo("NOT_CALCULATED");
+        assertThat(easy.cpiIndividualityStatus()).isEqualTo("ASSESSED");
+        assertThat(easy.spiIndividualityStatus()).isEqualTo("ASSESSED");
+        assertThat(easy.cpiIndividualityMetrics()).isNotNull();
+        assertThat(easy.spiIndividualityMetrics()).isNotNull();
     }
     @Test void penalizedRaschConvergesWithDifferentPlayerPools()throws Exception {
         var records=new ArrayList<String>();
@@ -56,9 +58,37 @@ class CpiSpiModelTest {
                 new Chart(3,13,49,"C","G",null,4,false),new Chart(4,14,49,"D","G",null,4,false));
         new CpiSpiModel(mapper).fit(dir,charts);
         var output=mapper.readValue(dir.resolve("ratings.json").toFile(),RatingSnapshot.class);
-        assertThat(output.modelVersion()).isEqualTo("cpi-spi-experimental-v4");
+        assertThat(output.modelVersion()).isEqualTo("cpi-spi-experimental-v5");
         assertThat(output.charts()).allSatisfy(chart->{assertThat(chart.cpi()).isFinite();assertThat(Math.abs(chart.cpi())).isLessThan(10);});
         assertThat(output.charts().get(3).cpi()).isGreaterThan(output.charts().get(2).cpi());
+    }
+    @Test void marksOnlyRelativelyUnpredictableChartsAsIndividualityCandidates()throws Exception {
+        var records=new ArrayList<String>();
+        for(long user=1;user<=100;user++){
+            boolean strong=user>50;
+            for(long chart=1;chart<=7;chart++){
+                int medal=strong?7:8;
+                int score=70000+(int)user*250-(int)chart*100;
+                records.add(json(record(user,chart,medal,score)));
+            }
+            boolean split=user%2==0;
+            int reversedScore=100000-(70000+(int)user*250);
+            records.add(json(record(user,8,split?7:8,reversedScore)));
+        }
+        Files.write(dir.resolve("records.jsonl"),records);
+        var charts=new ArrayList<Chart>();
+        for(long chart=1;chart<=8;chart++)charts.add(new Chart(chart,chart+100,49,"Song "+chart,"G",null,4,false));
+        var summary=new CpiSpiModel(mapper).fit(dir,charts);
+        var output=mapper.readValue(dir.resolve("ratings.json").toFile(),RatingSnapshot.class);
+        var normal=output.charts().get(0);var individual=output.charts().get(7);
+        assertThat(normal.cpiIndividualityStatus()).isEqualTo("ASSESSED");
+        assertThat(normal.spiIndividualityStatus()).isEqualTo("ASSESSED");
+        assertThat(individual.cpiIndividualityStatus()).isEqualTo("CANDIDATE");
+        assertThat(individual.spiIndividualityStatus()).isEqualTo("CANDIDATE");
+        assertThat(individual.cpiIndividualityMetrics().auc()).isLessThan(normal.cpiIndividualityMetrics().auc());
+        assertThat(individual.spiIndividualityMetrics().spearman()).isLessThan(normal.spiIndividualityMetrics().spearman());
+        assertThat(summary.get("cpiIndividualityCandidateCount")).isEqualTo(1L);
+        assertThat(summary.get("spiIndividualityCandidateCount")).isEqualTo(1L);
     }
     private AnalysisRecord record(long user,long chart,int medal,int score){return new AnalysisRecord(user,chart,chart,49,medal,score,true,true,false,false,true,true,false,false,29,29,score,true,null,null,1L);}
     private String json(Object value)throws Exception{return mapper.writeValueAsString(value);}
