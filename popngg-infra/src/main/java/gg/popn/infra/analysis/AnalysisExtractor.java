@@ -81,7 +81,8 @@ public class AnalysisExtractor {
                         r.getBoolean("user_exists"),r.getBoolean("profile_exists"),r.getBoolean("is_bot"),r.getBoolean("is_hidden"),
                         r.getBoolean("chart_exists"),r.getBoolean("song_exists"),r.getBoolean("is_deleted"),r.getBoolean("is_duplicate"),
                         nullableInt(r,"current_version"),nullableInt(r,"all_time_score_version"),nullableInt(r,"version_score"),
-                        r.getBoolean("version_score_known"),r.getString("last_played_at"),r.getString("updated_at"),nullableLong(r,"last_renew_log_id"));
+                        r.getBoolean("version_score_known"),r.getString("last_played_at"),r.getString("updated_at"),nullableLong(r,"last_renew_log_id"),
+                        nullableInt(r,"all_time_rank_code"));
                 try {out.write(mapper.writeValueAsString(row));out.newLine();written[0]++;}
                 catch(IOException e) {throw new UncheckedIOException(e);}
             });
