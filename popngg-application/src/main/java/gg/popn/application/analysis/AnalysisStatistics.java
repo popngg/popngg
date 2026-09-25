@@ -12,9 +12,14 @@ public final class AnalysisStatistics {
     private final ObjectMapper mapper;
     public AnalysisStatistics(ObjectMapper mapper) { this.mapper = mapper; }
     public record Chart(long chartId, long songId, int level, String songName, String genreName,
-                        String jacketUrl, int difficulty, boolean upper) {
+                        String jacketUrl, int difficulty, boolean upper,
+                        boolean strictJudgement, boolean strictGauge) {
         public Chart(long chartId, long songId, int level) {
-            this(chartId, songId, level, null, null, null, 0, false);
+            this(chartId, songId, level, null, null, null, 0, false, false, false);
+        }
+        public Chart(long chartId, long songId, int level, String songName, String genreName,
+                     String jacketUrl, int difficulty, boolean upper) {
+            this(chartId, songId, level, songName, genreName, jacketUrl, difficulty, upper, false, false);
         }
     }
     private record UserLevel(long userId, int level) {}

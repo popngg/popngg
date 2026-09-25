@@ -12,7 +12,7 @@ import java.util.function.Function;
 
 /** Deterministic experimental model. Values are latent coefficients, not a public 0-100 scale. */
 public final class CpiSpiModel {
-    public static final String VERSION = "cpi-spi-experimental-v2";
+    public static final String VERSION = "cpi-spi-experimental-v3";
     public static final int MIN_PLAYERS = 50;
     private static final int MIN_LEVEL = 48;
     private final ObjectMapper mapper;
@@ -71,7 +71,8 @@ public final class CpiSpiModel {
             boolean cpiReady=cpiReasons.isEmpty(),spiReady=spiReasons.isEmpty();
             var sorted = s.scores.stream().mapToInt(Integer::intValue).sorted().toArray();
             ratings.add(new ChartRating(chart.chartId(),chart.songId(),chart.songName(),chart.genreName(),chart.jacketUrl(),
-                    chart.level(),chart.difficulty(),chart.upper(), cpiReady?"ELIGIBLE":"HOLD",List.copyOf(cpiReasons),
+                    chart.level(),chart.difficulty(),chart.upper(),chart.strictJudgement(),chart.strictGauge(),
+                    "NOT_CALCULATED","NOT_CALCULATED",cpiReady?"ELIGIBLE":"HOLD",List.copyOf(cpiReasons),
                     cpiReady?round(cpiDifficulty.get(chart.chartId())):null,s.cpiUsers.size(),s.clearCount,ratio(s.clearCount,s.cpiCount),
                     spiReady?"ELIGIBLE":"HOLD",List.copyOf(spiReasons),spiReady?round(spiDifficulty.get(chart.chartId())):null,s.spiUsers.size(),
                     ratio(s.scoreSum,s.scores.size()),AnalysisStatistics.percentile(sorted,.5)));
@@ -164,9 +165,9 @@ public final class CpiSpiModel {
     private static Double round(Double v){return v==null?null:Math.rint(v*1_000_000d)/1_000_000d;}
     private static void writeCsv(Path path,List<ChartRating> rows)throws IOException {
         try(var out=Files.newBufferedWriter(path,StandardCharsets.UTF_8)){
-            out.write("chartId,songId,songName,genreName,jacketUrl,level,difficulty,upper,cpiEligibilityStatus,cpiHoldReasons,cpi,cpiSampleCount,clearCount,clearRate,spiEligibilityStatus,spiHoldReasons,spi,spiSampleCount,averageScore,medianScore\n");
-            for(var r:rows)out.write(csv(Arrays.asList(r.chartId(),r.songId(),r.songName(),r.genreName(),r.jacketUrl(),r.level(),r.difficulty(),r.upper(),r.cpiEligibilityStatus(),
-                    String.join("|",r.cpiHoldReasons()),Objects.toString(r.cpi(),""),r.cpiSampleCount(),r.clearCount(),Objects.toString(r.clearRate(),""),r.spiEligibilityStatus(),
+            out.write("chartId,songId,songName,genreName,jacketUrl,level,difficulty,upper,strictJudgement,strictGauge,cpiIndividualityStatus,spiIndividualityStatus,cpiEligibilityStatus,cpiHoldReasons,cpi,cpiSampleCount,clearCount,clearRate,spiEligibilityStatus,spiHoldReasons,spi,spiSampleCount,averageScore,medianScore\n");
+            for(var r:rows)out.write(csv(Arrays.asList(r.chartId(),r.songId(),r.songName(),r.genreName(),r.jacketUrl(),r.level(),r.difficulty(),r.upper(),
+                    r.strictJudgement(),r.strictGauge(),r.cpiIndividualityStatus(),r.spiIndividualityStatus(),r.cpiEligibilityStatus(),String.join("|",r.cpiHoldReasons()),Objects.toString(r.cpi(),""),r.cpiSampleCount(),r.clearCount(),Objects.toString(r.clearRate(),""),r.spiEligibilityStatus(),
                     String.join("|",r.spiHoldReasons()),Objects.toString(r.spi(),""),r.spiSampleCount(),Objects.toString(r.averageScore(),""),Objects.toString(r.medianScore(),""))));
         }
     }

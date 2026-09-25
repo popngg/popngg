@@ -13,7 +13,9 @@ class TierListImageRendererTest {
     @Test void rendersPersonalTierListAsPng()throws Exception{
         var charts=new ArrayList<ChartRating>();var records=new ArrayList<PlaydataQueryResults.ChartPlaydata>();
         for(int i=0;i<9;i++){
-            charts.add(new ChartRating(i+1,i+1,"楽曲 "+i,"ジャンル",null,49,4,false,"ELIGIBLE",List.of(),10d-i,60,30,.5,"ELIGIBLE",List.of(),1000d-i,60,95000d,95000d));
+            charts.add(new ChartRating(i+1,i+1,"楽曲 "+i,"ジャンル",null,49,4,false,
+                    i==0,i==0,i==0?"CANDIDATE":"NOT_CALCULATED","NOT_CALCULATED",
+                    "ELIGIBLE",List.of(),10d-i,60,30,.5,"ELIGIBLE",List.of(),1000d-i,60,95000d,95000d));
             if(i<5)records.add(new PlaydataQueryResults.ChartPlaydata(i+1,"hash","ジャンル","楽曲",4,"EX",49,29,false,new PlaydataQueryResults.Best(94000+i,9,29),new PlaydataQueryResults.Best(95000+i,9,28),new PlaydataQueryResults.Medal(i<3?6:8),null,null,null));
         }
         var snapshot=new RatingSnapshot("id","now","v1","EXPERIMENTAL","NOT_VALIDATED",50,charts);
