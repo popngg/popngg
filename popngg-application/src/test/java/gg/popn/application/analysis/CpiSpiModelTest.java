@@ -19,7 +19,7 @@ class CpiSpiModelTest {
             if(user<=10)records.add(json(record(user,3,8,99000)));
         }
         Files.write(dir.resolve("records.jsonl"),records);
-        var charts=List.of(new Chart(1,11,49,"Easy","Genre A","https://img/1.png",4,false,true,true),
+        var charts=List.of(new Chart(1,11,49,"Easy","Genre A","https://img/1.png",4,false,"SUPER_EXTRA",true,true),
                 new Chart(2,12,49,"Hard","Genre B","https://img/2.png",4,false),new Chart(3,13,49,"Sparse","Genre C",null,4,false));
         new CpiSpiModel(mapper).fit(dir,charts);
         var output=mapper.readValue(dir.resolve("ratings.json").toFile(),RatingSnapshot.class);
@@ -35,6 +35,7 @@ class CpiSpiModelTest {
         assertThat(easy.songName()).isEqualTo("Easy");
         assertThat(easy.strictJudgement()).isTrue();
         assertThat(easy.strictGauge()).isTrue();
+        assertThat(easy.extraType()).isEqualTo("SUPER_EXTRA");
         assertThat(easy.cpiIndividualityStatus()).isEqualTo("NOT_CALCULATED");
         assertThat(easy.spiIndividualityStatus()).isEqualTo("NOT_CALCULATED");
     }
@@ -55,7 +56,7 @@ class CpiSpiModelTest {
                 new Chart(3,13,49,"C","G",null,4,false),new Chart(4,14,49,"D","G",null,4,false));
         new CpiSpiModel(mapper).fit(dir,charts);
         var output=mapper.readValue(dir.resolve("ratings.json").toFile(),RatingSnapshot.class);
-        assertThat(output.modelVersion()).isEqualTo("cpi-spi-experimental-v3");
+        assertThat(output.modelVersion()).isEqualTo("cpi-spi-experimental-v4");
         assertThat(output.charts()).allSatisfy(chart->{assertThat(chart.cpi()).isFinite();assertThat(Math.abs(chart.cpi())).isLessThan(10);});
         assertThat(output.charts().get(3).cpi()).isGreaterThan(output.charts().get(2).cpi());
     }

@@ -4,19 +4,19 @@ import gg.popn.application.analysis.RatingSnapshot;
 import gg.popn.application.analysis.RatingSnapshot.ChartRating;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults.ChartPlaydata;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults.UserPlaydata;
+import gg.popn.application.user.dto.result.UserProfileResult;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.Path2D;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
@@ -40,8 +40,8 @@ public class TierListImageRenderer {
     public TierListImageRenderer(){this(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build());}
     TierListImageRenderer(HttpClient http){this.http=http;}
 
-    public byte[] render(RatingSnapshot snapshot,UserPlaydata user,int level,RatingController.Metric metric)throws IOException {
-        String renderKey=snapshot.snapshotId()+":"+user.poptomoId()+":"+level+":"+metric;var ready=rendered.get(renderKey);if(ready!=null)return ready;
+    public byte[] render(RatingSnapshot snapshot,UserPlaydata user,UserProfileResult profile,int level,RatingController.Metric metric)throws IOException {
+        String renderKey=snapshot.snapshotId()+":"+user.poptomoId()+":"+profile.updatedAt()+":"+user.playdata().hashCode()+":"+level+":"+metric;var ready=rendered.get(renderKey);if(ready!=null)return ready;
         var records=new HashMap<Long,ChartPlaydata>();user.playdata().forEach(r->records.put(r.chartId(),r));
         var eligible=snapshot.charts().stream().filter(c->c.level()==level).filter(c->"ELIGIBLE".equals(status(c,metric)))
                 .sorted(metric.comparator()).toList();
@@ -51,9 +51,10 @@ public class TierListImageRenderer {
         var jackets=new ConcurrentHashMap<Long,BufferedImage>();
         var loads=all.stream().map(c->CompletableFuture.runAsync(()->{var loaded=jacket(c.jacketUrl());if(loaded!=null)jackets.put(c.chartId(),loaded);},jacketExecutor)).toList();
         loads.forEach(CompletableFuture::join);
+        var avatar=remoteImage(profile.profileImageUrl());
         int height=MARGIN+headerHeight()+58+bands.stream().mapToInt(b->bandHeight(b.size())).sum()+(held.isEmpty()?0:bandHeight(held.size())+14)+55;
         var image=new BufferedImage(WIDTH,height,BufferedImage.TYPE_INT_RGB);var g=image.createGraphics();quality(g);
-        paintBackground(g,height);int y=MARGIN;drawHeader(g,snapshot,user,level,metric,eligible,records,y);y+=headerHeight();
+        paintBackground(g,height);int y=MARGIN;drawHeader(g,snapshot,user,profile,avatar,level,metric,eligible,records,y);y+=headerHeight();
         drawToolbar(g,bands.size(),y);y+=58;
         int index=0;for(var band:bands){int h=bandHeight(band.size());drawBand(g,"P-"+String.format("%02d",++index),band,y,h,ACCENTS[(index-1)%ACCENTS.length],records,jackets,level,metric);y+=h;}
         if(!held.isEmpty()){y+=14;int h=bandHeight(held.size());drawBand(g,"HOLD",held,y,h,new Color(141,113,142),records,jackets,level,metric);y+=h;}
@@ -85,21 +86,35 @@ public class TierListImageRenderer {
     private static double quantile(List<Double> values,double q){double p=(values.size()-1)*q;int lo=(int)p,hi=(int)Math.ceil(p);return values.get(lo)+(values.get(hi)-values.get(lo))*(p-lo);}
     private static double value(ChartRating c,RatingController.Metric metric){return metric==RatingController.Metric.CPI?c.cpi():c.spi();}
     private static String status(ChartRating c,RatingController.Metric metric){return metric==RatingController.Metric.CPI?c.cpiEligibilityStatus():c.spiEligibilityStatus();}
-    private static int headerHeight(){return 154;}
+    private static int headerHeight(){return 244;}
     private static int bandHeight(int songs){return 18+Math.max(1,(songs+CARD_COLUMNS-1)/CARD_COLUMNS)*(CARD_HEIGHT+CARD_GAP)+14;}
 
-    private void drawHeader(Graphics2D g,RatingSnapshot snapshot,UserPlaydata user,int level,RatingController.Metric metric,List<ChartRating> charts,Map<Long,ChartPlaydata> records,int y){
-        fill(g,PANEL,MARGIN,y,SHELL,154);stroke(g,BORDER,MARGIN,y,SHELL,154);g.setColor(BRAND);g.fillOval(MARGIN+18,y+17,9,9);font(g,Font.BOLD,11);g.setColor(new Color(85,93,109));g.drawString("popn.gg   /   PERSONAL MAP",MARGIN+34,y+26);
-        font(g,Font.BOLD,34);String fitted=fit(g,user.userName(),690);g.setColor(TEXT);g.drawString(fitted,MARGIN+18,y+73);font(g,Font.PLAIN,34);g.setColor(new Color(134,139,148));g.drawString("· Lv"+level,MARGIN+30+g.getFontMetrics().stringWidth(fitted),y+73);
-        font(g,Font.PLAIN,12);g.setColor(MUTED);g.drawString("#  "+user.poptomoId()+"   •   generated "+LocalDate.now(ZoneId.of("Asia/Seoul")),MARGIN+18,y+98);
-        fill(g,new Color(255,224,224),MARGIN+SHELL-95,y+45,70,32);font(g,Font.BOLD,12);g.setColor(new Color(124,30,28));center(g,metric.name(),MARGIN+SHELL-95,y+45,70,32);
-        g.setColor(BORDER);g.drawLine(MARGIN,y+112,MARGIN+SHELL,y+112);
+    private void drawHeader(Graphics2D g,RatingSnapshot snapshot,UserPlaydata user,UserProfileResult profile,BufferedImage avatar,int level,RatingController.Metric metric,List<ChartRating> charts,Map<Long,ChartPlaydata> records,int y){
+        fill(g,PANEL,MARGIN,y,SHELL,244);stroke(g,BORDER,MARGIN,y,SHELL,244);
+        drawAvatar(g,avatar,MARGIN+22,y+26,94);font(g,Font.BOLD,34);g.setColor(TEXT);g.drawString(fit(g,user.userName(),500),MARGIN+142,y+62);
+        roundedFill(g,new Color(243,244,245),MARGIN+142,y+75,178,29,6);font(g,Font.PLAIN,12);g.setColor(new Color(85,93,109));center(g,"#  "+user.poptomoId(),MARGIN+142,y+75,178,29);
+        font(g,Font.BOLD,13);g.setColor(new Color(207,49,49));g.drawString("♥  "+valueOrDash(profile.characterName()),MARGIN+142,y+130);
+        g.setColor(new Color(229,231,235));g.fillRect(MARGIN+22,y+157,3,27);font(g,Font.PLAIN,13);g.setColor(new Color(85,93,109));g.drawString(fit(g,valueOrDash(profile.comment()),610),MARGIN+38,y+176);
+        int sx=MARGIN+SHELL-340;drawProfileStats(g,profile,sx,y+28,310);
+        g.setColor(BORDER);g.drawLine(MARGIN,y+198,MARGIN+SHELL,y+198);
         long played=charts.stream().filter(c->records.containsKey(c.chartId())).count();long clear=charts.stream().filter(c->{var r=records.get(c.chartId());return r!=null&&isCleared(r.medal().code());}).count();
-        stat(g,"PLAYED",played+" / "+charts.size(),MARGIN+18,y+139);stat(g,"CLEAR",clear+(played==0?"":"  "+String.format("%.1f%%",100d*clear/played)),MARGIN+180,y+139);
-        font(g,Font.BOLD,10);g.setColor(new Color(134,139,148));g.drawString(snapshot.modelStatus()+"   •   "+snapshot.publicationStatus(),MARGIN+SHELL-245,y+141);
+        stat(g,"PLAYED",played+" / "+charts.size(),MARGIN+22,y+227);stat(g,"CLEAR",clear+" / "+played+(played==0?"":"  "+String.format("%.1f%%",100d*clear/played)),MARGIN+190,y+227);
+        fill(g,new Color(255,224,224),MARGIN+SHELL-92,y+207,67,27);font(g,Font.BOLD,11);g.setColor(new Color(124,30,28));center(g,metric.name(),MARGIN+SHELL-92,y+207,67,27);
+        font(g,Font.BOLD,9);g.setColor(new Color(134,139,148));g.drawString(snapshot.modelStatus()+"   •   "+snapshot.publicationStatus(),MARGIN+SHELL-330,y+225);
     }
+    private static void drawProfileStats(Graphics2D g,UserProfileResult profile,int x,int y,int width){
+        font(g,Font.PLAIN,11);g.setColor(MUTED);g.drawString("팝픈클래스",x,y+8);font(g,Font.BOLD,28);g.setColor(TEXT);String current=String.format("%.2f",profile.displayPopclass()/1000d);g.drawString(current,x,y+43);int currentWidth=g.getFontMetrics().stringWidth(current);
+        font(g,Font.PLAIN,12);g.setColor(new Color(85,93,109));g.drawString("/ 구"+String.format("%.2f",profile.legacyPopclass()/100d),x+currentWidth+9,y+42);g.setColor(BORDER);g.drawLine(x,y+61,x+width,y+61);
+        var summaries=new HashMap<String,UserProfileResult.MedalSummary>();profile.medalSummaries().forEach(s->summaries.put(s.kind(),s));
+        profileStat(g,"클리어",level(summaries,"clear"),new Color(255,77,128),x,y+86,width);
+        profileStat(g,"풀콤보",level(summaries,"full-combo"),new Color(50,203,204),x,y+116,width);
+        profileStat(g,"퍼펙트",level(summaries,"perfect"),new Color(255,191,0),x,y+146,width);
+    }
+    private static void profileStat(Graphics2D g,String label,int level,Color color,int x,int y,int width){g.setColor(color);g.fillOval(x,y-8,7,7);font(g,Font.BOLD,12);g.drawString(label,x+15,y);font(g,Font.PLAIN,15);g.setColor(TEXT);String value=level==0?"—":level+"";g.drawString(value,x+width-31-g.getFontMetrics().stringWidth(value),y);font(g,Font.PLAIN,10);g.setColor(MUTED);g.drawString("Lv",x+width-25,y);}
+    private static int level(Map<String,UserProfileResult.MedalSummary> summaries,String kind){var summary=summaries.get(kind);return summary==null?0:summary.maxLevel();}
+    private static String valueOrDash(String value){return value==null||value.isBlank()?"—":value;}
     private static void stat(Graphics2D g,String label,String value,int x,int y){font(g,Font.BOLD,9);g.setColor(MUTED);g.drawString(label,x,y);font(g,Font.BOLD,14);g.setColor(TEXT);g.drawString(value,x+58,y);}
-    private static void drawToolbar(Graphics2D g,int partitions,int y){font(g,Font.BOLD,10);g.setColor(new Color(85,93,109));g.drawString("GAP PARTITIONS  "+partitions,MARGIN+4,y+21);font(g,Font.PLAIN,10);g.setColor(MUTED);g.drawString("score / medal overlay enabled",WIDTH-MARGIN-175,y+21);font(g,Font.BOLD,9);g.setColor(new Color(134,139,148));g.drawString("FEATURE MARKS",MARGIN+4,y+45);drawLegendBadge(g,"個",new Color(75,123,229),MARGIN+96,y+32);g.drawString("개인차",MARGIN+114,y+45);drawLegendBadge(g,"辛G",new Color(234,96,104),MARGIN+160,y+32);g.drawString("짠게",MARGIN+178,y+45);drawLegendBadge(g,"辛判",new Color(247,196,81),MARGIN+217,y+32);g.drawString("짠판",MARGIN+237,y+45);}
+    private static void drawToolbar(Graphics2D g,int partitions,int y){font(g,Font.BOLD,10);g.setColor(new Color(85,93,109));g.drawString("GAP PARTITIONS  "+partitions,MARGIN+4,y+21);font(g,Font.PLAIN,10);g.setColor(MUTED);g.drawString("score / medal overlay enabled",WIDTH-MARGIN-175,y+21);font(g,Font.BOLD,9);g.setColor(new Color(134,139,148));g.drawString("FEATURE MARKS",MARGIN+4,y+45);drawLegendItem(g,"個","개인차",new Color(75,123,229),MARGIN+96,y+32);drawLegendItem(g,"辛G","짠게",new Color(234,96,104),MARGIN+160,y+32);drawLegendItem(g,"辛判","짠판",new Color(247,196,81),MARGIN+217,y+32);drawLegendItem(g,"EX","EXTRA",new Color(139,92,246),MARGIN+279,y+32);drawLegendItem(g,"超EX","초EXTRA",new Color(91,33,182),MARGIN+347,y+32);}
     private void drawBand(Graphics2D g,String label,List<ChartRating> charts,int y,int height,Color accent,Map<Long,ChartPlaydata> records,Map<Long,BufferedImage> jackets,int level,RatingController.Metric metric){
         fill(g,Color.WHITE,MARGIN,y,SHELL,height);stroke(g,BORDER,MARGIN,y,SHELL,height);fill(g,mix(Color.WHITE,accent,.09),MARGIN,y,LABEL_WIDTH,height);fill(g,accent,MARGIN,y,3,height);
         font(g,Font.BOLD,16);g.setColor(new Color(42,48,56));g.drawString(label,MARGIN+15,y+35);font(g,Font.PLAIN,10);g.setColor(new Color(134,139,148));g.drawString(charts.size()+" charts",MARGIN+15,y+53);
@@ -122,6 +137,8 @@ public class TierListImageRenderer {
         if("CANDIDATE".equals(individuality)||"CONFIRMED".equals(individuality))features.add(new Feature("個",25,new Color(75,123,229),new Color(50,103,214),new Color(40,84,184),new Color(120,162,255),Color.WHITE));
         if(chart.strictGauge())features.add(new Feature("辛G",25,new Color(234,96,104),new Color(217,74,82),new Color(185,54,64),new Color(255,133,139),Color.WHITE));
         if(chart.strictJudgement())features.add(new Feature("辛判",29,new Color(247,196,81),new Color(239,174,50),new Color(213,138,24),new Color(255,217,120),new Color(33,23,6)));
+        if("EXTRA".equals(chart.extraType()))features.add(new Feature("EX",25,new Color(167,139,250),new Color(139,92,246),new Color(109,40,217),new Color(196,181,253),Color.WHITE));
+        if("SUPER_EXTRA".equals(chart.extraType()))features.add(new Feature("超EX",31,new Color(124,58,237),new Color(91,33,182),new Color(76,29,149),new Color(167,139,250),Color.WHITE));
         int offset=0;for(var feature:features){drawFeatureBadge(g,feature,x+offset,y);offset+=feature.width()+3;}
     }
     private static void drawFeatureBadge(Graphics2D g,Feature feature,int x,int y){
@@ -129,6 +146,7 @@ public class TierListImageRenderer {
         var paint=g.getPaint();g.setPaint(new LinearGradientPaint(x,y,x,y+h,new float[]{0,.48f,1},new Color[]{feature.highlight(),feature.main(),feature.dark()}));g.fill(shape);g.setPaint(paint);g.setColor(feature.border());g.draw(shape);font(g,Font.BOLD,10);g.setColor(feature.text());center(g,feature.mark(),x,y-1,w,25);
     }
     private static void drawLegendBadge(Graphics2D g,String mark,Color color,int x,int y){fill(g,color,x,y,14,14);font(g,Font.BOLD,8);g.setColor(Color.WHITE);center(g,mark,x,y,14,14);}
+    private static void drawLegendItem(Graphics2D g,String mark,String label,Color color,int x,int y){drawLegendBadge(g,mark,color,x,y);font(g,Font.BOLD,9);g.setColor(MUTED);g.drawString(label,x+18,y+13);}
     private static void drawMedal(Graphics2D g,int code,int x,int y){g.drawImage(MEDAL_ICONS.getOrDefault(code,MEDAL_ICONS.get(13)),x-1,y-1,16,16,null);}
     static String medalIconResource(int code){int normalized=code>=1&&code<=13?code:13;return "/medals/"+MEDAL_FILES[normalized]+".png";}
     private static Map<Integer,BufferedImage> loadMedalIcons(){
@@ -143,12 +161,15 @@ public class TierListImageRenderer {
     private static String difficulty(int code){return switch(code){case 1->"E";case 2->"N";case 3->"H";case 4->"EX";default->"?";};}
     private static void drawFooter(Graphics2D g,int level,RatingController.Metric metric,int y){font(g,Font.PLAIN,10);g.setColor(new Color(134,139,148));g.drawString("popn.gg / personal tier map",MARGIN+3,y);String right="Lv"+level+" · "+metric+" · EXPERIMENTAL";g.drawString(right,WIDTH-MARGIN-g.getFontMetrics().stringWidth(right),y);}
 
-    private BufferedImage jacket(String url){if(url==null||url.isBlank())return null;var cached=cache.get(url);if(cached!=null)return cached;try{var uri=URI.create(url);if(!"https".equals(uri.getScheme())||!"static.popn.gg".equalsIgnoreCase(uri.getHost()))return null;var response=http.send(HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(3)).header("Accept","image/*").GET().build(),HttpResponse.BodyHandlers.ofByteArray());if(response.statusCode()!=200||response.body().length>2_000_000)return null;var image=ImageIO.read(new ByteArrayInputStream(response.body()));if(image!=null)cache.put(url,image);return image;}catch(Exception ignored){return null;}}
+    private BufferedImage jacket(String url){return remoteImage(url);}
+    private BufferedImage remoteImage(String url){if(url==null||url.isBlank())return null;var cached=cache.get(url);if(cached!=null)return cached;try{var uri=URI.create(url);if(!"https".equals(uri.getScheme())||!"static.popn.gg".equalsIgnoreCase(uri.getHost()))return null;var response=http.send(HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(3)).header("Accept","image/*").GET().build(),HttpResponse.BodyHandlers.ofByteArray());if(response.statusCode()!=200||response.body().length>2_000_000)return null;var image=ImageIO.read(new ByteArrayInputStream(response.body()));if(image!=null)cache.put(url,image);return image;}catch(Exception ignored){return null;}}
+    private static void drawAvatar(Graphics2D g,BufferedImage avatar,int x,int y,int size){var old=g.getClip();var shape=new RoundRectangle2D.Double(x,y,size,size,24,24);g.setClip(shape);if(avatar==null){fill(g,new Color(243,244,245),x,y,size,size);font(g,Font.BOLD,22);g.setColor(new Color(134,139,148));center(g,"popn",x,y,size,size);}else cover(g,avatar,x,y,size,size);g.setClip(old);g.setColor(new Color(229,231,235));g.draw(shape);}
     private static void cover(Graphics2D g,BufferedImage image,int x,int y,int w,int h){double scale=Math.max((double)w/image.getWidth(),(double)h/image.getHeight());int sw=(int)Math.round(w/scale),sh=(int)Math.round(h/scale),sx=(image.getWidth()-sw)/2,sy=(image.getHeight()-sh)/2;g.drawImage(image,x,y,x+w,y+h,sx,sy,sx+sw,sy+sh,null);}
     private static void paintBackground(Graphics2D g,int height){g.setColor(BG);g.fillRect(0,0,WIDTH,height);g.setPaint(new GradientPaint(0,0,new Color(255,240,240,150),0,360,new Color(247,248,249,0)));g.fillRect(0,0,WIDTH,360);}
     private static void quality(Graphics2D g){g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON);g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BICUBIC);}
     private static void font(Graphics2D g,int style,int size){g.setFont(new Font("Noto Sans CJK JP",style,size));}
     private static void fill(Graphics2D g,Color c,int x,int y,int w,int h){g.setColor(c);g.fillRect(x,y,w,h);}
+    private static void roundedFill(Graphics2D g,Color c,int x,int y,int w,int h,int radius){g.setColor(c);g.fillRoundRect(x,y,w,h,radius,radius);}
     private static void stroke(Graphics2D g,Color c,int x,int y,int w,int h){g.setColor(c);g.drawRect(x,y,w-1,h-1);}
     private static void center(Graphics2D g,String text,int x,int y,int w,int h){var fm=g.getFontMetrics();g.drawString(text,x+(w-fm.stringWidth(text))/2,y+(h-fm.getHeight())/2+fm.getAscent());}
     private static String fit(Graphics2D g,String value,int width){if(value==null)return "";var fm=g.getFontMetrics();if(fm.stringWidth(value)<=width)return value;String ellipsis="…";int end=value.length();while(end>0&&fm.stringWidth(value.substring(0,end)+ellipsis)>width)end--;return value.substring(0,end)+ellipsis;}

@@ -52,11 +52,12 @@ public class AnalysisExtractor {
         metadata.put("timestampMeaning","recordUpdatedAt is DB update time, not proven play time");
         var catalog=jdbc.query("""
                 SELECT c.chart_id,c.song_id,c.level,s.song_name,s.genre_name,s.jacket_url,
-                       c.difficulty_code,c.is_upper,c.has_strict_judgement,c.has_strict_gauge
+                       c.difficulty_code,c.is_upper,s.extra_type,c.has_strict_judgement,c.has_strict_gauge
                 FROM charts c JOIN songs s ON s.song_id=c.song_id
                 WHERE c.is_deleted=FALSE AND c.level BETWEEN 1 AND 50 ORDER BY c.chart_id
                 """,(r,n)->new Chart(r.getLong(1),r.getLong(2),r.getInt(3),r.getString(4),
-                        r.getString(5),r.getString(6),r.getInt(7),r.getBoolean(8),r.getBoolean(9),r.getBoolean(10)));
+                        r.getString(5),r.getString(6),r.getInt(7),r.getBoolean(8),r.getString(9),
+                        r.getBoolean(10),r.getBoolean(11)));
         var users=jdbc.queryForList("""
                 SELECT u.user_id FROM users u JOIN user_profiles p ON p.user_id=u.user_id
                 WHERE u.role <> 'BOT' AND p.is_hidden=FALSE ORDER BY u.user_id
