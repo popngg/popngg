@@ -6,6 +6,9 @@ import gg.popn.application.analysis.RatingQuery;
 import gg.popn.application.analysis.RatingSnapshot;
 import gg.popn.application.playdata.dto.result.PlaydataQueryResults;
 import gg.popn.application.playdata.port.in.PlaydataQueryUseCase;
+import gg.popn.application.user.dto.query.UserProfileQuery;
+import gg.popn.application.user.dto.result.UserProfileResult;
+import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.http.analysis.RatingController;
 import gg.popn.http.analysis.TierListImageRenderer;
 import org.junit.jupiter.api.Test;
@@ -23,10 +26,11 @@ class DiscordRatingImageTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final RatingQuery ratings = mock(RatingQuery.class);
     private final PlaydataQueryUseCase playdata = mock(PlaydataQueryUseCase.class);
+    private final UserProfileUseCase profiles = mock(UserProfileUseCase.class);
     private final TierListImageRenderer renderer = mock(TierListImageRenderer.class);
     private final List<DiscordRatingImage.Result> replies = new ArrayList<>();
     private final DiscordRatingImage image = new DiscordRatingImage(
-            ratings, playdata, renderer, Runnable::run, (root, result) -> replies.add(result));
+            ratings, playdata, profiles, renderer, Runnable::run, (root, result) -> replies.add(result));
 
     @Test
     void rendersTheSelectedUsersScoreAndMedalTierList() throws Exception {
@@ -36,7 +40,9 @@ class DiscordRatingImageTest {
                 "1234-5678-9012", "테스트 유저", 0, 0, 0, List.of());
         when(ratings.latest()).thenReturn(snapshot);
         when(playdata.findUserPlaydata("1234-5678-9012")).thenReturn(user);
-        when(renderer.render(snapshot, user, 49, RatingController.Metric.SPI))
+        var profile=mock(UserProfileResult.class);
+        when(profiles.get(new UserProfileQuery("1234-5678-9012"))).thenReturn(profile);
+        when(renderer.render(snapshot, user, profile,49, RatingController.Metric.SPI))
                 .thenReturn(new byte[]{1, 2, 3});
 
         Map<String, Object> response = image.start(root(), 49, "spi", " 1234-5678-9012 ");
@@ -56,7 +62,7 @@ class DiscordRatingImageTest {
         assertThat(image.start(root(), 47, "CPI", "1234-5678-9012").toString()).contains("48, 49, 50");
         assertThat(image.start(root(), 49, "CPI", "BOT-1-1").toString()).contains("1234-5678-9012");
         assertThat(image.start(root(), 49, "OTHER", "1234-5678-9012").toString()).contains("CPI 또는 SPI");
-        verifyNoInteractions(ratings, playdata, renderer);
+        verifyNoInteractions(ratings, playdata, profiles, renderer);
     }
 
     @Test
@@ -73,14 +79,15 @@ class DiscordRatingImageTest {
         assertThat(replies.getLast().content()).contains("사용자를 찾을 수 없습니다");
 
         reset(playdata);
-        when(renderer.render(any(), any(), anyInt(), any())).thenThrow(new RuntimeException());
+        when(profiles.get(any())).thenReturn(mock(UserProfileResult.class));
+        when(renderer.render(any(), any(), any(), anyInt(), any())).thenThrow(new RuntimeException());
         image.start(root(), 48, "CPI", "1234-5678-9012");
         assertThat(replies.getLast().content()).contains("생성하지 못했습니다");
     }
 
     @Test
     void rejectsWorkWhenTheBoundedQueueIsBusy() {
-        var busy = new DiscordRatingImage(ratings, playdata, renderer,
+        var busy = new DiscordRatingImage(ratings, playdata, profiles, renderer,
                 task -> { throw new RejectedExecutionException(); }, (root, result) -> {});
         assertThat(busy.start(root(), 50, "CPI", "1234-5678-9012").toString())
                 .contains("요청이 많습니다");

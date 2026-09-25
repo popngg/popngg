@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gg.popn.application.analysis.RatingQuery;
 import gg.popn.application.playdata.port.in.PlaydataQueryUseCase;
+import gg.popn.application.user.dto.query.UserProfileQuery;
+import gg.popn.application.user.exception.UserProfileNotFoundException;
+import gg.popn.application.user.port.in.UserProfileUseCase;
 import gg.popn.http.analysis.RatingController;
 import gg.popn.http.analysis.TierListImageRenderer;
 import jakarta.annotation.PreDestroy;
@@ -24,14 +27,15 @@ import java.util.concurrent.TimeUnit;
 public class DiscordRatingImage {
     private final RatingQuery ratings;
     private final PlaydataQueryUseCase playdata;
+    private final UserProfileUseCase profiles;
     private final TierListImageRenderer renderer;
     private final Executor executor;
     private final Reply reply;
 
     @Autowired
-    public DiscordRatingImage(RatingQuery ratings, PlaydataQueryUseCase playdata,
+    public DiscordRatingImage(RatingQuery ratings, PlaydataQueryUseCase playdata, UserProfileUseCase profiles,
                               TierListImageRenderer renderer, ObjectMapper mapper) {
-        this(ratings, playdata, renderer,
+        this(ratings, playdata, profiles, renderer,
                 new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS,
                         new ArrayBlockingQueue<>(8), runnable -> {
                     Thread thread = new Thread(runnable, "discord-rating-image");
@@ -40,10 +44,11 @@ public class DiscordRatingImage {
                 }), new DiscordRatingReplyClient(mapper)::send);
     }
 
-    DiscordRatingImage(RatingQuery ratings, PlaydataQueryUseCase playdata,
+    DiscordRatingImage(RatingQuery ratings, PlaydataQueryUseCase playdata, UserProfileUseCase profiles,
                        TierListImageRenderer renderer, Executor executor, Reply reply) {
         this.ratings = ratings;
         this.playdata = playdata;
+        this.profiles = profiles;
         this.renderer = renderer;
         this.executor = executor;
         this.reply = reply;
@@ -73,13 +78,14 @@ public class DiscordRatingImage {
         try {
             var snapshot = ratings.latest();
             var user = playdata.findUserPlaydata(poptomoId);
-            byte[] png = renderer.render(snapshot, user, level, metric);
+            var profile = profiles.get(new UserProfileQuery(poptomoId));
+            byte[] png = renderer.render(snapshot, user, profile, level, metric);
             String filename = "popngg-lv%d-%s-%s.png".formatted(
                     level, metric.name().toLowerCase(Locale.ROOT), poptomoId);
             String content = "**%s님의 Lv%d %s 서열표**\n점수와 메달은 popn.gg 최고 기록 기준입니다. 현재 모델은 실험 단계입니다."
                     .formatted(user.userName(), level, metric);
             result = new Result(content, filename, png);
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException | UserProfileNotFoundException exception) {
             result = Result.text("해당 팝토모 ID의 사용자를 찾을 수 없습니다.");
         } catch (IllegalStateException exception) {
             result = Result.text("CPI/SPI 데이터가 아직 준비되지 않았습니다. 분석 최신화가 완료된 뒤 다시 시도해 주세요.");

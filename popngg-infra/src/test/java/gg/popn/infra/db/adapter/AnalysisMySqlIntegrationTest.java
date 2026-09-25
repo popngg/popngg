@@ -22,6 +22,7 @@ class AnalysisMySqlIntegrationTest extends MySqlIntegrationTestSupport {
         jdbc.update("INSERT INTO user_profiles(user_id,user_name,created_at,updated_at) VALUES(1,'test',NOW(),NOW())");
         jdbc.update("INSERT INTO songs(song_id,genre_name,song_name,version,created_at,updated_at) VALUES(1,'test','test',29,NOW(),NOW())");
         jdbc.update("INSERT INTO charts(chart_id,song_id,difficulty_code,difficulty_label,level,chart_version,created_at,updated_at) VALUES(1,1,3,'EX',49,29,NOW(),NOW())");
+        jdbc.update("INSERT INTO chart_special_flags(chart_id,has_strict_judgement,has_strict_gauge,extra_type,source,as_of) VALUES(1,TRUE,TRUE,'SUPER_EXTRA','test','2026-09-25')");
         jdbc.update("INSERT INTO playdata(user_id,chart_id,current_version,all_time_score,medal_code,created_at,updated_at) VALUES(1,1,29,95000,8,NOW(),NOW())");
         var store=new AnalysisJobStore(jdbc,true);
         var tx=new TransactionTemplate(new DataSourceTransactionManager(ds));
@@ -40,6 +41,11 @@ class AnalysisMySqlIntegrationTest extends MySqlIntegrationTestSupport {
         tx.setReadOnly(true);tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
         var snapshot=tx.execute(s->{try{return extractor.extract(directory);}catch(Exception e){throw new RuntimeException(e);}});
         assertThat(snapshot.metadata().get("extractedRecordCount")).isEqualTo(jdbc.queryForObject("SELECT COUNT(*) FROM playdata",Long.class));
+        assertThat(snapshot.catalog()).singleElement().satisfies(chart -> {
+            assertThat(chart.strictJudgement()).isTrue();
+            assertThat(chart.strictGauge()).isTrue();
+            assertThat(chart.extraType()).isEqualTo("SUPER_EXTRA");
+        });
         assertThat(directory.resolve("records.jsonl")).exists();
     }
 }
