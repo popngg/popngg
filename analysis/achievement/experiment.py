@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 
 import numpy as np
 from scipy.optimize import minimize
@@ -106,8 +107,12 @@ def anchors(difficulty, levels, eligible, reference):
 
 
 def convert(value, points):
-    if points is None or value < points[0] or value > points[-1]:
-        return None  # Never extrapolate beyond the supported reference levels.
+    if points is None:
+        return None
+    if value < points[0]:
+        return float(48 + (value-points[0])/(points[1]-points[0]))
+    if value > points[2]:
+        return float(50 + (value-points[2])/(points[2]-points[1]))
     return float(np.interp(value, points, [48, 49, 50]))
 
 
@@ -123,7 +128,7 @@ def connected(u, c, user_count, chart_count):
     return len({root(user_count + k) for k in range(chart_count)}) == 1
 
 
-def run(directory, output, axis="medal", bootstrap=30, seed=20260925):
+def run(directory, output, axis="medal", bootstrap=30, seed=20260925, source_snapshot_id=None):
     if directory.resolve() == output.resolve():
         raise ValueError("Output must not overwrite the source snapshot")
     catalog, rows, quality = load(directory, axis)
@@ -215,7 +220,6 @@ def run(directory, output, axis="medal", bootstrap=30, seed=20260925):
             if not final_info["converged"]: reasons.append("MODEL_NOT_CONVERGED")
             value = convert(d[j, t], points)
             if points is None: reasons.append("UNSTABLE_LEVEL_ANCHORS")
-            elif value is None: reasons.append("OUTSIDE_CALIBRATED_RANGE")
             valid = [s[j][t] for s in samples if s[j][t] is not None]
             interval = np.quantile(valid, [.025, .975]).tolist() if bootstrap >= 30 and len(valid) >= .9*bootstrap else None
             if interval is None: reasons.append("INSUFFICIENT_BOOTSTRAP_SUPPORT")
@@ -225,8 +229,14 @@ def run(directory, output, axis="medal", bootstrap=30, seed=20260925):
                             "interval": interval if not reasons else None,
                             "playerCount": int(count[j]), "achievedCount": int(successes[j, t]),
                             "status": "HOLD" if reasons else "EXPERIMENTAL", "holdReasons": reasons})
+    source_hashes = {p: hashlib.sha256((directory/p).read_bytes()).hexdigest()
+                     for p in ("records.jsonl", "catalog.json")}
+    generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    source_id = source_snapshot_id or "files:" + source_hashes["records.jsonl"][:32]
+    input_kind = ("SYNTHETIC" if (directory/'FIXTURE_NOT_PRODUCTION.txt').exists() else
+                  "PUBLIC_API" if (directory/'API_COLLECTION_METADATA.json').exists() else "UNVERIFIED_SOURCE")
     report = {"status": "EXPERIMENT_COMPLETE", "publicationStatus": "NOT_VALIDATED", "axis": axis,
-              "inputKind": "SYNTHETIC" if (directory/'FIXTURE_NOT_PRODUCTION.txt').exists() else "UNVERIFIED_SOURCE",
+              "inputKind": input_kind,
               "quality": quality, "users": len(users), "charts": len(ids), "seed": seed,
               "penalty": penalty, "finalFit": final_info, "evaluation": evaluation,
               "userLevelPenalty": baseline_penalty,
@@ -235,8 +245,8 @@ def run(directory, output, axis="medal", bootstrap=30, seed=20260925):
               "testUnsupported": int(((split == 2) & ~supported).sum()),
               "connected": graph_connected, "referenceTarget": TARGETS[axis][reference][0],
               "levelAnchors": points, "bootstrapRuns": bootstrap, "bootstrapConverged": bootstrap_converged,
-              "sourceHashes": {p: hashlib.sha256((directory/p).read_bytes()).hexdigest()
-                               for p in ("records.jsonl", "catalog.json")},
+              "sourceSnapshotId": source_id, "generatedAt": generated_at,
+              "sourceHashes": source_hashes,
               "limitations": ["Observed best-owned states; not attempt probabilities",
                               "Selection bias and static ability assumptions",
                               "No user holdout or existing production CPI/SPI comparison yet",
@@ -244,6 +254,11 @@ def run(directory, output, axis="medal", bootstrap=30, seed=20260925):
                               "No DB writes, S3 publication, or operational rating replacement"]}
     for filename, data in (("report.json", report), ("achievement-ratings.json", results)):
         (output/filename).write_text(json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
+    bundle = {"sourceSnapshotId": source_id, "modelVersion": "achievement-v1",
+              "modelStatus": "EXPERIMENTAL", "generatedAt": generated_at,
+              "axis": axis.upper(), "constants": results}
+    (output/"achievement-import.json").write_text(
+        json.dumps(bundle, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
     with (output/"achievement-ratings.csv").open("w", newline="", encoding="utf-8-sig") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(results[0]))
         writer.writeheader()
@@ -257,5 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--axis", choices=TARGETS, default="medal")
     parser.add_argument("--bootstrap", type=int, default=30)
+    parser.add_argument("--source-snapshot-id")
     args = parser.parse_args()
-    print(json.dumps(run(args.snapshot, args.output, args.axis, args.bootstrap), ensure_ascii=False, indent=2))
+    print(json.dumps(run(args.snapshot, args.output, args.axis, args.bootstrap,
+                         source_snapshot_id=args.source_snapshot_id), ensure_ascii=False, indent=2))

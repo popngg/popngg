@@ -85,6 +85,23 @@ class DiscordInteractionControllerTest {
         assertThat(content(call(request))).contains("이 서버에서는 사용할 수 없는");
     }
 
+    @Test
+    void achievementConstantImageIsAdminOnly() throws Exception {
+        var image = mock(DiscordAchievementConstantImage.class);
+        controller.setDiscordAchievementConstantImage(image);
+        when(image.start(any(), eq(49), eq("MEDAL")))
+                .thenReturn(Map.of("type", 5, "data", Map.of("flags", 64)));
+        ObjectNode request = command("상수표");
+        option(request, "기준", "MEDAL");
+        option(request, "레벨", 49);
+        assertThat(body(call(request)).get("type")).isEqualTo(5);
+        verify(image).start(any(), eq(49), eq("MEDAL"));
+        clearInvocations(image);
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할");
+        verifyNoInteractions(image);
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         keys = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();

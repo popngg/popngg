@@ -76,6 +76,7 @@ public class DiscordInteractionController {
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
     private OfficialSongReview officialSongReview;
     private DiscordRatingImage discordRatingImage;
+    private DiscordAchievementConstantImage discordAchievementConstantImage;
 
     @Autowired
     void setOfficialSongReview(OfficialSongReview officialSongReview) {
@@ -85,6 +86,11 @@ public class DiscordInteractionController {
     @Autowired
     void setDiscordRatingImage(DiscordRatingImage discordRatingImage) {
         this.discordRatingImage = discordRatingImage;
+    }
+
+    @Autowired
+    void setDiscordAchievementConstantImage(DiscordAchievementConstantImage image) {
+        this.discordAchievementConstantImage = image;
     }
     private gg.popn.application.analysis.AnalysisJobs analysisJobs;
 
@@ -165,6 +171,11 @@ public class DiscordInteractionController {
             return ResponseEntity.ok(discordRatingImage.start(root, level, metric, poptomoId));
         }
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
+        if (type == 2 && "상수표".equals(root.path("data").path("name").asText())) {
+            int level = option(root, "레벨").path("value").asInt();
+            String axis = option(root, "기준").path("value").asText();
+            return ResponseEntity.ok(discordAchievementConstantImage.start(root, level, axis));
+        }
         if ((type == 3 || type == 5) && root.path("data").path("custom_id").asText().startsWith("official_")
                 && officialSongReview != null) {
             return ResponseEntity.ok(officialSongReview.interact(root));

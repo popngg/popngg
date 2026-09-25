@@ -17,6 +17,14 @@ python analysis/achievement/experiment.py --snapshot /private/snapshot --output 
 python -m unittest discover -s analysis/achievement -p 'test_*.py'
 ```
 
+DB 스냅샷을 직접 사용할 수 없는 검토 환경에서는 공개 API에서 익명화된 연구 입력을
+수집할 수 있다. 팝토모 ID와 닉네임은 파일에 기록하지 않는다. API 수집은 트랜잭션
+스냅샷이 아니므로 최종 검증보다 탐색 실험에만 사용한다.
+
+```sh
+python analysis/achievement/collect_api.py --output build/achievement/api-input
+```
+
 원천 catalog.json과 records.jsonl을 읽는다. user/profile/chart/song 존재 여부,
 bot/hidden/deleted/duplicate를 재검사한다. 누락된 플래그는 안전하게 제외한다.
 메달 1~10만 분석하며 EASY/LONGOFF/NONE은 실패로 바꾸지 않는다.
@@ -40,8 +48,10 @@ bot/hidden/deleted/duplicate를 재검사한다. 누락된 플래그는 안전�
 ## 레벨 환산과 불확실성
 
 Lv48/49/50마다 적격 채보 3개 이상일 때 기준 목표 계수의 중앙값을 48/49/50에
-대응시킨다. 기준점이 증가하지 않으면 보류한다. 선형 보간만 사용하며 범위 밖은
-OUTSIDE_CALIBRATED_RANGE이다. 따라서 50 이상을 임의 외삽하지 않는다.
+대응시킨다. 기준점이 증가하지 않으면 보류한다. 48~50 사이는 선형 보간하고,
+그 밖의 목표는 가장 가까운 두 레벨 기준점의 기울기로 외삽한다. 따라서 Lv48 FC가
+Lv50 CLEAR보다 어렵게 추정되면 50을 넘는 상수가 나올 수 있다. 이는 관리자 검토용
+실험 환산이며 공식 레벨을 바꾸는 값이 아니다.
 
 사용자 단위 bootstrap마다 모델과 기준점을 다시 적합한다. 같은 사용자의 모든
 기록에 동일 가중치를 부여한다. 30회 이상, 전체 반복의 90% 이상에서 환산 가능한
@@ -51,13 +61,27 @@ OUTSIDE_CALIBRATED_RANGE이다. 따라서 50 이상을 임의 외삽하지 않�
 ## 산출물과 후속 저장
 
 - achievement-ratings.json/csv: 목표별 계수, 환산 상수, 구간, 표본, 보류 사유
+- achievement-import.json: 관리자 API로 DB에 원자적으로 등록하는 실험 스냅샷 묶음
 - report.json: 소스 SHA256, seed, 선택 규제, test 성능, 수렴, 기준점, 제약
+
+운영 DB에는 기존 채보 테이블을 수정하지 않고 `achievement_constant_snapshots`와
+`achievement_constants`에 저장한다. 관리자 권한으로 아래 API에
+`achievement-import.json`을 전송하면 같은 축의 최신 스냅샷 포인터가 한 트랜잭션에서
+교체된다. 등록 원본 JSON은 DB 변경 전에 비공개 분석 S3 버킷에 AES-256으로
+보관한다. 보관 실패 시 DB 활성 스냅샷은 바뀌지 않는다. 일반 사용자 API에는
+노출하지 않는다.
+
+```text
+POST /api/v1/admin/analysis/achievement-constants/snapshots
+```
+
+등록 뒤 Discord 관리자 명령 `/상수표`에서 레벨 48~50과 메달/랭크 축을 선택하면
+곡별 다섯 목표 상수를 CPI 서열표 계열 디자인의 PNG로 확인할 수 있다.
 
 원천/사용자 데이터는 커밋하지 않는다. 합성 결과는 운영 근거로 사용하지 않는다.
 generate_fixture.py로 가상 사용자 300명, 채보 18개, 기록 5,400개를 생성할 수 있다.
-현재 로컬 smoke 결과: 90개 목표 중 38개 실험 상수, 52개 보류. 범위 밖 및 bootstrap
-환산 지원 부족을 숨기지 않는다. 48/50 끝점 주변이 자주 보류되는 한계가 있으므로
-실데이터에서 보정 범위를 넓힐지 검토한다. 임의 외삽은 아직 하지 않는다.
+합성 데이터 결과는 파이프라인 확인용일 뿐 운영 근거로 사용하지 않는다. 외삽된
+상수는 특히 기준점 추정 오차에 민감하므로 bootstrap 구간과 함께 검토한다.
 
 합성 데이터 test log loss (작을수록 좋음):
 

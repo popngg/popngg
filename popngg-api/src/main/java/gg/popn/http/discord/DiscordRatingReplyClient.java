@@ -31,6 +31,15 @@ final class DiscordRatingReplyClient {
     }
 
     void send(JsonNode root, DiscordRatingImage.Result result) throws Exception {
+        send(root, result.content(), result.filename(), result.png(), result.hasImage());
+    }
+
+    void send(JsonNode root, DiscordAchievementConstantImage.Result result) throws Exception {
+        send(root, result.content(), result.filename(), result.png(), result.hasImage());
+    }
+
+    private void send(JsonNode root, String resultContent, String resultFilename, byte[] resultPng,
+                      boolean hasImage) throws Exception {
         String application = root.path("application_id").asText();
         String token = root.path("token").asText();
         if (!application.matches("[0-9]+") || !token.matches("[A-Za-z0-9._-]{1,1024}"))
@@ -39,14 +48,14 @@ final class DiscordRatingReplyClient {
         HttpRequest.BodyPublisher body;
         String contentType;
         Map<String, Object> payload = Map.of(
-                "content", result.content(),
+                "content", resultContent,
                 "allowed_mentions", Map.of("parse", List.of()),
-                "attachments", result.hasImage()
-                        ? List.of(Map.of("id", 0, "filename", result.filename())) : List.of());
-        if (result.hasImage()) {
+                "attachments", hasImage
+                        ? List.of(Map.of("id", 0, "filename", resultFilename)) : List.of());
+        if (hasImage) {
             String boundary = "popngg-" + UUID.randomUUID();
             body = HttpRequest.BodyPublishers.ofByteArray(multipart(
-                    boundary, mapper.writeValueAsBytes(payload), result.filename(), result.png()));
+                    boundary, mapper.writeValueAsBytes(payload), resultFilename, resultPng));
             contentType = "multipart/form-data; boundary=" + boundary;
         } else {
             body = HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(payload));
