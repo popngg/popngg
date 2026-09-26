@@ -12,6 +12,28 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AchievementConstantImageRendererTest {
+    @Test void rendersChartsWithHeldReferenceConstantsForBothAxes()throws Exception{
+        var renderer=new AchievementConstantImageRenderer();
+        try{
+            for(var axis:AchievementConstants.Axis.values()){
+                String target=axis==AchievementConstants.Axis.MEDAL?"CLEAR":"AAA";
+                var held=new AchievementConstants.Constant(target,1d,null,null,null,20,10,
+                        "HOLD",List.of("INSUFFICIENT_PLAYERS"));
+                var ready=new AchievementConstants.Constant(target,1d,49d,48.9,49.1,100,50,
+                        "EXPERIMENTAL",List.of());
+                var charts=List.of(
+                        new AchievementConstants.Chart(1,"held","genre",null,49,4,false,
+                                false,false,"NONE",List.of(held)),
+                        new AchievementConstants.Chart(2,"ready","genre",null,49,4,false,
+                                false,false,"NONE",List.of(ready)));
+                var snapshot=new AchievementConstants.Snapshot(1,"source","achievement-v1","EXPERIMENTAL",
+                        Instant.parse("2026-09-25T00:00:00Z"),axis,49,charts);
+                byte[] png=renderer.render(snapshot);
+                assertThat(ImageIO.read(new ByteArrayInputStream(png)).getWidth()).isEqualTo(1160);
+            }
+        }finally{renderer.close();}
+    }
+
     @Test void rendersFiveConstantsForEveryChartAsPng()throws Exception{
         var charts=new ArrayList<AchievementConstants.Chart>();
         for(int chart=0;chart<12;chart++){

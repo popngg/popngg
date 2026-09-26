@@ -38,6 +38,10 @@ class ExperimentTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             generate(root/'input')
+            catalog_path = root/'input'/'catalog.json'
+            catalog = json.loads(catalog_path.read_text('utf-8'))
+            catalog.append({'chartId': 9999, 'level': 49, 'songName': 'No observations'})
+            catalog_path.write_text(json.dumps(catalog), 'utf-8')
             report = run(root/'input', root/'output', bootstrap=30)
             self.assertEqual(report['inputKind'], 'SYNTHETIC')
             self.assertEqual(report['bootstrapConverged'], 30)
@@ -47,7 +51,11 @@ class ExperimentTest(unittest.TestCase):
             self.assertEqual('MEDAL', bundle['axis'])
             self.assertEqual('achievement-v1', bundle['modelVersion'])
             self.assertEqual(rows, bundle['constants'])
-            self.assertEqual(len(rows), 18*5)
+            self.assertEqual(len(rows), 19*5)
+            unobserved = [r for r in rows if r['chartId'] == 9999]
+            self.assertEqual(len(unobserved), 5)
+            self.assertTrue(all(r['status'] == 'HOLD' and r['playerCount'] == 0
+                                and r['difficultyConstant'] is None for r in unobserved))
             visible = [r for r in rows if r['status'] == 'EXPERIMENTAL']
             self.assertTrue(visible)
             self.assertTrue(all(np.isfinite(r['difficultyConstant']) for r in visible))

@@ -75,6 +75,7 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                             "options", ratingOptions()),
                     Map.of("name", "상수표", "description", "관리자용 목표별 달성 난이도 상수표 이미지 생성", "type", 1,
                             "options", achievementConstantOptions()),
+                    Map.of("name", "상수최신화", "description", "Lv48~50 메달·랭크 상수 재계산; 완료 시 admin bot이 JSON 알림", "type", 1),
                     Map.of("name", "실력분석최신화", "description", "CPI/SPI 기초 분석 접수; 완료 시 admin bot이 JSON 알림", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")

@@ -28,13 +28,16 @@ def load(directory, axis):
                 continue
             r = json.loads(line)
             counts["raw"] += 1
+            if r["chartId"] not in catalog:
+                counts["excluded"] += 1
+                continue  # Do not retain millions of low-level keys in server memory.
             key = (r["userId"], r["chartId"])
             if key in seen:
                 duplicate.add(key)
             seen.add(key)
             valid = all(r.get(k, False) for k in ("userExists", "profileExists", "chartExists", "songExists"))
             valid &= not any(r.get(k, False) for k in ("bot", "hidden", "deleted", "duplicate"))
-            if not valid or r["chartId"] not in catalog:
+            if not valid:
                 counts["excluded"] += 1
                 continue
             code = r.get("medal" if axis == "medal" else "allTimeRankCode")
@@ -229,12 +232,23 @@ def run(directory, output, axis="medal", bootstrap=30, seed=20260925, source_sna
                             "interval": interval if not reasons else None,
                             "playerCount": int(count[j]), "achievedCount": int(successes[j, t]),
                             "status": "HOLD" if reasons else "EXPERIMENTAL", "holdReasons": reasons})
-    source_hashes = {p: hashlib.sha256((directory/p).read_bytes()).hexdigest()
-                     for p in ("records.jsonl", "catalog.json")}
+    # Unobserved charts remain visible, never manufactured failures or model inputs.
+    for chart_id in sorted(set(catalog)-set(ids)):
+        for name, _ in TARGETS[axis]:
+            results.append({"chartId": chart_id, "songName": catalog[chart_id].get("songName"),
+                            "level": catalog[chart_id]["level"], "axis": axis, "target": name,
+                            "rawDifficulty": None, "difficultyConstant": None, "interval": None,
+                            "playerCount": 0, "achievedCount": 0, "status": "HOLD",
+                            "holdReasons": ["NO_VALID_RECORDS", "INSUFFICIENT_PLAYERS"]})
+    source_hashes = {}
+    for p in ("records.jsonl", "catalog.json"):
+        with (directory/p).open("rb") as stream:
+            source_hashes[p] = hashlib.file_digest(stream, "sha256").hexdigest()
     generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     source_id = source_snapshot_id or "files:" + source_hashes["records.jsonl"][:32]
     input_kind = ("SYNTHETIC" if (directory/'FIXTURE_NOT_PRODUCTION.txt').exists() else
-                  "PUBLIC_API" if (directory/'API_COLLECTION_METADATA.json').exists() else "UNVERIFIED_SOURCE")
+                  "PUBLIC_API" if (directory/'API_COLLECTION_METADATA.json').exists() else
+                  "DATABASE_SNAPSHOT" if (directory/'source_metadata.json').exists() else "UNVERIFIED_SOURCE")
     report = {"status": "EXPERIMENT_COMPLETE", "publicationStatus": "NOT_VALIDATED", "axis": axis,
               "inputKind": input_kind,
               "quality": quality, "users": len(users), "charts": len(ids), "seed": seed,

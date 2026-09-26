@@ -26,6 +26,11 @@ popngg:
     output: ${ANALYSIS_OUTPUT:build/analysis/cpi-spi}
     max-records: ${ANALYSIS_MAX_RECORDS:3000000}
     cron: ${ANALYSIS_CRON:0 0 6 * * *}
+  achievement:
+    python: ${ACHIEVEMENT_PYTHON:python3}
+    script: ${ACHIEVEMENT_SCRIPT:analysis/achievement/experiment.py}
+    bootstrap: ${ACHIEVEMENT_BOOTSTRAP:30}
+    timeout-seconds: ${ACHIEVEMENT_TIMEOUT_SECONDS:7200}
   auth:
     cookie-secure: ${AUTH_COOKIE_SECURE:true}
     cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}

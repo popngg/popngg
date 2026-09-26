@@ -180,13 +180,19 @@ public class DiscordInteractionController {
                 && officialSongReview != null) {
             return ResponseEntity.ok(officialSongReview.interact(root));
         }
-        if (type == 2 && "실력분석최신화".equals(root.path("data").path("name").asText())) {
+        String commandName = root.path("data").path("name").asText();
+        if (type == 2 && ("실력분석최신화".equals(commandName) || "상수최신화".equals(commandName))) {
             try {
                 String interactionId = root.path("id").asText();
                 if (interactionId.isBlank()) return ResponseEntity.ok(ephemeral("요청 ID가 없습니다."));
-                var submission = analysisJobs.submit("DISCORD", "discord:" + interactionId);
-                return ResponseEntity.ok(ephemeral((submission.existing() ? "기존 작업을 확인했습니다." : "분석 작업을 접수했습니다.")
+                boolean achievements = "상수최신화".equals(commandName);
+                var submission = achievements
+                        ? analysisJobs.submitAchievements("DISCORD", "discord-achievements:" + interactionId)
+                        : analysisJobs.submit("DISCORD", "discord:" + interactionId);
+                return ResponseEntity.ok(ephemeral((submission.existing() ? "기존 작업을 확인했습니다."
+                        : achievements ? "Lv48~50 메달·랭크 상수 최신화 작업을 접수했습니다." : "분석 작업을 접수했습니다.")
                         + "\n작업 ID: `" + submission.jobId() + "`\n상태: " + submission.status()
+                        + (achievements ? "\n계산 후 DB와 S3에 저장합니다. 완료 후 /상수표에서 확인해 주세요." : "")
                         + "\n완료 또는 실패 결과는 admin bot이 JSON 파일로 별도 알려드립니다."));
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(ephemeral("분석 작업을 접수하지 못했습니다. 분석 설정과 DB 상태를 확인해 주세요."));
