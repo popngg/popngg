@@ -44,6 +44,7 @@ mysql_args=(
   --host="${MYSQL_HOST:-127.0.0.1}"
   --port="${MYSQL_PORT:-3306}"
   --user="${MYSQL_USER:-root}"
+  --database="$target_db"
   --protocol=tcp
   --batch
   --raw
