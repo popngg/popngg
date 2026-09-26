@@ -69,7 +69,7 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
         jdbc.update("INSERT INTO migration_playdata_map VALUES (1,1),(2,2),(3,3),(4,4)");
         jdbc.update("""
                 INSERT INTO renew_logs (user_id,poptomo_id,status,mode,created_at)
-                VALUES (2,'0000-0000-0002','SUCCESS','ALL','2026-08-30 00:00:00')
+                VALUES (2,'0000-0000-0002','SUCCESS','ALL','2026-08-29 15:00:00')
                 """);
 
         Path workspace = Path.of(System.getProperty("user.dir"));
