@@ -2,6 +2,8 @@
 -- Execute with mysql --default-character-set=utf8mb4, without --force.
 -- The song hash and title checks prevent a song_id reused in another catalog
 -- from receiving an unrelated alias. This is not a Flyway migration.
+-- Use the catalog column collation explicitly: the production database default
+-- differs from songs.song_name and song_search_tags.normalized_tag_value.
 SET SESSION sql_mode = 'STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 CREATE TEMPORARY TABLE pilot_song_aliases (
     song_id BIGINT NOT NULL,
@@ -11,7 +13,7 @@ CREATE TEMPORARY TABLE pilot_song_aliases (
     normalized_tag_value VARCHAR(255) NOT NULL,
     tag_type VARCHAR(32) NOT NULL,
     PRIMARY KEY (song_id, normalized_tag_value, tag_type)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 INSERT INTO pilot_song_aliases VALUES
     (477, '2069b8e308e8c524e99c0101ff2d5c84122e6edf4bef4338a2ed136e49bd6110', 'シュレーディンガーの猫', '슈뢰딩거의고양이', '슈뢰딩거의고양이', 'KO_ALIAS'),
     (477, '2069b8e308e8c524e99c0101ff2d5c84122e6edf4bef4338a2ed136e49bd6110', 'シュレーディンガーの猫', 'SchrodingersCat', 'schrodingerscat', 'EN_ALIAS'),
