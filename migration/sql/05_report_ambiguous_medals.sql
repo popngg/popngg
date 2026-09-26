@@ -7,8 +7,9 @@ SELECT audit_status, COUNT(*) AS record_count,
 
 SELECT 'summary' AS section,
        (SELECT COUNT(*) FROM `__LEGACY_DB__`.playdata WHERE medal = 12) AS source_code12_rows,
-       (SELECT COUNT(*) FROM code12_audit) AS mapped_rows,
-       (SELECT COUNT(*) FROM code12_audit WHERE audit_status = 'REVIEW') AS review_rows;
+       COUNT(*) AS mapped_rows,
+       SUM(audit_status = 'REVIEW') AS review_rows
+  FROM code12_audit;
 
 SELECT COALESCE(CAST(h.last_history_medal AS CHAR), 'NO_HISTORY') AS latest_history_medal,
        COUNT(*) AS review_rows,
