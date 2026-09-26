@@ -34,9 +34,10 @@ mysql_args=(
 
 temporary_dir=$(mktemp -d)
 trap 'rm -rf "$temporary_dir"' EXIT
-sed -e "s/__LEGACY_PLAYDATA__/$legacy_db.playdata/g" \
-    -e "s/__TARGET_DB__/$target_db/g" \
+cat "$repo_root/migration/sql/05_stage_medals_for_restore.sql" \
     "$repo_root/migration/sql/05_audit_medals_for_restore.sql" \
+    | sed -e "s/__LEGACY_PLAYDATA__/$legacy_db.playdata/g" \
+          -e "s/__TARGET_DB__/$target_db/g" \
     > "$temporary_dir/audit.sql"
 
 mysql "${mysql_args[@]}" < "$temporary_dir/audit.sql" \

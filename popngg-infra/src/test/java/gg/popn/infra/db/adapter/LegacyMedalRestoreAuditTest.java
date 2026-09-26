@@ -69,8 +69,10 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
         if (!Files.exists(workspace.resolve("migration/sql/05_audit_medals_for_restore.sql"))) {
             workspace = workspace.getParent();
         }
-        String sql = Files.readString(workspace.resolve(
-                        "migration/sql/05_audit_medals_for_restore.sql"))
+        String sql = (Files.readString(workspace.resolve(
+                        "migration/sql/05_stage_medals_for_restore.sql"))
+                + Files.readString(workspace.resolve(
+                        "migration/sql/05_audit_medals_for_restore.sql")))
                 .replace("__LEGACY_PLAYDATA__", "popngg_integration.legacy_medal_audit_test_playdata")
                 .replace("__TARGET_DB__", "popngg_integration");
         try (Connection connection = source.getConnection();
