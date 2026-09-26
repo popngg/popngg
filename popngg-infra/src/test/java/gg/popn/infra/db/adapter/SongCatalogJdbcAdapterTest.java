@@ -77,6 +77,18 @@ class SongCatalogJdbcAdapterTest {
     }
 
     @Test
+    void ignoresWhitespaceInSearchTagsWithoutChangingTitleSearch() {
+        var spacedAlias = query("문 차 일 드", null, null);
+        assertThat(adapter.count(spacedAlias)).isEqualTo(1);
+        assertThat(adapter.findPage(spacedAlias)).extracting(song -> song.songId())
+                .containsExactly(1L);
+
+        var title = query("Moon Child", null, null);
+        assertThat(adapter.findPage(title)).extracting(song -> song.songId())
+                .containsExactly(1L);
+    }
+
+    @Test
     void filtersUsingChartVersionAndReturnsOnlyMatchingCharts() {
         FindSongsQuery query = query(null, 28, false);
 
