@@ -1,0 +1,24 @@
+name: Achievement runtime image
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - Dockerfile
+      - analysis/achievement/**
+      - .github/workflows/achievement-runtime-image.yml
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image with achievement runtime
+        run: docker build --tag popngg-achievement-runtime:ci .
+      - name: Check isolated Python runtime and model script
+        run: |
+          docker run --rm --entrypoint /opt/achievement/bin/python popngg-achievement-runtime:ci \
+            -I -c "import numpy, scipy; from pathlib import Path; assert Path('/app/analysis/achievement/experiment.py').is_file()"

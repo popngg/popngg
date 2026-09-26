@@ -66,6 +66,54 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void achievementRefreshAcknowledgesImmediatelyAndDuplicateKeepsSameJob() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        when(jobs.submitAchievements("DISCORD", "discord-achievements:1234")).thenReturn(
+                new gg.popn.application.analysis.AnalysisJobs.Submission("constants-job", "QUEUED", false),
+                new gg.popn.application.analysis.AnalysisJobs.Submission("constants-job", "RUNNING", true));
+        var request = command("상수최신화");
+        request.put("id", "1234");
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(((Map<?, ?>) response.get("data")).get("flags")).isEqualTo(64);
+        assertThat(response.toString()).contains("constants-job", "Lv48~50", "메달·랭크", "DB", "S3", "JSON");
+        assertThat(content(call(request))).contains("기존 작업", "constants-job", "RUNNING");
+        verify(jobs, times(2)).submitAchievements("DISCORD", "discord-achievements:1234");
+        verify(jobs, never()).submit(any(), any());
+    }
+
+    @Test
+    void achievementRefreshRequiresAdminRoleAndConfiguredGuild() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        var wrongGuild = command("상수최신화");
+        wrongGuild.put("id", "1234").put("guild_id", "another-guild");
+        assertThat(content(call(wrongGuild))).contains("관리자 역할");
+        var noRole = command("상수최신화");
+        noRole.put("id", "1234");
+        noRole.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(noRole))).contains("관리자 역할");
+        verifyNoInteractions(jobs);
+    }
+
+    @Test
+    void achievementRefreshReportsMissingIdOrSubmissionFailureWithoutDeferredResponse() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        var request = command("상수최신화");
+        request.remove("id");
+        assertThat(content(call(request))).contains("요청 ID가 없습니다");
+        verifyNoInteractions(jobs);
+        request.put("id", "1234");
+        when(jobs.submitAchievements(any(), any())).thenThrow(new IllegalStateException("ANALYSIS_DISABLED"));
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(((Map<?, ?>) response.get("data")).get("flags")).isEqualTo(64);
+        assertThat(response.toString()).contains("접수하지 못했습니다");
+    }
+
+    @Test
     void ratingImageCommandIsAvailableToGuildMembersAndDefersTheReply() throws Exception {
         var ratingImage = mock(DiscordRatingImage.class);
         controller.setDiscordRatingImage(ratingImage);

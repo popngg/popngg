@@ -128,7 +128,8 @@ public class AchievementConstantImageRenderer {
         }catch(Exception ignored){return null;}
     }
     private static Double referenceValue(AchievementConstants.Chart chart,String target){return chart.constants().stream()
-            .filter(c->target.equals(c.target())).map(AchievementConstants.Constant::value).findFirst().orElse(null);}
+            .filter(c->target.equals(c.target())).map(AchievementConstants.Constant::value)
+            .filter(Objects::nonNull).findFirst().orElse(null);}
     private static String label(String target){return switch(target){case"BRONZE_DIAMOND"->"동다";case"BRONZE_STAR"->"동별";
         case"FULL_COMBO"->"FC";case"PERFECT"->"PERFECT";case"AA_PLUS"->"AA+";case"S_PLUS"->"S+";default->target;};}
     private static void contain(Graphics2D g,BufferedImage image,int x,int y,int w,int h){double s=Math.min((double)w/image.getWidth(),(double)h/image.getHeight());

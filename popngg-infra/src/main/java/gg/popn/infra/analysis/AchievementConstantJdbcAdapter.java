@@ -132,12 +132,12 @@ public class AchievementConstantJdbcAdapter implements AchievementConstants {
         Set<String> targets = request.axis() == Axis.MEDAL ? MEDAL_TARGETS : RANK_TARGETS;
         var keys = new HashSet<String>();
         for (var row : request.constants()) {
-            if (row.chartId() <= 0 || row.level() < 48 || row.level() > 50
+            if (row == null || row.chartId() <= 0 || row.level() < 48 || row.level() > 50
                     || !request.axis().name().equalsIgnoreCase(row.axis())
-                    || !targets.contains(row.target()) || row.playerCount() < 0
+                    || row.target() == null || !targets.contains(row.target()) || row.playerCount() < 0
                     || row.achievedCount() < 0 || row.achievedCount() > row.playerCount()
                     || !("EXPERIMENTAL".equals(row.status()) || "HOLD".equals(row.status()))
-                    || !keys.add(row.chartId() + ":" + row.target()))
+                    || !keys.add(row.chartId() + ":" + row.target()) || !validResult(row))
                 throw new IllegalArgumentException("Invalid achievement constant row");
         }
         var ids = request.constants().stream().map(ImportRow::chartId).distinct().toList();
@@ -154,6 +154,23 @@ public class AchievementConstantJdbcAdapter implements AchievementConstants {
         if (!hashes.isEmpty() && !hashes.getFirst().equals(payloadHash(request)))
             throw new IllegalArgumentException("Source snapshot content changed");
     }
+
+    private static boolean validResult(ImportRow row) {
+        if (row.rawDifficulty() != null && !Double.isFinite(row.rawDifficulty())) return false;
+        if (row.holdReasons() != null && row.holdReasons().stream()
+                .anyMatch(reason -> reason == null || reason.isBlank())) return false;
+        if ("HOLD".equals(row.status())) {
+            return row.difficultyConstant() == null && row.interval() == null
+                    && row.holdReasons() != null && !row.holdReasons().isEmpty();
+        }
+        return finite(row.rawDifficulty()) && finite(row.difficultyConstant())
+                && row.interval() != null && row.interval().size() == 2
+                && finite(row.interval().get(0)) && finite(row.interval().get(1))
+                && row.interval().get(0) <= row.interval().get(1)
+                && (row.holdReasons() == null || row.holdReasons().isEmpty());
+    }
+
+    private static boolean finite(Double value) { return value != null && Double.isFinite(value); }
 
     private static Double nullableDouble(ResultSet rs, String column) throws java.sql.SQLException {
         Object value = rs.getObject(column); return value == null ? null : ((Number)value).doubleValue();
