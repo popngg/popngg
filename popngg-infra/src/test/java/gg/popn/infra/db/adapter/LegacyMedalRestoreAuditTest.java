@@ -21,10 +21,9 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
         flyway.clean();
         flyway.migrate();
         var jdbc = new JdbcTemplate(source);
-        jdbc.execute("CREATE DATABASE IF NOT EXISTS legacy_medal_audit_test");
-        jdbc.execute("DROP TABLE IF EXISTS legacy_medal_audit_test.playdata");
+        jdbc.execute("DROP TABLE IF EXISTS legacy_medal_audit_test_playdata");
         jdbc.execute("""
-                CREATE TABLE legacy_medal_audit_test.playdata (
+                CREATE TABLE legacy_medal_audit_test_playdata (
                     playdata_id BIGINT PRIMARY KEY, user_id BIGINT NOT NULL,
                     chart_id BIGINT NOT NULL, score INT NOT NULL, medal INT NOT NULL)
                 """);
@@ -47,7 +46,7 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
                     """, chartId, chartId);
         }
         jdbc.update("""
-                INSERT INTO legacy_medal_audit_test.playdata VALUES
+                INSERT INTO legacy_medal_audit_test_playdata VALUES
                     (1,1,1,90000,11), (2,1,2,72000,12),
                     (3,2,3,80000,10), (4,3,4,85000,9)
                 """);
@@ -72,7 +71,7 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
         }
         String sql = Files.readString(workspace.resolve(
                         "migration/sql/05_audit_medals_for_restore.sql"))
-                .replace("__LEGACY_DB__", "legacy_medal_audit_test")
+                .replace("__LEGACY_PLAYDATA__", "popngg_integration.legacy_medal_audit_test_playdata")
                 .replace("__TARGET_DB__", "popngg_integration");
         try (Connection connection = source.getConnection();
              Statement statement = connection.createStatement()) {

@@ -48,7 +48,7 @@ SELECT legacy.playdata_id AS old_playdata_id,
                WHEN 11 THEN 10 ELSE legacy.medal END THEN 'ALREADY_CORRECT'
            ELSE 'READY'
        END AS audit_status
-  FROM `__LEGACY_DB__`.playdata legacy
+  FROM __LEGACY_PLAYDATA__ legacy
   JOIN `__TARGET_DB__`.migration_playdata_map mapped
     ON mapped.old_playdata_id = legacy.playdata_id
   JOIN `__TARGET_DB__`.playdata current
