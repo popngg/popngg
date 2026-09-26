@@ -26,6 +26,25 @@ MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
 운영 데이터를 수정하지 않습니다. 결과를 확인하기 전에는 일괄 복구를
 실행하지 않습니다.
 
+감사 결과의 `READY` 건수와 메달별 분포를 검토하고 DB 백업을 마친 뒤에만
+별도 복구 명령을 실행할 수 있습니다. 복구 명령은 구 코드 `1~11` 중 현재
+메달과 다른 `READY` 기록만 수정합니다. `SOURCE_NONE_REVIEW`인 구 코드
+`12`는 수정하지 않습니다. 예상 건수가 달라지면 실행을 중단하며, 변경 전
+메달 번호를 저장소 바깥의 권한 제한 TSV 파일로 보관합니다.
+
+```bash
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
+./migration/bin/restore-medals-from-dump.sh \
+  --legacy-db popngg_legacy_audit --target-db popngg \
+  --expected-ready-count 12345 \
+  --backup-file /secure/path/medal-restore-before.tsv --apply
+```
+
+위 숫자는 예시이며 실제 감사 보고서의 `READY` 건수로 교체해야 합니다.
+복구 SQL은 유저 행을 잠그고 갱신 로그를 다시 검사한 뒤 한 트랜잭션에서
+메달과 파생 캐시를 갱신합니다. 이 명령은 운영 감사 결과 없이 실행하지
+않습니다.
+
 POPNGG-20의 대량 데이터 변환 초안입니다. Flyway는 대상 MVP 스키마를
 생성하는 데만 사용하고, 이 디렉터리의 job은 이미 Flyway migration이 끝난
 빈 대상 DB에 데이터를 적재합니다.

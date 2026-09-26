@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +34,12 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
                 VALUES (1,'0000-0000-0001','x','USER',NOW(),NOW()),
                        (2,'0000-0000-0002','x','USER',NOW(),NOW()),
                        (3,'0000-0000-0003','x','USER',NOW(),NOW())
+                """);
+        jdbc.update("""
+                INSERT INTO user_profiles (user_id,user_name,potential_popclass,created_at,updated_at)
+                VALUES (1,'dormant',123,NOW(),NOW()),
+                       (2,'renewed',456,NOW(),NOW()),
+                       (3,'score-changed',789,NOW(),NOW())
                 """);
         jdbc.update("""
                 INSERT INTO songs (song_id,song_hash,genre_name,song_name,version,created_at,updated_at)
@@ -104,6 +111,40 @@ class LegacyMedalRestoreAuditTest extends MySqlIntegrationTestSupport {
                         .containsEntry("RENEWED_AFTER_AUG30", 1)
                         .containsEntry("SCORE_CHANGED", 1);
             }
+            String applyTemplate = Files.readString(workspace.resolve(
+                    "migration/sql/06_apply_legacy_medal_restore.sql"))
+                    .replace("__TARGET_DB__", "popngg_integration");
+            boolean wrongCountRejected = false;
+            try {
+                runSql(statement, applyTemplate.replace("__EXPECTED_READY__", "2"));
+            } catch (SQLException expected) {
+                wrongCountRejected = true;
+            }
+            assertThat(wrongCountRejected).isTrue();
+            assertThat(jdbc.queryForObject(
+                    "SELECT medal_code FROM playdata WHERE playdata_id=1", Integer.class))
+                    .isEqualTo(9);
+            statement.execute("DROP TEMPORARY TABLE medal_restore_assertion");
+            statement.execute("DROP TEMPORARY TABLE medal_restore_users");
+            statement.execute("DROP TEMPORARY TABLE medal_restore_ready");
+
+            String apply = applyTemplate.replace("__EXPECTED_READY__", "1");
+            runSql(statement, apply);
+            try (var restored = statement.executeQuery(
+                    "SELECT medal_code FROM playdata ORDER BY playdata_id")) {
+                var medals = new java.util.ArrayList<Integer>();
+                while (restored.next()) medals.add(restored.getInt(1));
+                assertThat(medals).containsExactly(10, 12, 8, 11);
+            }
+            assertThat(jdbc.queryForObject(
+                    "SELECT potential_popclass FROM user_profiles WHERE user_id=2", Integer.class))
+                    .isEqualTo(456);
+        }
+    }
+
+    private static void runSql(Statement statement, String sql) throws SQLException {
+        for (String command : sql.replaceAll("(?m)^--.*$", "").split(";")) {
+            if (!command.isBlank()) statement.execute(command);
         }
     }
 }
