@@ -8,6 +8,9 @@ on:
       - analysis/achievement/**
       - .github/workflows/achievement-runtime-image.yml
 
+permissions:
+  contents: read
+
 jobs:
   image:
     runs-on: ubuntu-latest
