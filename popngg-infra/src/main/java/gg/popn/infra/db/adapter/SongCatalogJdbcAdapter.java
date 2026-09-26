@@ -18,6 +18,7 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,7 +38,7 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                     FROM song_search_tags st
                     WHERE st.song_id = s.song_id
                       AND st.is_active = TRUE
-                      AND LOWER(st.normalized_tag_value) LIKE :keywordPattern
+                      AND LOWER(st.normalized_tag_value) LIKE :tagKeywordPattern
                 )
               )
               AND EXISTS (
@@ -210,10 +211,14 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
     }
 
     private MapSqlParameterSource parameters(FindSongsQuery query) {
-        String normalizedKeyword = query.keyword() == null ? null : query.keyword().toLowerCase();
+        String normalizedKeyword = query.keyword() == null ? null : query.keyword().toLowerCase(Locale.ROOT);
+        String tagKeyword = normalizedKeyword == null ? null
+                : normalizedKeyword.replaceAll("(?U)\\s+", "");
         return new MapSqlParameterSource()
                 .addValue("keyword", normalizedKeyword)
                 .addValue("keywordPattern", normalizedKeyword == null ? null : "%" + normalizedKeyword + "%")
+                .addValue("tagKeywordPattern", tagKeyword == null || tagKeyword.isEmpty()
+                        ? null : "%" + tagKeyword + "%")
                 .addValue("version", query.version())
                 .addValue("chartVersion", query.chartVersion())
                 .addValue("levelMin", query.levelMin())
