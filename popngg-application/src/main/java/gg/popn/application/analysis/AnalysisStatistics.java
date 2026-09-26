@@ -11,7 +11,23 @@ public final class AnalysisStatistics {
     public static final String POLICY = "cpi-spi-descriptive-v1";
     private final ObjectMapper mapper;
     public AnalysisStatistics(ObjectMapper mapper) { this.mapper = mapper; }
-    public record Chart(long chartId, long songId, int level) {}
+    public record Chart(long chartId, long songId, int level, String songName, String genreName,
+                        String jacketUrl, int difficulty, boolean upper, String extraType,
+                        boolean strictJudgement, boolean strictGauge) {
+        public Chart(long chartId, long songId, int level) {
+            this(chartId, songId, level, null, null, null, 0, false, "NONE", false, false);
+        }
+        public Chart(long chartId, long songId, int level, String songName, String genreName,
+                     String jacketUrl, int difficulty, boolean upper) {
+            this(chartId, songId, level, songName, genreName, jacketUrl, difficulty, upper, "NONE", false, false);
+        }
+        public Chart(long chartId, long songId, int level, String songName, String genreName,
+                     String jacketUrl, int difficulty, boolean upper,
+                     boolean strictJudgement, boolean strictGauge) {
+            this(chartId, songId, level, songName, genreName, jacketUrl, difficulty, upper,
+                    "NONE", strictJudgement, strictGauge);
+        }
+    }
     private record UserLevel(long userId, int level) {}
 
     public Map<String, Object> analyze(Path directory, List<Chart> catalog, List<Long> eligibleUsers) throws IOException {
@@ -32,13 +48,13 @@ public final class AnalysisStatistics {
         long[] rowCount = {0};
         Path records = directory.resolve("records.jsonl");
         try (var csv = Files.newBufferedWriter(directory.resolve("records.csv"), StandardCharsets.UTF_8)) {
-            csv.write("userId,chartId,songId,level,cleared,medal,score,cpiEligible,spiEligible\n");
+            csv.write("userId,chartId,songId,level,cleared,medal,score,cpiEligible,spiEligible,allTimeRankCode\n");
             read(records, r -> {
                 rowCount[0]++;
                 countQuality(quality, r);
                 csv.write(String.join(",", String.valueOf(r.userId()), String.valueOf(r.chartId()), value(r.songId()),
                         value(r.level()), value(r.cleared()), value(r.medal()), value(r.score()),
-                        String.valueOf(r.cpiEligible()), String.valueOf(r.spiEligible())) + "\n");
+                        String.valueOf(r.cpiEligible()), String.valueOf(r.spiEligible()), value(r.allTimeRankCode())) + "\n");
                 if (!r.baseEligible()) return;
                 if (!chartInfo.containsKey(r.chartId())) throw new IOException("CATALOG_RECORD_MISMATCH");
                 var ul = new UserLevel(r.userId(), r.level());

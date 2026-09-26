@@ -65,6 +65,91 @@ class DiscordInteractionControllerTest {
         verifyNoInteractions(jobs);
     }
 
+    @Test
+    void achievementRefreshAcknowledgesImmediatelyAndDuplicateKeepsSameJob() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        when(jobs.submitAchievements("DISCORD", "discord-achievements:1234")).thenReturn(
+                new gg.popn.application.analysis.AnalysisJobs.Submission("constants-job", "QUEUED", false),
+                new gg.popn.application.analysis.AnalysisJobs.Submission("constants-job", "RUNNING", true));
+        var request = command("상수최신화");
+        request.put("id", "1234");
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(((Map<?, ?>) response.get("data")).get("flags")).isEqualTo(64);
+        assertThat(response.toString()).contains("constants-job", "Lv48~50", "메달·랭크", "DB", "S3", "JSON");
+        assertThat(content(call(request))).contains("기존 작업", "constants-job", "RUNNING");
+        verify(jobs, times(2)).submitAchievements("DISCORD", "discord-achievements:1234");
+        verify(jobs, never()).submit(any(), any());
+    }
+
+    @Test
+    void achievementRefreshRequiresAdminRoleAndConfiguredGuild() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        var wrongGuild = command("상수최신화");
+        wrongGuild.put("id", "1234").put("guild_id", "another-guild");
+        assertThat(content(call(wrongGuild))).contains("관리자 역할");
+        var noRole = command("상수최신화");
+        noRole.put("id", "1234");
+        noRole.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(noRole))).contains("관리자 역할");
+        verifyNoInteractions(jobs);
+    }
+
+    @Test
+    void achievementRefreshReportsMissingIdOrSubmissionFailureWithoutDeferredResponse() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        var request = command("상수최신화");
+        request.remove("id");
+        assertThat(content(call(request))).contains("요청 ID가 없습니다");
+        verifyNoInteractions(jobs);
+        request.put("id", "1234");
+        when(jobs.submitAchievements(any(), any())).thenThrow(new IllegalStateException("ANALYSIS_DISABLED"));
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(((Map<?, ?>) response.get("data")).get("flags")).isEqualTo(64);
+        assertThat(response.toString()).contains("접수하지 못했습니다");
+    }
+
+    @Test
+    void ratingImageCommandIsAvailableToGuildMembersAndDefersTheReply() throws Exception {
+        var ratingImage = mock(DiscordRatingImage.class);
+        controller.setDiscordRatingImage(ratingImage);
+        when(ratingImage.start(any(), eq(49), eq("SPI"), eq("1234-5678-9012")))
+                .thenReturn(Map.of("type", 5, "data", Map.of("flags", 64)));
+        ObjectNode request = command("서열표");
+        option(request, "기준", "SPI");
+        option(request, "레벨", 49);
+        option(request, "팝토모_id", "1234-5678-9012");
+        request.withObject("member").withArray("roles").removeAll();
+
+        Map<?, ?> response = body(call(request));
+
+        assertThat(response.get("type")).isEqualTo(5);
+        verify(ratingImage).start(any(), eq(49), eq("SPI"), eq("1234-5678-9012"));
+        request.put("guild_id", "another-guild");
+        assertThat(content(call(request))).contains("이 서버에서는 사용할 수 없는");
+    }
+
+    @Test
+    void achievementConstantImageIsAdminOnly() throws Exception {
+        var image = mock(DiscordAchievementConstantImage.class);
+        controller.setDiscordAchievementConstantImage(image);
+        when(image.start(any(), eq(49), eq("MEDAL")))
+                .thenReturn(Map.of("type", 5, "data", Map.of("flags", 64)));
+        ObjectNode request = command("상수표");
+        option(request, "기준", "MEDAL");
+        option(request, "레벨", 49);
+        assertThat(body(call(request)).get("type")).isEqualTo(5);
+        verify(image).start(any(), eq(49), eq("MEDAL"));
+        clearInvocations(image);
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할");
+        verifyNoInteractions(image);
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         keys = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
@@ -270,6 +355,52 @@ class DiscordInteractionControllerTest {
         verify(createSong).execute(argThat(command -> command.jacketUrl() == null));
         verifyNoInteractions(jackets);
         verify(unknown).resolve(7);
+    }
+
+    @Test
+    void opensExistingSongEditForAMissingDifficulty() throws Exception {
+        var report = new UnknownChartReportPort.Report(8, "known song", "genre", "artist",
+                4, false, true, 12L, 2, Instant.now());
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(report));
+        when(findDetail.findSong(12)).thenReturn(detail("known song", "known-hash"));
+
+        assertThat(content(call(command("미등록목록")))).contains("known song", "[EX 채보 누락]");
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("8");
+
+        Map<?, ?> modal = body(call(selection));
+
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(modal.toString()).contains("곡 수정", "known song", "N:30,H:42");
+        verify(findDetail).findSong(12);
+        verifyNoInteractions(createSong);
+    }
+
+    @Test
+    void labelsMissingVariantsAndEveryReportedDifficulty() throws Exception {
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(1, "upper", "genre", "artist",
+                        4, true, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(2, "regular", "genre", "artist",
+                        4, false, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(3, "easy", "genre", "artist",
+                        1, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(4, "normal", "genre", "artist",
+                        2, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(5, "hyper", "genre", "artist",
+                        3, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(6, "unknown", "genre", "artist",
+                        null, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(7, "future", "genre", "artist",
+                        5, false, false, 10L, 1, Instant.now())));
+
+        String result = content(call(command("미등록목록")));
+
+        assertThat(result).contains(
+                "[UPPER 누락]", "[일반 버전 누락]", "[EASY 채보 누락]",
+                "[NORMAL 채보 누락]", "[HYPER 채보 누락]", "[미등록 채보 누락]",
+                "[난이도 5 채보 누락]");
     }
 
     @Test

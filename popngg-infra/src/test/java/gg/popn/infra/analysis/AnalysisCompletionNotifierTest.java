@@ -18,6 +18,8 @@ class AnalysisCompletionNotifierTest {
             var notifier=new AnalysisCompletionNotifier("http://127.0.0.1:"+server.getAddress().getPort(),HttpClient.newHttpClient());
             notifier.send("{\"jobId\":\"123\",\"status\":\"SUCCEEDED\"}");
             assertThat(body.get()).contains("filename=\"analysis-result.json\"","\"status\":\"SUCCEEDED\"","admin bot","allowed_mentions");
+            notifier.send("{\"jobType\":\"ACHIEVEMENT_CONSTANTS\",\"status\":\"SUCCEEDED\"}");
+            assertThat(body.get()).contains("filename=\"achievement-result.json\"", "상수 최신화 작업 결과입니다.");
             status.set(429);
             assertThatThrownBy(()->notifier.send("{}")).isInstanceOf(IllegalStateException.class).hasMessage("ADMIN_NOTIFICATION_HTTP_429");
             assertThatThrownBy(()->new AnalysisCompletionNotifier("").send("{}")).hasMessage("ADMIN_WEBHOOK_NOT_CONFIGURED");

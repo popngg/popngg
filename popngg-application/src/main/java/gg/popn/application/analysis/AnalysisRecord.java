@@ -7,7 +7,19 @@ public record AnalysisRecord(long userId, long chartId, Long songId, Integer lev
         boolean bot, boolean hidden, boolean chartExists, boolean songExists,
         boolean deleted, boolean duplicate, Integer currentVersion, Integer allTimeScoreVersion,
         Integer versionScore, boolean versionScoreKnown, String lastPlayedAt,
-        String recordUpdatedAt, Long lastRenewLogId) {
+        String recordUpdatedAt, Long lastRenewLogId, Integer allTimeRankCode) {
+    /** Old snapshots/fixtures have no rank; never infer one from score. */
+    public AnalysisRecord(long userId, long chartId, Long songId, Integer level,
+            Integer medal, Integer score, boolean userExists, boolean profileExists,
+            boolean bot, boolean hidden, boolean chartExists, boolean songExists,
+            boolean deleted, boolean duplicate, Integer currentVersion, Integer allTimeScoreVersion,
+            Integer versionScore, boolean versionScoreKnown, String lastPlayedAt,
+            String recordUpdatedAt, Long lastRenewLogId) {
+        this(userId, chartId, songId, level, medal, score, userExists, profileExists,
+                bot, hidden, chartExists, songExists, deleted, duplicate, currentVersion,
+                allTimeScoreVersion, versionScore, versionScoreKnown, lastPlayedAt,
+                recordUpdatedAt, lastRenewLogId, null);
+    }
     public boolean baseEligible() {
         return userExists && profileExists && !bot && !hidden && chartExists && songExists
                 && !deleted && !duplicate && level != null && level >= 1 && level <= 50;
