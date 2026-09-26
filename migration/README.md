@@ -1,5 +1,31 @@
 # Legacy migration draft
 
+## 구 메달 코드 12 후속 조사
+
+2026-09-26 운영 복구로 안전하게 판정된 구 코드 8~11 기록 47,092건을
+수정했습니다. 구 코드 12는 원본 스크립트에서 `none`을 의미하지만, 실제
+흑동그라미였다는 확인 사례도 있어 자동 변환하지 않았습니다. 아래 도구는
+운영 데이터를 변경하지 않고 코드 12의 상태와 원본 이력만 집계합니다.
+
+```bash
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
+./migration/bin/audit-ambiguous-medals.sh \
+  --legacy-db popngg_legacy_medal_audit --target-db popngg \
+  --report build/reports/ambiguous-medals.tsv
+```
+
+개별 검토가 필요하면 저장소 밖의 제한된 경로에 식별자 목록을 저장합니다.
+
+```bash
+./migration/bin/audit-ambiguous-medals.sh \
+  --legacy-db popngg_legacy_medal_audit --target-db popngg \
+  --review-file /secure/path/code12-review.tsv
+```
+
+연결된 기존 기록을 조회하며, 2026-08-30 00:00 KST 이후 갱신한 유저는
+검토 대상에서 제외합니다. 자세한 해석과 한계는
+`docs/legacy-medal-code12-followup.md`를 참고합니다.
+
 POPNGG-20의 대량 데이터 변환 초안입니다. Flyway는 대상 MVP 스키마를
 생성하는 데만 사용하고, 이 디렉터리의 job은 이미 Flyway migration이 끝난
 빈 대상 DB에 데이터를 적재합니다.
