@@ -22,8 +22,9 @@ CREATE TEMPORARY TABLE code12_audit AS
 SELECT legacy.playdata_id AS old_playdata_id,
        current.playdata_id AS new_playdata_id,
        current.user_id, current.chart_id,
-       legacy.score AS source_score,
+       legacy.score AS source_score, legacy.rank AS source_rank,
        current.medal_code AS current_medal,
+       current.all_time_rank_code AS current_rank,
        CASE
            WHEN legacy.user_id <> current.user_id
              OR legacy.chart_id <> current.chart_id THEN 'IDENTITY_MISMATCH'
@@ -35,6 +36,9 @@ SELECT legacy.playdata_id AS old_playdata_id,
              OR current.all_time_score_version <> 28
              OR current.version_score_known <> FALSE THEN 'STATE_CHANGED'
            WHEN current.medal_code <> 12 THEN 'CURRENT_MEDAL_CHANGED'
+           WHEN NOT (legacy.rank <=> 9)
+             OR NOT (current.all_time_rank_code <=> 9)
+             THEN 'RANK_CHANGED'
            ELSE 'REVIEW'
        END AS audit_status
   FROM `__LEGACY_DB__`.playdata legacy
