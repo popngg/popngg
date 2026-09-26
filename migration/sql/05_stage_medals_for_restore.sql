@@ -55,4 +55,3 @@ SELECT legacy.playdata_id AS old_playdata_id,
     ON current.playdata_id = mapped.new_playdata_id
   LEFT JOIN protected_since_dump renewed ON renewed.user_id = current.user_id
   LEFT JOIN protected_after_cutoff cutoff ON cutoff.user_id = current.user_id;
-
