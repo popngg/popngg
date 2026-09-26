@@ -1,5 +1,31 @@
 # Legacy migration draft
 
+## 2026-07-24 덤프의 메달 복구 감사
+
+구 Jam&Fizz 갱신 코드 0.1.0.5는 `8=EASY`, `9=BLACK_STAR`,
+`10=BLACK_DIAMOND`, `11=BLACK_CIRCLE`, `12=none`으로 전송했습니다.
+현행 코드에서는 각각 `11`, `8`, `9`, `10`, `13`입니다. 구 백엔드는
+전송된 숫자를 그대로 저장했습니다. 다만 실제 흑동그라미인데 구 덤프에
+`12`가 들어간 확인 사례가 있어, `12`는 자동 복구하지 않고 검토 대상으로
+분류합니다.
+
+격리 복원한 구 덤프 DB와 운영 DB가 모두 접근 가능한 환경에서 읽기 전용
+감사를 실행합니다. 원본 덤프를 저장소에 넣지 않습니다.
+
+```bash
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root \
+./migration/bin/audit-medals-for-restore.sh \
+  --legacy-db popngg_legacy_audit --target-db popngg \
+  --report build/reports/medal-restore-audit.tsv
+```
+
+감사는 `migration_playdata_map`으로 동일 기록을 연결하고 점수·유저·채보를
+검증합니다. 2026-08-30 00:00 KST 이후 갱신된 유저는 반드시 제외하며,
+덤프가 생성된 7월 24일 이후 갱신된 유저도 보수적으로 제외합니다. 보고서에는
+식별자를 출력하지 않고 사유와 메달 번호별 건수만 기록합니다. 이 명령은
+운영 데이터를 수정하지 않습니다. 결과를 확인하기 전에는 일괄 복구를
+실행하지 않습니다.
+
 POPNGG-20의 대량 데이터 변환 초안입니다. Flyway는 대상 MVP 스키마를
 생성하는 데만 사용하고, 이 디렉터리의 job은 이미 Flyway migration이 끝난
 빈 대상 DB에 데이터를 적재합니다.
