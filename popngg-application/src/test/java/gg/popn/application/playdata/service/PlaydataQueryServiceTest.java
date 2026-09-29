@@ -39,6 +39,21 @@ class PlaydataQueryServiceTest {
     }
 
     @Test
+    void validatesAndNormalizesAllChartRankings() {
+        var entries = List.of(new PlaydataQueryResults.ChartRankingEntry(
+                1, "0000", "user", null, 19_000, 17_000, 99_000, 1, 1));
+        when(port.findAllChartRankings("hash", 4, "MEDAL")).thenReturn(entries);
+
+        assertThat(service.findAllChartRankings("hash", 4, "medal")).isSameAs(entries);
+        assertThatThrownBy(() -> service.findAllChartRankings("hash", 0, "score"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findAllChartRankings("hash", 5, "score"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.findAllChartRankings("hash", 4, "invalid"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void normalizesCountOptionsAndDelegates() {
         var expected = new PlaydataQueryResults.Counts(List.of());
         when(port.count("0000", "LEVEL", "MEDAL")).thenReturn(expected);
