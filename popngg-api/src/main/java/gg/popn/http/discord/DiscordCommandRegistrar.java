@@ -71,6 +71,11 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                     Map.of("name", "장애상태확인", "description", "현재 지표 판정만 확인하며 알림은 전송하지 않음", "type", 1),
                     Map.of("name", "장애알림테스트", "description", "error-log 장애 스레드 생성 경로 테스트", "type", 1),
                     Map.of("name", "에러알림테스트", "description", "API 예외용 error-log Webhook 전달 테스트", "type", 1),
+                    Map.of("name", "서열표", "description", "사용자의 CPI/SPI 서열표 이미지를 생성", "type", 1,
+                            "options", ratingOptions()),
+                    Map.of("name", "상수표", "description", "관리자용 목표별 달성 난이도 상수표 이미지 생성", "type", 1,
+                            "options", achievementConstantOptions()),
+                    Map.of("name", "상수최신화", "description", "Lv48~50 메달·랭크 상수 재계산; 완료 시 admin bot이 JSON 알림", "type", 1),
                     Map.of("name", "실력분석최신화", "description", "CPI/SPI 기초 분석 접수; 완료 시 admin bot이 JSON 알림", "type", 1)));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")
@@ -113,6 +118,29 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                 upperOption(false), option(4, "l", "변경할 L 레벨", false),
                 option(4, "n", "변경할 N 레벨", false), option(4, "h", "변경할 H 레벨", false),
                 option(4, "ex", "변경할 EX 레벨", false));
+    }
+
+    private static List<Map<String, Object>> ratingOptions() {
+        return List.of(
+                Map.of("type", 3, "name", "기준", "description", "클리어 또는 스코어 서열표",
+                        "required", true, "choices", List.of(
+                                Map.of("name", "CPI · 클리어", "value", "CPI"),
+                                Map.of("name", "SPI · 스코어", "value", "SPI"))),
+                Map.of("type", 4, "name", "레벨", "description", "서열표 레벨", "required", true,
+                        "choices", List.of(Map.of("name", "48", "value", 48),
+                                Map.of("name", "49", "value", 49), Map.of("name", "50", "value", 50))),
+                option(3, "팝토모_id", "예: 1234-5678-9012", true));
+    }
+
+    private static List<Map<String, Object>> achievementConstantOptions() {
+        return List.of(
+                Map.of("type", 3, "name", "기준", "description", "메달 또는 스코어 랭크 목표",
+                        "required", true, "choices", List.of(
+                                Map.of("name", "메달 · 클리어/동다/동별/FC/퍼펙트", "value", "MEDAL"),
+                                Map.of("name", "랭크 · AA/AA+/AAA/S/S+", "value", "RANK"))),
+                Map.of("type", 4, "name", "레벨", "description", "상수표 레벨", "required", true,
+                        "choices", List.of(Map.of("name", "48", "value", 48),
+                                Map.of("name", "49", "value", 49), Map.of("name", "50", "value", 50))));
     }
 
     private static Map<String, Object> option(int type, String name, String description, boolean required) {

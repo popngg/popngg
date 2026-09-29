@@ -13,6 +13,7 @@ import gg.popn.application.playdata.exception.ActualPopclassUnavailableException
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import gg.popn.application.song.exception.CatalogItemNotFoundException;
+import gg.popn.application.song.exception.InvalidSongQueryException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -120,6 +121,13 @@ public class BaseExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of(
                 "code", "INVALID_REQUEST_PARAMETER",
                 "message", "A request parameter or path value is invalid."));
+    }
+    @ExceptionHandler(InvalidSongQueryException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidSongQuery(
+            InvalidSongQueryException exception) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "code", "INVALID_SONG_QUERY",
+                "message", exception.getMessage()));
     }
     @ExceptionHandler(AlreadyRegisteredException.class)
     public ResponseEntity<Map<String, Object>> handleAlreadyRegistered() {

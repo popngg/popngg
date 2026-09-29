@@ -23,7 +23,8 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
                      is_upper,occurrences,resolved,first_seen_at,last_seen_at)
                 VALUES (?,?,?,?,?,?,?,1,FALSE,?,?)
                 ON DUPLICATE KEY UPDATE renew_log_id=VALUES(renew_log_id),
-                    poptomo_id=VALUES(poptomo_id), occurrences=occurrences+1,
+                    poptomo_id=VALUES(poptomo_id), difficulty_code=VALUES(difficulty_code),
+                    is_upper=VALUES(is_upper), occurrences=occurrences+1,
                     resolved=FALSE,last_seen_at=VALUES(last_seen_at)
                 """, renewLogId, poptomoId, row.songName(), row.genreName(),
                 row.artistName() == null ? "" : row.artistName(), row.difficultyCode(), row.upper(),
@@ -37,24 +38,32 @@ public class UnknownChartReportJdbcAdapter implements UnknownChartReportPort {
                        EXISTS (SELECT 1 FROM songs s
                                 WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name)
                            AS missing_variant,
+                       (SELECT CASE WHEN COUNT(DISTINCT s.song_id)=1 THEN MIN(s.song_id) END
+                          FROM songs s
+                          JOIN charts c ON c.song_id=s.song_id AND c.is_deleted=FALSE
+                         WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name
+                           AND r.is_upper IS NOT NULL AND c.is_upper=r.is_upper)
+                           AS existing_variant_song_id,
                        r.occurrences,r.last_seen_at
                 FROM unknown_chart_reports r
                 WHERE r.resolved=FALSE
                   AND (NOT EXISTS (
                           SELECT 1 FROM songs s
                            WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name)
-                       OR (r.is_upper IS NOT NULL
+                       OR (r.difficulty_code IS NOT NULL AND r.is_upper IS NOT NULL
                            AND NOT EXISTS (
                                SELECT 1 FROM songs s
                                JOIN charts c ON c.song_id=s.song_id AND c.is_deleted=FALSE
                                 WHERE s.song_name=r.song_name AND s.genre_name=r.genre_name
+                                  AND c.difficulty_code=r.difficulty_code
                                   AND c.is_upper=r.is_upper)))
                 ORDER BY last_seen_at DESC LIMIT ?
                 """, (rs, n) -> new Report(rs.getLong("report_id"), rs.getString("song_name"),
                 rs.getString("genre_name"), rs.getString("artist_name"),
                 (Integer) rs.getObject("difficulty_code"),
                 rs.getObject("is_upper") == null ? null : rs.getBoolean("is_upper"),
-                rs.getBoolean("missing_variant"), rs.getInt("occurrences"),
+                rs.getBoolean("missing_variant"), (Long) rs.getObject("existing_variant_song_id"),
+                rs.getInt("occurrences"),
                 rs.getTimestamp("last_seen_at").toInstant()), limit);
     }
 

@@ -1,6 +1,7 @@
 package gg.popn.http.song;
 
 import gg.popn.application.song.dto.query.FindSongsQuery;
+import gg.popn.application.song.exception.InvalidSongQueryException;
 import gg.popn.application.song.port.in.FindSongDetailUseCase;
 import gg.popn.application.song.port.in.FindSongsUseCase;
 import gg.popn.domain.common.ResponseCode;
@@ -35,7 +36,7 @@ public class FrontendChartController {
             @RequestParam(defaultValue = "20") int size
     ) {
         if (page < 1) {
-            throw new IllegalArgumentException("page must be one or greater");
+            throw new InvalidSongQueryException("page must be one or greater");
         }
         var result = findSongsUseCase.execute(new FindSongsQuery(
                 keyword, version, null, levelMin, levelMax, difficulty,
