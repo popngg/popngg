@@ -22,7 +22,7 @@ class FindSongsServiceTest {
         FindSongsQuery query = new FindSongsQuery(null, null, null, null, null,
                 null, null, null, 1, 2);
         GroupedSongView song = new GroupedSongView(1, "hash", "High☆Cheers",
-                "Song", "Artist", 28, null, List.of());
+                "Song", "Artist", 28, null, null, List.of());
         when(port.count(query)).thenReturn(5L);
         when(port.findPage(query)).thenReturn(List.of(song));
 
@@ -32,6 +32,19 @@ class FindSongsServiceTest {
         assertThat(result.page()).isEqualTo(1);
         assertThat(result.totalElements()).isEqualTo(5);
         assertThat(result.totalPages()).isEqualTo(3);
+    }
+
+    @Test
+    void recentSongsValidateLimitAndRequestCreationOrder() {
+        assertThatThrownBy(() -> service.findRecent(0)).isInstanceOf(InvalidSongQueryException.class);
+        assertThatThrownBy(() -> service.findRecent(11)).isInstanceOf(InvalidSongQueryException.class);
+        var query = new FindSongsQuery(null, null, null, null, null, null,
+                null, null, null, FindSongsQuery.Sort.CREATED_AT, FindSongsQuery.Order.DESC,
+                true, 0, 5);
+        when(port.findPage(query)).thenReturn(List.of());
+        when(port.count(query)).thenReturn(0L);
+        assertThat(service.findRecent(5).size()).isEqualTo(5);
+        org.mockito.Mockito.verify(port).findPage(query);
     }
 
     @Test
