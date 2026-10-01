@@ -280,7 +280,7 @@ class DiscordInteractionControllerTest {
 
     @Test
     void searchesSongsAndListsUnknownCharts() throws Exception {
-        var song = new GroupedSongView(3, "hash", "genre", "title", "artist", 29, null, List.of());
+        var song = new GroupedSongView(3, "hash", "genre", "title", "artist", 29, null, null, List.of());
         when(findSongs.execute(any())).thenReturn(SongPageView.of(List.of(song), 0, 10, 1));
         ObjectNode search = command("곡조회");
         option(search, "검색어", "title");

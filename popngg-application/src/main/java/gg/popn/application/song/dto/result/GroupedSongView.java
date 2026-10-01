@@ -1,6 +1,7 @@
 package gg.popn.application.song.dto.result;
 
 import java.util.List;
+import java.time.Instant;
 
 public record GroupedSongView(
         long songId,
@@ -10,6 +11,7 @@ public record GroupedSongView(
         String artistName,
         int version,
         String jacketUrl,
+        Instant createdAt,
         List<SongChartView> charts
 ) {
 }

@@ -61,7 +61,8 @@ public record FindSongsQuery(
         TITLE,
         GENRE,
         MAX_LEVEL,
-        SONG_ID;
+        SONG_ID,
+        CREATED_AT;
 
         public static Sort from(String value) {
             return switch (value) {

@@ -140,3 +140,17 @@ Response:
   ]
 }
 ```
+
+## 최근 추가된 곡
+
+`GET /api/v1/songs/recent`는 생성일(`songs.created_at`) 내림차순으로 곡을 반환합니다.
+생성일이 같으면 `song_id` 내림차순으로 정렬합니다. 삭제되지 않은 채보가 있는 곡만
+조회하며, 각 곡에는 삭제되지 않은 채보 전체가 포함됩니다.
+
+- `limit`: 생략하면 10, 허용 범위는 1~10. 예: `/api/v1/songs/recent?limit=5`.
+- 범위를 벗어나면 HTTP 400 (`INVALID_SONG_QUERY`), 숫자가 아니어도 HTTP 400입니다.
+- 응답은 기존 `GET /api/v1/songs`와 같은 `data.items`, `totalItems`, `totalPages`,
+  `hasPrev`, `hasNext` 형식을 사용합니다. 메타데이터는 전체 조회 가능한 곡 수 기준입니다.
+- 기존 곡 목록과 최근 곡 목록의 각 항목에 `createdAt`을 추가했습니다.
+  값은 UTC ISO 8601 시각입니다(예: `2026-10-01T00:00:00Z`).
+  게임 출시일이 아니라 DB에 저장된 생성일이며, 별도 생성일로 등록한 곡은 해당 값을 사용합니다.

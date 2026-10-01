@@ -4,6 +4,7 @@ import gg.popn.application.song.dto.result.CreateSongResult;
 import gg.popn.application.song.port.in.CreateSongUseCase;
 import gg.popn.application.song.port.in.FindSongDetailUseCase;
 import gg.popn.application.song.port.in.FindSongsUseCase;
+import gg.popn.application.song.port.in.FindRecentSongsUseCase;
 import gg.popn.http.song.request.CreateSongRequest;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,7 @@ class CreateSongControllerTest {
         CreateSongUseCase useCase = mock(CreateSongUseCase.class);
         when(useCase.execute(any())).thenReturn(new CreateSongResult(1, List.of(10L)));
         SongController controller = new SongController(
-                mock(FindSongsUseCase.class), mock(FindSongDetailUseCase.class), useCase);
+                mock(FindSongsUseCase.class), mock(FindSongDetailUseCase.class), useCase, mock(FindRecentSongsUseCase.class));
         CreateSongRequest request = new CreateSongRequest("hash", "genre", "song", "artist",
                 28, null, List.of(new CreateSongRequest.ChartRequest(
                 1, 45, 28, false, true, false)));
