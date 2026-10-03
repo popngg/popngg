@@ -2,7 +2,6 @@ package gg.popn.http.song;
 
 import gg.popn.application.song.dto.query.FindSongsQuery;
 import gg.popn.application.song.port.in.FindSongsUseCase;
-import gg.popn.application.song.port.in.FindRecentSongsUseCase;
 import gg.popn.application.song.port.in.FindSongDetailUseCase;
 import gg.popn.application.song.port.in.CreateSongUseCase;
 import gg.popn.domain.common.ResponseCode;
@@ -31,7 +30,6 @@ public class SongController {
     private final FindSongsUseCase findSongsUseCase;
     private final FindSongDetailUseCase findSongDetailUseCase;
     private final CreateSongUseCase createSongUseCase;
-    private final FindRecentSongsUseCase findRecentSongsUseCase;
 
     @GetMapping
     public SuccessResponse<PageResponse<GroupedSongResponse>> findSongs(
@@ -49,19 +47,6 @@ public class SongController {
         FindSongsQuery query = new FindSongsQuery(keyword, version, chartVersion, level,
                 difficulty, isUpper, hasStrictGauge, hasStrictJudgement, page, size);
         var result = findSongsUseCase.execute(query);
-        return SuccessResponse.<PageResponse<GroupedSongResponse>>builder()
-                .code(ResponseCode.SUCCESS)
-                .message(ResponseMessage.SUCCESS)
-                .data(PageResponse.of(
-                        result.content().stream().map(GroupedSongResponse::from).toList(),
-                        result.totalElements(), result.page(), result.size()))
-                .build();
-    }
-
-    @GetMapping("/recent")
-    public SuccessResponse<PageResponse<GroupedSongResponse>> findRecentSongs(
-            @RequestParam(defaultValue = "10") int limit) {
-        var result = findRecentSongsUseCase.findRecent(limit);
         return SuccessResponse.<PageResponse<GroupedSongResponse>>builder()
                 .code(ResponseCode.SUCCESS)
                 .message(ResponseMessage.SUCCESS)
