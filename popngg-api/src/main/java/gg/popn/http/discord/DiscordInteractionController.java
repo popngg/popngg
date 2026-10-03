@@ -75,10 +75,22 @@ public class DiscordInteractionController {
     private final Map<String, PreDraft> preDrafts = new ConcurrentHashMap<>();
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
     private OfficialSongReview officialSongReview;
+    private DiscordRatingImage discordRatingImage;
+    private DiscordAchievementConstantImage discordAchievementConstantImage;
 
     @Autowired
     void setOfficialSongReview(OfficialSongReview officialSongReview) {
         this.officialSongReview = officialSongReview;
+    }
+
+    @Autowired
+    void setDiscordRatingImage(DiscordRatingImage discordRatingImage) {
+        this.discordRatingImage = discordRatingImage;
+    }
+
+    @Autowired
+    void setDiscordAchievementConstantImage(DiscordAchievementConstantImage image) {
+        this.discordAchievementConstantImage = image;
     }
     private gg.popn.application.analysis.AnalysisJobs analysisJobs;
 
@@ -150,18 +162,37 @@ public class DiscordInteractionController {
         cleanupDrafts();
         int type = root.path("type").asInt();
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
+        if (type == 2 && "서열표".equals(root.path("data").path("name").asText())) {
+            if (!guildId.equals(root.path("guild_id").asText()))
+                return ResponseEntity.ok(ephemeral("이 서버에서는 사용할 수 없는 명령입니다."));
+            int level = option(root, "레벨").path("value").asInt();
+            String metric = option(root, "기준").path("value").asText();
+            String poptomoId = option(root, "팝토모_id").path("value").asText();
+            return ResponseEntity.ok(discordRatingImage.start(root, level, metric, poptomoId));
+        }
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
+        if (type == 2 && "상수표".equals(root.path("data").path("name").asText())) {
+            int level = option(root, "레벨").path("value").asInt();
+            String axis = option(root, "기준").path("value").asText();
+            return ResponseEntity.ok(discordAchievementConstantImage.start(root, level, axis));
+        }
         if ((type == 3 || type == 5) && root.path("data").path("custom_id").asText().startsWith("official_")
                 && officialSongReview != null) {
             return ResponseEntity.ok(officialSongReview.interact(root));
         }
-        if (type == 2 && "실력분석최신화".equals(root.path("data").path("name").asText())) {
+        String commandName = root.path("data").path("name").asText();
+        if (type == 2 && ("실력분석최신화".equals(commandName) || "상수최신화".equals(commandName))) {
             try {
                 String interactionId = root.path("id").asText();
                 if (interactionId.isBlank()) return ResponseEntity.ok(ephemeral("요청 ID가 없습니다."));
-                var submission = analysisJobs.submit("DISCORD", "discord:" + interactionId);
-                return ResponseEntity.ok(ephemeral((submission.existing() ? "기존 작업을 확인했습니다." : "분석 작업을 접수했습니다.")
+                boolean achievements = "상수최신화".equals(commandName);
+                var submission = achievements
+                        ? analysisJobs.submitAchievements("DISCORD", "discord-achievements:" + interactionId)
+                        : analysisJobs.submit("DISCORD", "discord:" + interactionId);
+                return ResponseEntity.ok(ephemeral((submission.existing() ? "기존 작업을 확인했습니다."
+                        : achievements ? "Lv48~50 메달·랭크 상수 최신화 작업을 접수했습니다." : "분석 작업을 접수했습니다.")
                         + "\n작업 ID: `" + submission.jobId() + "`\n상태: " + submission.status()
+                        + (achievements ? "\n계산 후 DB와 S3에 저장합니다. 완료 후 /상수표에서 확인해 주세요." : "")
                         + "\n완료 또는 실패 결과는 admin bot이 JSON 파일로 별도 알려드립니다."));
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(ephemeral("분석 작업을 접수하지 못했습니다. 분석 설정과 DB 상태를 확인해 주세요."));
@@ -240,8 +271,10 @@ public class DiscordInteractionController {
             String content = reports.stream().map(report ->
                     "- `#%d` **%s** %s / %s / %s / %d회".formatted(
                             report.reportId(), report.songName(),
-                            report.missingVariant()
-                                    ? report.upper() ? "[UPPER 누락]" : "[일반 버전 누락]"
+                            report.existingVariantSongId() != null
+                                    ? "[" + difficultyLabel(report.difficultyCode()) + " 채보 누락]"
+                                    : report.missingVariant()
+                                    ? Boolean.TRUE.equals(report.upper()) ? "[UPPER 누락]" : "[일반 버전 누락]"
                                     : "[곡 미등록]",
                             report.genreName(), report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
@@ -290,6 +323,12 @@ public class DiscordInteractionController {
                     .filter(report -> report.reportId() == reportId).findFirst();
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
+            if (report.existingVariantSongId() != null) {
+                SongDetailView current = findSongDetail.findSong(report.existingVariantSongId());
+                String id = UUID.randomUUID().toString();
+                editDrafts.put(id, new EditDraft(current, null, null, null, Instant.now(), report.reportId()));
+                return ResponseEntity.ok(editModal(id, current, null));
+            }
             String id = UUID.randomUUID().toString();
             Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
                     Boolean.TRUE.equals(report.upper()));
@@ -522,6 +561,17 @@ public class DiscordInteractionController {
     private static Map<String, Object> inputValue(String id, String label, String value) {
         return Map.of("type", 1, "components", List.of(Map.of("type", 4, "custom_id", id,
                 "label", label, "style", 1, "required", true, "value", value == null ? "" : value)));
+    }
+
+    private static String difficultyLabel(Integer difficultyCode) {
+        if (difficultyCode == null) return "미등록";
+        return switch (difficultyCode) {
+            case 1 -> "EASY";
+            case 2 -> "NORMAL";
+            case 3 -> "HYPER";
+            case 4 -> "EX";
+            default -> "난이도 " + difficultyCode;
+        };
     }
 
     private static Map<String, Object> editModal(

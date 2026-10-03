@@ -12,7 +12,14 @@ public interface UnknownChartReportPort {
 
     record Report(long reportId, String songName, String genreName, String artistName,
                   Integer difficultyCode, Boolean upper, boolean missingVariant,
-                  int occurrences, Instant lastSeenAt) {}
+                  Long existingVariantSongId, int occurrences, Instant lastSeenAt) {
+        public Report(long reportId, String songName, String genreName, String artistName,
+                      Integer difficultyCode, Boolean upper, boolean missingVariant,
+                      int occurrences, Instant lastSeenAt) {
+            this(reportId, songName, genreName, artistName, difficultyCode, upper,
+                    missingVariant, null, occurrences, lastSeenAt);
+        }
+    }
     record IncompleteReport(long reportId, long songId, String songName, String genreName,
                             String reportedArtistName, String registeredArtistName,
                             int occurrences, Instant lastSeenAt) {}
