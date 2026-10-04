@@ -74,6 +74,13 @@ public class DiscordInteractionController {
     private final Map<String, Draft> drafts = new ConcurrentHashMap<>();
     private final Map<String, PreDraft> preDrafts = new ConcurrentHashMap<>();
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
+    private DiscordSongEditConfirmation songEditConfirmation;
+
+    @Autowired
+    void setSongEditConfirmation(DiscordSongEditConfirmation confirmation) {
+        this.songEditConfirmation = confirmation;
+    }
+
     private OfficialSongReview officialSongReview;
     private DiscordRatingImage discordRatingImage;
     private DiscordAchievementConstantImage discordAchievementConstantImage;
@@ -396,43 +403,9 @@ public class DiscordInteractionController {
             String id = root.path("data").path("custom_id").asText().substring("song_edit_confirm:".length());
             EditDraft edit = editDrafts.remove(id);
             if (edit == null || edit.command() == null) return ResponseEntity.ok(message("수정 요청이 만료되었습니다."));
-            try {
-                UpdateSongCommand command = edit.command();
-                String oldHash = edit.current().song().songHash();
-                boolean upper = command.charts().isEmpty() ? edit.current().charts().getFirst().isUpper()
-                        : command.charts().getFirst().isUpper();
-                String newHash = SongHashGenerator.generate(command.genreName(), command.songName(),
-                        command.artistName(), command.version(), upper);
-                String backupKey = null;
-                boolean newObject = false;
-                if (edit.attachmentUrl() != null) {
-                    byte[] png = jacketDownloader.download(edit.attachmentUrl());
-                    String jacketUrl;
-                    if (newHash.equals(oldHash)) {
-                        backupKey = jacketStorage.replacePng(oldHash, png);
-                        jacketUrl = edit.current().song().jacketUrl();
-                    } else {
-                        jacketUrl = jacketStorage.uploadPng(newHash, png);
-                        newObject = true;
-                    }
-                    command = new UpdateSongCommand(command.songId(), command.genreName(), command.songName(),
-                            command.artistName(), command.version(), jacketUrl, command.createdAt(), command.charts());
-                }
-                try {
-                    SongDetailView updated = updateSong.execute(command);
-                    if (edit.reportId() != null) unknownChartReport.resolve(edit.reportId());
-                    adminNotification.send("**[곡 수정]** 관리자: `<@%s>` / songId: `%d` / 곡명: **%s** / songHash: `%s`".formatted(
-                            actorId(root), updated.song().songId(), updated.song().songName(), updated.song().songHash()));
-                    return ResponseEntity.ok(message("곡 수정 완료: `#%d` **%s**\n새 songHash: `%s`".formatted(
-                            updated.song().songId(), updated.song().songName(), updated.song().songHash())));
-                } catch (RuntimeException exception) {
-                    if (newObject) jacketStorage.delete(newHash);
-                    if (backupKey != null) jacketStorage.restore(oldHash, backupKey);
-                    throw exception;
-                }
-            } catch (RuntimeException exception) {
-                return ResponseEntity.ok(message("곡 수정 실패: " + exception.getMessage()));
-            }
+            Map<String, Object> response = songEditConfirmation.start(root, () -> completeSongEdit(root, edit));
+            if (Integer.valueOf(4).equals(response.get("type"))) editDrafts.putIfAbsent(id, edit);
+            return ResponseEntity.ok(response);
         }
         if (type == 5 && root.path("data").path("custom_id").asText().startsWith("song_create:")) {
             try {
@@ -487,6 +460,50 @@ public class DiscordInteractionController {
             return ResponseEntity.ok(message("곡 등록을 취소했습니다."));
         }
         return ResponseEntity.ok(message("지원하지 않는 명령입니다."));
+    }
+
+    private Map<String, Object> completeSongEdit(JsonNode root, EditDraft edit) {
+        try {
+            UpdateSongCommand command = edit.command();
+            String oldHash = edit.current().song().songHash();
+            boolean upper = command.charts().isEmpty() ? edit.current().charts().getFirst().isUpper()
+                    : command.charts().getFirst().isUpper();
+            String newHash = SongHashGenerator.generate(command.genreName(), command.songName(),
+                    command.artistName(), command.version(), upper);
+            String backupKey = null;
+            boolean newObject = false;
+            if (edit.attachmentUrl() != null) {
+                byte[] png = jacketDownloader.download(edit.attachmentUrl());
+                String jacketUrl;
+                if (newHash.equals(oldHash)) {
+                    backupKey = jacketStorage.replacePng(oldHash, png);
+                    jacketUrl = edit.current().song().jacketUrl();
+                } else {
+                    jacketUrl = jacketStorage.uploadPng(newHash, png);
+                    newObject = true;
+                }
+                command = new UpdateSongCommand(command.songId(), command.genreName(), command.songName(),
+                        command.artistName(), command.version(), jacketUrl, command.createdAt(), command.charts());
+            }
+            try {
+                SongDetailView updated = updateSong.execute(command);
+                if (edit.reportId() != null) unknownChartReport.resolve(edit.reportId());
+                try {
+                    adminNotification.send("**[곡 수정]** 관리자: `<@%s>` / songId: `%d` / 곡명: **%s** / songHash: `%s`".formatted(
+                            actorId(root), updated.song().songId(), updated.song().songName(), updated.song().songHash()));
+                } catch (RuntimeException exception) {
+                    log.warn("Song edit notification failed for songId={}", updated.song().songId());
+                }
+                return message("곡 수정 완료: `#%d` **%s**\n새 songHash: `%s`".formatted(
+                        updated.song().songId(), updated.song().songName(), updated.song().songHash()));
+            } catch (RuntimeException exception) {
+                if (newObject) jacketStorage.delete(newHash);
+                if (backupKey != null) jacketStorage.restore(oldHash, backupKey);
+                throw exception;
+            }
+        } catch (Exception exception) {
+            return message("곡 수정 실패: " + exception.getMessage());
+        }
     }
 
     private boolean validSignature(byte[] body, String signatureHex, String timestamp) {

@@ -49,6 +49,8 @@ may use the commands.
 
 Chart input uses `N:30,H:42,EX:48`; prefix it with `UPPER` for Upper charts.
 Creation and modification require a preview confirmation. Drafts expire after 15 minutes.
+Song edit confirmation immediately acknowledges the interaction, saves in a bounded background queue,
+and updates the Discord response with the result. If the queue is full, the confirmation can be retried.
 
 ## Alerts
 
