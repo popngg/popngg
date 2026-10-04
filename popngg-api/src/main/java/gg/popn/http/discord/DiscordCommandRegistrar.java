@@ -112,7 +112,7 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
         return List.of(
                 option(4, "song_id", "수정할 songId", true),
                 option(11, "자켓", "교체할 자켓 이미지", false),
-                option(3, "추가일", "변경할 날짜 YYYY-MM-DD", false),
+                option(3, "출시일", "변경할 출시일 YYYY-MM-DD", false),
                 option(3, "곡명", "변경할 곡명", false), option(3, "장르", "변경할 장르", false),
                 option(3, "아티스트", "변경할 아티스트", false), option(4, "버전", "변경할 버전", false),
                 upperOption(false), option(4, "l", "변경할 L 레벨", false),

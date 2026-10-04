@@ -345,14 +345,15 @@ public class DiscordInteractionController {
                             current, null, null, null, Instant.now(), null));
                     return ResponseEntity.ok(editModal(id, current, null));
                 }
-                Instant createdAt = optionalDate(root, "추가일");
+                Instant createdAt = optionalOption(root, "출시일") == null
+                        ? optionalDate(root, "추가일") : optionalDate(root, "출시일");
                 String attachmentUrl = optionalAttachmentUrl(root, "자켓");
                 UpdateSongCommand command = updateCommandFromOptions(root, current, createdAt);
                 String id = UUID.randomUUID().toString();
                 editDrafts.put(id, new EditDraft(current, command, attachmentUrl, createdAt, Instant.now(), null));
                 return ResponseEntity.ok(editPreview(id, current, command));
             } catch (RuntimeException exception) {
-                return ResponseEntity.ok(message("곡을 찾을 수 없거나 추가일 형식이 올바르지 않습니다."));
+                return ResponseEntity.ok(message("곡을 찾을 수 없거나 출시일 형식이 올바르지 않습니다."));
             }
         }
         if (type == 3 && root.path("data").path("custom_id").asText()
@@ -375,14 +376,19 @@ public class DiscordInteractionController {
             try {
                 Map<String, String> values = modalValues(root);
                 List<UpdateSongCommand.ChartUpdate> charts = parseChartUpdates(values.get("charts"), stored.current());
-                var command = new UpdateSongCommand(stored.current().song().songId(), values.get("genre"),
-                        values.get("song"), values.get("artist"), Integer.parseInt(values.get("version")),
-                        null, stored.requestedCreatedAt(), charts);
+                JsonNode metadata = values.containsKey("metadata") ? mapper.readTree(values.get("metadata")) : null;
+                Instant date = values.getOrDefault("date", "").isBlank() ? stored.requestedCreatedAt()
+                        : LocalDate.parse(values.get("date")).atStartOfDay(ZoneOffset.UTC).toInstant();
+                var command = new UpdateSongCommand(stored.current().song().songId(),
+                        metadata == null ? values.get("genre") : metadata.path("genreName").asText(),
+                        metadata == null ? values.get("song") : metadata.path("songName").asText(),
+                        metadata == null ? values.get("artist") : metadata.path("artistName").asText(),
+                        Integer.parseInt(values.get("version")), null, date, charts);
                 String confirmId = UUID.randomUUID().toString();
                 editDrafts.put(confirmId, new EditDraft(stored.current(), command, stored.attachmentUrl(),
-                        stored.requestedCreatedAt(), Instant.now(), stored.reportId()));
+                        date, Instant.now(), stored.reportId()));
                 return ResponseEntity.ok(editPreview(confirmId, stored.current(), command));
-            } catch (RuntimeException exception) {
+            } catch (Exception exception) {
                 return ResponseEntity.ok(message("수정 입력 오류: " + exception.getMessage()));
             }
         }
@@ -574,7 +580,7 @@ public class DiscordInteractionController {
         };
     }
 
-    private static Map<String, Object> editModal(
+    private Map<String, Object> editModal(
             String id, SongDetailView current, UpdateSongCommand defaults) {
         List<UpdateSongCommand.ChartUpdate> requested = defaults == null
                 ? List.of() : defaults.charts();
@@ -593,12 +599,21 @@ public class DiscordInteractionController {
         String genre = defaults == null ? current.song().genreName() : defaults.genreName();
         String artist = defaults == null ? current.song().artistName() : defaults.artistName();
         int version = defaults == null ? current.song().version() : defaults.version();
+        String metadata;
+        try {
+            metadata = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of(
+                    "songName", song, "genreName", genre, "artistName", artist));
+        } catch (Exception exception) {
+            throw new IllegalStateException("곡 기본정보를 만들 수 없습니다.", exception);
+        }
+        String date = defaults == null || defaults.createdAt() == null ? ""
+                : defaults.createdAt().atZone(ZoneOffset.UTC).toLocalDate().toString();
         return Map.of("type", 9, "data", Map.of("custom_id", "song_edit:" + id, "title", "곡 수정",
-                "components", List.of(inputValue("song", "곡명", song),
-                        inputValue("genre", "장르", genre),
-                        inputValue("artist", "아티스트", artist),
-                        inputValue("version", "버전", Integer.toString(version)),
-                        inputValue("charts", "채보", charts))));
+                "components", List.of(
+                        modernTextArea("metadata", "곡 기본정보 JSON", metadata),
+                        modernInput("version", "버전", "예: 29", Integer.toString(version), true),
+                        modernInput("date", "출시일", "YYYY-MM-DD (비워두면 기존 날짜 유지)", date, false),
+                        modernInput("charts", "채보", "예: N:30,H:42,EX:48", charts, true))));
     }
 
     private static boolean hasSongUpdateOptions(JsonNode root) {
