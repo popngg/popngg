@@ -467,6 +467,54 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void changesReleaseDateDirectlyInSongEditModal() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        Map<?, ?> modal = body(call(edit));
+        Map<?, ?> data = (Map<?, ?>) modal.get("data");
+        assertThat(data.toString()).contains("출시일", "YYYY-MM-DD");
+        ObjectNode submit = interaction(5);
+        submit.withObject("data").put("custom_id", (String) data.get("custom_id"));
+        ArrayNode fields = submit.withObject("data").putArray("components");
+        modalModernValue(fields, "metadata", "{\"songName\":\"changed\",\"genreName\":\"genre\",\"artistName\":\"artist\"}");
+        modalModernValue(fields, "version", "29");
+        modalModernValue(fields, "charts", "N:30,H:42");
+        modalModernValue(fields, "date", "2026-09-01");
+        Map<?, ?> preview = body(call(submit));
+        assertThat(((Map<?, ?>) preview.get("data")).get("content").toString())
+                .contains("2026-09-01", "changed");
+
+        ObjectNode reopen = interaction(3);
+        reopen.withObject("data").put("custom_id", buttonId(preview, "song_edit_reopen:"));
+        Map<?, ?> reopenedData = (Map<?, ?>) body(call(reopen)).get("data");
+        assertThat(reopenedData.toString()).contains("2026-09-01");
+        submit.withObject("data").put("custom_id", (String) reopenedData.get("custom_id"));
+        Map<?, ?> finalPreview = body(call(submit));
+        when(updateSong.execute(any())).thenReturn(detail("changed", "new-hash"));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(finalPreview));
+        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        verify(updateSong).execute(argThat(value -> value.createdAt().equals(
+                java.time.Instant.parse("2026-09-01T00:00:00Z")) && value.songName().equals("changed")));
+    }
+
+    @Test
+    void changesReleaseDateInSongEditSlashCommand() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "출시일", "2026-09-01");
+        Map<?, ?> preview = body(call(edit));
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        verify(updateSong).execute(argThat(value -> value.createdAt().equals(
+                java.time.Instant.parse("2026-09-01T00:00:00Z"))));
+    }
+
+    @Test
     void opensSongEditModalAndCanReopenPreviewForFurtherChanges() throws Exception {
         when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
 

@@ -10,7 +10,9 @@ may use the commands.
   and an `o`/`x` UPPER option in one slash command. Submission shows a JSON preview.
 - `/곡수정` accepts `song_id` plus optional jacket, date, metadata, L/N/H/EX levels,
   and UPPER in one slash command. Omitted values and charts remain unchanged and a JSON
-  preview is shown before confirmation.
+  preview is shown before confirmation. Set `출시일` directly in the slash command or
+  in the song edit form (`YYYY-MM-DD`); leave the form date empty to retain the existing date.
+  The form groups song, genre, and artist in the same basic metadata JSON used by song creation.
 - `/곡조회 검색어:<text>` searches the catalog.
 - `/미등록목록` shows recently unmatched renewal rows. Selecting a row fetches the official
   [music list](https://p.eagate.573.jp/game/popn/popn29/music/list.html) and privately shows
