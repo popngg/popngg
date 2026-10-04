@@ -15,9 +15,11 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,7 +39,7 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                     FROM song_search_tags st
                     WHERE st.song_id = s.song_id
                       AND st.is_active = TRUE
-                      AND LOWER(st.normalized_tag_value) LIKE :keywordPattern
+                      AND LOWER(st.normalized_tag_value) LIKE :tagKeywordPattern
                 )
               )
               AND EXISTS (
@@ -71,13 +73,12 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
 
         List<SongRow> songs = jdbcTemplate.query("""
                         SELECT s.song_id, s.song_hash, s.genre_name, s.song_name,
-                               s.artist_name, s.version, s.jacket_url,
+                               s.artist_name, s.version, s.jacket_url, s.created_at,
                                (SELECT MAX(cs.level) FROM charts cs
                                  WHERE cs.song_id = s.song_id AND cs.is_deleted = FALSE) AS max_level
-                        """ + SONG_FILTERS + " ORDER BY " + orderBy(query) + """
-                        , s.song_id ASC
-                        LIMIT :limit OFFSET :offset
-                        """,
+                        """ + SONG_FILTERS + " ORDER BY " + orderBy(query) + ", s.song_id "
+                        + (query.sort() == FindSongsQuery.Sort.CREATED_AT ? "DESC" : "ASC")
+                        + " LIMIT :limit OFFSET :offset",
                 parameters,
                 (rs, rowNum) -> new SongRow(
                         rs.getLong("song_id"),
@@ -86,7 +87,8 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
                         rs.getString("song_name"),
                         rs.getString("artist_name"),
                         rs.getInt("version"),
-                        rs.getString("jacket_url")));
+                        rs.getString("jacket_url"),
+                        rs.getTimestamp("created_at").toInstant()));
 
         if (songs.isEmpty()) {
             return List.of();
@@ -129,7 +131,7 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
         return songs.stream()
                 .map(song -> new GroupedSongView(
                         song.songId(), song.songHash(), song.genreName(), song.songName(),
-                        song.artistName(), song.version(), song.jacketUrl(),
+                        song.artistName(), song.version(), song.jacketUrl(), song.createdAt(),
                         List.copyOf(chartsBySong.getOrDefault(song.songId(), List.of()))))
                 .toList();
     }
@@ -210,10 +212,14 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
     }
 
     private MapSqlParameterSource parameters(FindSongsQuery query) {
-        String normalizedKeyword = query.keyword() == null ? null : query.keyword().toLowerCase();
+        String normalizedKeyword = query.keyword() == null ? null : query.keyword().toLowerCase(Locale.ROOT);
+        String tagKeyword = normalizedKeyword == null ? null
+                : normalizedKeyword.replaceAll("(?U)\\s+", "");
         return new MapSqlParameterSource()
                 .addValue("keyword", normalizedKeyword)
                 .addValue("keywordPattern", normalizedKeyword == null ? null : "%" + normalizedKeyword + "%")
+                .addValue("tagKeywordPattern", tagKeyword == null || tagKeyword.isEmpty()
+                        ? null : "%" + tagKeyword + "%")
                 .addValue("version", query.version())
                 .addValue("chartVersion", query.chartVersion())
                 .addValue("levelMin", query.levelMin())
@@ -234,6 +240,7 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
             case GENRE -> "s.genre_name";
             case MAX_LEVEL -> "max_level";
             case SONG_ID -> "s.song_id";
+            case CREATED_AT -> "s.created_at";
         };
         String direction = query.order() == FindSongsQuery.Order.ASC ? "ASC" : "DESC";
         if (query.sort() == FindSongsQuery.Sort.VERSION) {
@@ -250,7 +257,8 @@ public class SongCatalogJdbcAdapter implements SongCatalogQueryPort {
             String songName,
             String artistName,
             int version,
-            String jacketUrl
+            String jacketUrl,
+            Instant createdAt
     ) {
     }
 }

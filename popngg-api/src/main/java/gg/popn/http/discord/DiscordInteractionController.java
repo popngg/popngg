@@ -74,11 +74,30 @@ public class DiscordInteractionController {
     private final Map<String, Draft> drafts = new ConcurrentHashMap<>();
     private final Map<String, PreDraft> preDrafts = new ConcurrentHashMap<>();
     private final Map<String, EditDraft> editDrafts = new ConcurrentHashMap<>();
+    private DiscordSongEditConfirmation songEditConfirmation;
+
+    @Autowired
+    void setSongEditConfirmation(DiscordSongEditConfirmation confirmation) {
+        this.songEditConfirmation = confirmation;
+    }
+
     private OfficialSongReview officialSongReview;
+    private DiscordRatingImage discordRatingImage;
+    private DiscordAchievementConstantImage discordAchievementConstantImage;
 
     @Autowired
     void setOfficialSongReview(OfficialSongReview officialSongReview) {
         this.officialSongReview = officialSongReview;
+    }
+
+    @Autowired
+    void setDiscordRatingImage(DiscordRatingImage discordRatingImage) {
+        this.discordRatingImage = discordRatingImage;
+    }
+
+    @Autowired
+    void setDiscordAchievementConstantImage(DiscordAchievementConstantImage image) {
+        this.discordAchievementConstantImage = image;
     }
     private gg.popn.application.analysis.AnalysisJobs analysisJobs;
 
@@ -150,18 +169,37 @@ public class DiscordInteractionController {
         cleanupDrafts();
         int type = root.path("type").asInt();
         if (type == 1) return ResponseEntity.ok(Map.of("type", 1));
+        if (type == 2 && "서열표".equals(root.path("data").path("name").asText())) {
+            if (!guildId.equals(root.path("guild_id").asText()))
+                return ResponseEntity.ok(ephemeral("이 서버에서는 사용할 수 없는 명령입니다."));
+            int level = option(root, "레벨").path("value").asInt();
+            String metric = option(root, "기준").path("value").asText();
+            String poptomoId = option(root, "팝토모_id").path("value").asText();
+            return ResponseEntity.ok(discordRatingImage.start(root, level, metric, poptomoId));
+        }
         if (!authorized(root)) return ResponseEntity.ok(message("관리자 역할이 필요합니다."));
+        if (type == 2 && "상수표".equals(root.path("data").path("name").asText())) {
+            int level = option(root, "레벨").path("value").asInt();
+            String axis = option(root, "기준").path("value").asText();
+            return ResponseEntity.ok(discordAchievementConstantImage.start(root, level, axis));
+        }
         if ((type == 3 || type == 5) && root.path("data").path("custom_id").asText().startsWith("official_")
                 && officialSongReview != null) {
             return ResponseEntity.ok(officialSongReview.interact(root));
         }
-        if (type == 2 && "실력분석최신화".equals(root.path("data").path("name").asText())) {
+        String commandName = root.path("data").path("name").asText();
+        if (type == 2 && ("실력분석최신화".equals(commandName) || "상수최신화".equals(commandName))) {
             try {
                 String interactionId = root.path("id").asText();
                 if (interactionId.isBlank()) return ResponseEntity.ok(ephemeral("요청 ID가 없습니다."));
-                var submission = analysisJobs.submit("DISCORD", "discord:" + interactionId);
-                return ResponseEntity.ok(ephemeral((submission.existing() ? "기존 작업을 확인했습니다." : "분석 작업을 접수했습니다.")
+                boolean achievements = "상수최신화".equals(commandName);
+                var submission = achievements
+                        ? analysisJobs.submitAchievements("DISCORD", "discord-achievements:" + interactionId)
+                        : analysisJobs.submit("DISCORD", "discord:" + interactionId);
+                return ResponseEntity.ok(ephemeral((submission.existing() ? "기존 작업을 확인했습니다."
+                        : achievements ? "Lv48~50 메달·랭크 상수 최신화 작업을 접수했습니다." : "분석 작업을 접수했습니다.")
                         + "\n작업 ID: `" + submission.jobId() + "`\n상태: " + submission.status()
+                        + (achievements ? "\n계산 후 DB와 S3에 저장합니다. 완료 후 /상수표에서 확인해 주세요." : "")
                         + "\n완료 또는 실패 결과는 admin bot이 JSON 파일로 별도 알려드립니다."));
             } catch (RuntimeException exception) {
                 return ResponseEntity.ok(ephemeral("분석 작업을 접수하지 못했습니다. 분석 설정과 DB 상태를 확인해 주세요."));
@@ -240,8 +278,10 @@ public class DiscordInteractionController {
             String content = reports.stream().map(report ->
                     "- `#%d` **%s** %s / %s / %s / %d회".formatted(
                             report.reportId(), report.songName(),
-                            report.missingVariant()
-                                    ? report.upper() ? "[UPPER 누락]" : "[일반 버전 누락]"
+                            report.existingVariantSongId() != null
+                                    ? "[" + difficultyLabel(report.difficultyCode()) + " 채보 누락]"
+                                    : report.missingVariant()
+                                    ? Boolean.TRUE.equals(report.upper()) ? "[UPPER 누락]" : "[일반 버전 누락]"
                                     : "[곡 미등록]",
                             report.genreName(), report.artistName(), report.occurrences()))
                     .collect(java.util.stream.Collectors.joining("\n"));
@@ -290,6 +330,12 @@ public class DiscordInteractionController {
                     .filter(report -> report.reportId() == reportId).findFirst();
             if (selected.isEmpty()) return ResponseEntity.ok(message("미등록 곡 정보를 찾을 수 없습니다."));
             var report = selected.get();
+            if (report.existingVariantSongId() != null) {
+                SongDetailView current = findSongDetail.findSong(report.existingVariantSongId());
+                String id = UUID.randomUUID().toString();
+                editDrafts.put(id, new EditDraft(current, null, null, null, Instant.now(), report.reportId()));
+                return ResponseEntity.ok(editModal(id, current, null));
+            }
             String id = UUID.randomUUID().toString();
             Prefill prefill = new Prefill(report.songName(), report.genreName(), report.artistName(),
                     Boolean.TRUE.equals(report.upper()));
@@ -306,14 +352,15 @@ public class DiscordInteractionController {
                             current, null, null, null, Instant.now(), null));
                     return ResponseEntity.ok(editModal(id, current, null));
                 }
-                Instant createdAt = optionalDate(root, "추가일");
+                Instant createdAt = optionalOption(root, "출시일") == null
+                        ? optionalDate(root, "추가일") : optionalDate(root, "출시일");
                 String attachmentUrl = optionalAttachmentUrl(root, "자켓");
                 UpdateSongCommand command = updateCommandFromOptions(root, current, createdAt);
                 String id = UUID.randomUUID().toString();
                 editDrafts.put(id, new EditDraft(current, command, attachmentUrl, createdAt, Instant.now(), null));
                 return ResponseEntity.ok(editPreview(id, current, command));
             } catch (RuntimeException exception) {
-                return ResponseEntity.ok(message("곡을 찾을 수 없거나 추가일 형식이 올바르지 않습니다."));
+                return ResponseEntity.ok(message("곡을 찾을 수 없거나 출시일 형식이 올바르지 않습니다."));
             }
         }
         if (type == 3 && root.path("data").path("custom_id").asText()
@@ -336,14 +383,19 @@ public class DiscordInteractionController {
             try {
                 Map<String, String> values = modalValues(root);
                 List<UpdateSongCommand.ChartUpdate> charts = parseChartUpdates(values.get("charts"), stored.current());
-                var command = new UpdateSongCommand(stored.current().song().songId(), values.get("genre"),
-                        values.get("song"), values.get("artist"), Integer.parseInt(values.get("version")),
-                        null, stored.requestedCreatedAt(), charts);
+                JsonNode metadata = values.containsKey("metadata") ? mapper.readTree(values.get("metadata")) : null;
+                Instant date = values.getOrDefault("date", "").isBlank() ? stored.requestedCreatedAt()
+                        : LocalDate.parse(values.get("date")).atStartOfDay(ZoneOffset.UTC).toInstant();
+                var command = new UpdateSongCommand(stored.current().song().songId(),
+                        metadata == null ? values.get("genre") : metadata.path("genreName").asText(),
+                        metadata == null ? values.get("song") : metadata.path("songName").asText(),
+                        metadata == null ? values.get("artist") : metadata.path("artistName").asText(),
+                        Integer.parseInt(values.get("version")), null, date, charts);
                 String confirmId = UUID.randomUUID().toString();
                 editDrafts.put(confirmId, new EditDraft(stored.current(), command, stored.attachmentUrl(),
-                        stored.requestedCreatedAt(), Instant.now(), stored.reportId()));
+                        date, Instant.now(), stored.reportId()));
                 return ResponseEntity.ok(editPreview(confirmId, stored.current(), command));
-            } catch (RuntimeException exception) {
+            } catch (Exception exception) {
                 return ResponseEntity.ok(message("수정 입력 오류: " + exception.getMessage()));
             }
         }
@@ -351,43 +403,9 @@ public class DiscordInteractionController {
             String id = root.path("data").path("custom_id").asText().substring("song_edit_confirm:".length());
             EditDraft edit = editDrafts.remove(id);
             if (edit == null || edit.command() == null) return ResponseEntity.ok(message("수정 요청이 만료되었습니다."));
-            try {
-                UpdateSongCommand command = edit.command();
-                String oldHash = edit.current().song().songHash();
-                boolean upper = command.charts().isEmpty() ? edit.current().charts().getFirst().isUpper()
-                        : command.charts().getFirst().isUpper();
-                String newHash = SongHashGenerator.generate(command.genreName(), command.songName(),
-                        command.artistName(), command.version(), upper);
-                String backupKey = null;
-                boolean newObject = false;
-                if (edit.attachmentUrl() != null) {
-                    byte[] png = jacketDownloader.download(edit.attachmentUrl());
-                    String jacketUrl;
-                    if (newHash.equals(oldHash)) {
-                        backupKey = jacketStorage.replacePng(oldHash, png);
-                        jacketUrl = edit.current().song().jacketUrl();
-                    } else {
-                        jacketUrl = jacketStorage.uploadPng(newHash, png);
-                        newObject = true;
-                    }
-                    command = new UpdateSongCommand(command.songId(), command.genreName(), command.songName(),
-                            command.artistName(), command.version(), jacketUrl, command.createdAt(), command.charts());
-                }
-                try {
-                    SongDetailView updated = updateSong.execute(command);
-                    if (edit.reportId() != null) unknownChartReport.resolve(edit.reportId());
-                    adminNotification.send("**[곡 수정]** 관리자: `<@%s>` / songId: `%d` / 곡명: **%s** / songHash: `%s`".formatted(
-                            actorId(root), updated.song().songId(), updated.song().songName(), updated.song().songHash()));
-                    return ResponseEntity.ok(message("곡 수정 완료: `#%d` **%s**\n새 songHash: `%s`".formatted(
-                            updated.song().songId(), updated.song().songName(), updated.song().songHash())));
-                } catch (RuntimeException exception) {
-                    if (newObject) jacketStorage.delete(newHash);
-                    if (backupKey != null) jacketStorage.restore(oldHash, backupKey);
-                    throw exception;
-                }
-            } catch (RuntimeException exception) {
-                return ResponseEntity.ok(message("곡 수정 실패: " + exception.getMessage()));
-            }
+            Map<String, Object> response = songEditConfirmation.start(root, () -> completeSongEdit(root, edit));
+            if (Integer.valueOf(4).equals(response.get("type"))) editDrafts.putIfAbsent(id, edit);
+            return ResponseEntity.ok(response);
         }
         if (type == 5 && root.path("data").path("custom_id").asText().startsWith("song_create:")) {
             try {
@@ -442,6 +460,50 @@ public class DiscordInteractionController {
             return ResponseEntity.ok(message("곡 등록을 취소했습니다."));
         }
         return ResponseEntity.ok(message("지원하지 않는 명령입니다."));
+    }
+
+    private Map<String, Object> completeSongEdit(JsonNode root, EditDraft edit) {
+        try {
+            UpdateSongCommand command = edit.command();
+            String oldHash = edit.current().song().songHash();
+            boolean upper = command.charts().isEmpty() ? edit.current().charts().getFirst().isUpper()
+                    : command.charts().getFirst().isUpper();
+            String newHash = SongHashGenerator.generate(command.genreName(), command.songName(),
+                    command.artistName(), command.version(), upper);
+            String backupKey = null;
+            boolean newObject = false;
+            if (edit.attachmentUrl() != null) {
+                byte[] png = jacketDownloader.download(edit.attachmentUrl());
+                String jacketUrl;
+                if (newHash.equals(oldHash)) {
+                    backupKey = jacketStorage.replacePng(oldHash, png);
+                    jacketUrl = edit.current().song().jacketUrl();
+                } else {
+                    jacketUrl = jacketStorage.uploadPng(newHash, png);
+                    newObject = true;
+                }
+                command = new UpdateSongCommand(command.songId(), command.genreName(), command.songName(),
+                        command.artistName(), command.version(), jacketUrl, command.createdAt(), command.charts());
+            }
+            try {
+                SongDetailView updated = updateSong.execute(command);
+                if (edit.reportId() != null) unknownChartReport.resolve(edit.reportId());
+                try {
+                    adminNotification.send("**[곡 수정]** 관리자: `<@%s>` / songId: `%d` / 곡명: **%s** / songHash: `%s`".formatted(
+                            actorId(root), updated.song().songId(), updated.song().songName(), updated.song().songHash()));
+                } catch (RuntimeException exception) {
+                    log.warn("Song edit notification failed for songId={}", updated.song().songId());
+                }
+                return message("곡 수정 완료: `#%d` **%s**\n새 songHash: `%s`".formatted(
+                        updated.song().songId(), updated.song().songName(), updated.song().songHash()));
+            } catch (RuntimeException exception) {
+                if (newObject) jacketStorage.delete(newHash);
+                if (backupKey != null) jacketStorage.restore(oldHash, backupKey);
+                throw exception;
+            }
+        } catch (Exception exception) {
+            return message("곡 수정 실패: " + exception.getMessage());
+        }
     }
 
     private boolean validSignature(byte[] body, String signatureHex, String timestamp) {
@@ -524,7 +586,18 @@ public class DiscordInteractionController {
                 "label", label, "style", 1, "required", true, "value", value == null ? "" : value)));
     }
 
-    private static Map<String, Object> editModal(
+    private static String difficultyLabel(Integer difficultyCode) {
+        if (difficultyCode == null) return "미등록";
+        return switch (difficultyCode) {
+            case 1 -> "EASY";
+            case 2 -> "NORMAL";
+            case 3 -> "HYPER";
+            case 4 -> "EX";
+            default -> "난이도 " + difficultyCode;
+        };
+    }
+
+    private Map<String, Object> editModal(
             String id, SongDetailView current, UpdateSongCommand defaults) {
         List<UpdateSongCommand.ChartUpdate> requested = defaults == null
                 ? List.of() : defaults.charts();
@@ -543,12 +616,21 @@ public class DiscordInteractionController {
         String genre = defaults == null ? current.song().genreName() : defaults.genreName();
         String artist = defaults == null ? current.song().artistName() : defaults.artistName();
         int version = defaults == null ? current.song().version() : defaults.version();
+        String metadata;
+        try {
+            metadata = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of(
+                    "songName", song, "genreName", genre, "artistName", artist));
+        } catch (Exception exception) {
+            throw new IllegalStateException("곡 기본정보를 만들 수 없습니다.", exception);
+        }
+        String date = defaults == null || defaults.createdAt() == null ? ""
+                : defaults.createdAt().atZone(ZoneOffset.UTC).toLocalDate().toString();
         return Map.of("type", 9, "data", Map.of("custom_id", "song_edit:" + id, "title", "곡 수정",
-                "components", List.of(inputValue("song", "곡명", song),
-                        inputValue("genre", "장르", genre),
-                        inputValue("artist", "아티스트", artist),
-                        inputValue("version", "버전", Integer.toString(version)),
-                        inputValue("charts", "채보", charts))));
+                "components", List.of(
+                        modernTextArea("metadata", "곡 기본정보 JSON", metadata),
+                        modernInput("version", "버전", "예: 29", Integer.toString(version), true),
+                        modernInput("date", "출시일", "YYYY-MM-DD (비워두면 기존 날짜 유지)", date, false),
+                        modernInput("charts", "채보", "예: N:30,H:42,EX:48", charts, true))));
     }
 
     private static boolean hasSongUpdateOptions(JsonNode root) {

@@ -46,6 +46,7 @@ class DiscordInteractionControllerTest {
     private final IncidentThreadTestClient incidentThreadTestClient = mock(IncidentThreadTestClient.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
+    private String songEditReply;
 
     @Test
     void analysisAcknowledgesImmediatelyWithoutDeferredLoadingAndRequiresAdmin() throws Exception {
@@ -63,6 +64,91 @@ class DiscordInteractionControllerTest {
         request.withObject("member").withArray("roles").removeAll();
         assertThat(content(call(request))).contains("관리자 역할");
         verifyNoInteractions(jobs);
+    }
+
+    @Test
+    void achievementRefreshAcknowledgesImmediatelyAndDuplicateKeepsSameJob() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        when(jobs.submitAchievements("DISCORD", "discord-achievements:1234")).thenReturn(
+                new gg.popn.application.analysis.AnalysisJobs.Submission("constants-job", "QUEUED", false),
+                new gg.popn.application.analysis.AnalysisJobs.Submission("constants-job", "RUNNING", true));
+        var request = command("상수최신화");
+        request.put("id", "1234");
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(((Map<?, ?>) response.get("data")).get("flags")).isEqualTo(64);
+        assertThat(response.toString()).contains("constants-job", "Lv48~50", "메달·랭크", "DB", "S3", "JSON");
+        assertThat(content(call(request))).contains("기존 작업", "constants-job", "RUNNING");
+        verify(jobs, times(2)).submitAchievements("DISCORD", "discord-achievements:1234");
+        verify(jobs, never()).submit(any(), any());
+    }
+
+    @Test
+    void achievementRefreshRequiresAdminRoleAndConfiguredGuild() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        var wrongGuild = command("상수최신화");
+        wrongGuild.put("id", "1234").put("guild_id", "another-guild");
+        assertThat(content(call(wrongGuild))).contains("관리자 역할");
+        var noRole = command("상수최신화");
+        noRole.put("id", "1234");
+        noRole.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(noRole))).contains("관리자 역할");
+        verifyNoInteractions(jobs);
+    }
+
+    @Test
+    void achievementRefreshReportsMissingIdOrSubmissionFailureWithoutDeferredResponse() throws Exception {
+        var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
+        controller.setAnalysisJobs(jobs);
+        var request = command("상수최신화");
+        request.remove("id");
+        assertThat(content(call(request))).contains("요청 ID가 없습니다");
+        verifyNoInteractions(jobs);
+        request.put("id", "1234");
+        when(jobs.submitAchievements(any(), any())).thenThrow(new IllegalStateException("ANALYSIS_DISABLED"));
+        var response = body(call(request));
+        assertThat(response.get("type")).isEqualTo(4);
+        assertThat(((Map<?, ?>) response.get("data")).get("flags")).isEqualTo(64);
+        assertThat(response.toString()).contains("접수하지 못했습니다");
+    }
+
+    @Test
+    void ratingImageCommandIsAvailableToGuildMembersAndDefersTheReply() throws Exception {
+        var ratingImage = mock(DiscordRatingImage.class);
+        controller.setDiscordRatingImage(ratingImage);
+        when(ratingImage.start(any(), eq(49), eq("SPI"), eq("1234-5678-9012")))
+                .thenReturn(Map.of("type", 5, "data", Map.of("flags", 64)));
+        ObjectNode request = command("서열표");
+        option(request, "기준", "SPI");
+        option(request, "레벨", 49);
+        option(request, "팝토모_id", "1234-5678-9012");
+        request.withObject("member").withArray("roles").removeAll();
+
+        Map<?, ?> response = body(call(request));
+
+        assertThat(response.get("type")).isEqualTo(5);
+        verify(ratingImage).start(any(), eq(49), eq("SPI"), eq("1234-5678-9012"));
+        request.put("guild_id", "another-guild");
+        assertThat(content(call(request))).contains("이 서버에서는 사용할 수 없는");
+    }
+
+    @Test
+    void achievementConstantImageIsAdminOnly() throws Exception {
+        var image = mock(DiscordAchievementConstantImage.class);
+        controller.setDiscordAchievementConstantImage(image);
+        when(image.start(any(), eq(49), eq("MEDAL")))
+                .thenReturn(Map.of("type", 5, "data", Map.of("flags", 64)));
+        ObjectNode request = command("상수표");
+        option(request, "기준", "MEDAL");
+        option(request, "레벨", 49);
+        assertThat(body(call(request)).get("type")).isEqualTo(5);
+        verify(image).start(any(), eq(49), eq("MEDAL"));
+        clearInvocations(image);
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할");
+        verifyNoInteractions(image);
     }
 
     @BeforeEach
@@ -195,7 +281,7 @@ class DiscordInteractionControllerTest {
 
     @Test
     void searchesSongsAndListsUnknownCharts() throws Exception {
-        var song = new GroupedSongView(3, "hash", "genre", "title", "artist", 29, null, List.of());
+        var song = new GroupedSongView(3, "hash", "genre", "title", "artist", 29, null, null, List.of());
         when(findSongs.execute(any())).thenReturn(SongPageView.of(List.of(song), 0, 10, 1));
         ObjectNode search = command("곡조회");
         option(search, "검색어", "title");
@@ -273,6 +359,52 @@ class DiscordInteractionControllerTest {
     }
 
     @Test
+    void opensExistingSongEditForAMissingDifficulty() throws Exception {
+        var report = new UnknownChartReportPort.Report(8, "known song", "genre", "artist",
+                4, false, true, 12L, 2, Instant.now());
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(report));
+        when(findDetail.findSong(12)).thenReturn(detail("known song", "known-hash"));
+
+        assertThat(content(call(command("미등록목록")))).contains("known song", "[EX 채보 누락]");
+        ObjectNode selection = interaction(3);
+        selection.withObject("data").put("custom_id", "unknown_song_select")
+                .putArray("values").add("8");
+
+        Map<?, ?> modal = body(call(selection));
+
+        assertThat(modal.get("type")).isEqualTo(9);
+        assertThat(modal.toString()).contains("곡 수정", "known song", "N:30,H:42");
+        verify(findDetail).findSong(12);
+        verifyNoInteractions(createSong);
+    }
+
+    @Test
+    void labelsMissingVariantsAndEveryReportedDifficulty() throws Exception {
+        when(unknown.findRecentUnresolved(anyInt())).thenReturn(List.of(
+                new UnknownChartReportPort.Report(1, "upper", "genre", "artist",
+                        4, true, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(2, "regular", "genre", "artist",
+                        4, false, true, 1, Instant.now()),
+                new UnknownChartReportPort.Report(3, "easy", "genre", "artist",
+                        1, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(4, "normal", "genre", "artist",
+                        2, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(5, "hyper", "genre", "artist",
+                        3, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(6, "unknown", "genre", "artist",
+                        null, false, false, 10L, 1, Instant.now()),
+                new UnknownChartReportPort.Report(7, "future", "genre", "artist",
+                        5, false, false, 10L, 1, Instant.now())));
+
+        String result = content(call(command("미등록목록")));
+
+        assertThat(result).contains(
+                "[UPPER 누락]", "[일반 버전 누락]", "[EASY 채보 누락]",
+                "[NORMAL 채보 누락]", "[HYPER 채보 누락]", "[미등록 채보 누락]",
+                "[난이도 5 채보 누락]");
+    }
+
+    @Test
     void acceptsNonSquareJacketImages() throws Exception {
         BufferedImage image = new BufferedImage(2, 1, BufferedImage.TYPE_INT_ARGB);
         ByteArrayOutputStream source = new ByteArrayOutputStream();
@@ -330,9 +462,57 @@ class DiscordInteractionControllerTest {
         when(jackets.uploadPng(anyString(), any())).thenReturn("https://static.popn.gg/new-hash.png");
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", confirmId);
-        assertThat(content(call(confirm))).contains("곡 수정 완료", "new-hash");
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료", "new-hash");
         verify(updateSong).execute(any());
         verify(admin).send(contains("곡 수정"));
+    }
+
+    @Test
+    void changesReleaseDateDirectlyInSongEditModal() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        Map<?, ?> modal = body(call(edit));
+        Map<?, ?> data = (Map<?, ?>) modal.get("data");
+        assertThat(data.toString()).contains("출시일", "YYYY-MM-DD");
+        ObjectNode submit = interaction(5);
+        submit.withObject("data").put("custom_id", (String) data.get("custom_id"));
+        ArrayNode fields = submit.withObject("data").putArray("components");
+        modalModernValue(fields, "metadata", "{\"songName\":\"changed\",\"genreName\":\"genre\",\"artistName\":\"artist\"}");
+        modalModernValue(fields, "version", "29");
+        modalModernValue(fields, "charts", "N:30,H:42");
+        modalModernValue(fields, "date", "2026-09-01");
+        Map<?, ?> preview = body(call(submit));
+        assertThat(((Map<?, ?>) preview.get("data")).get("content").toString())
+                .contains("2026-09-01", "changed");
+
+        ObjectNode reopen = interaction(3);
+        reopen.withObject("data").put("custom_id", buttonId(preview, "song_edit_reopen:"));
+        Map<?, ?> reopenedData = (Map<?, ?>) body(call(reopen)).get("data");
+        assertThat(reopenedData.toString()).contains("2026-09-01");
+        submit.withObject("data").put("custom_id", (String) reopenedData.get("custom_id"));
+        Map<?, ?> finalPreview = body(call(submit));
+        when(updateSong.execute(any())).thenReturn(detail("changed", "new-hash"));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(finalPreview));
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
+        verify(updateSong).execute(argThat(value -> value.createdAt().equals(
+                java.time.Instant.parse("2026-09-01T00:00:00Z")) && value.songName().equals("changed")));
+    }
+
+    @Test
+    void changesReleaseDateInSongEditSlashCommand() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "출시일", "2026-09-01");
+        Map<?, ?> preview = body(call(edit));
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
+        verify(updateSong).execute(argThat(value -> value.createdAt().equals(
+                java.time.Instant.parse("2026-09-01T00:00:00Z"))));
     }
 
     @Test
@@ -396,7 +576,7 @@ class DiscordInteractionControllerTest {
         when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", confirmId);
-        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
         verify(unknown).resolve(8);
     }
 
@@ -465,6 +645,55 @@ class DiscordInteractionControllerTest {
         }
         ObjectNode option = options.addObject().put("name", name);
         option.set("value", mapper.valueToTree(value));
+    }
+
+    private String confirmedEditContent(ObjectNode confirm) throws Exception {
+        controller.setSongEditConfirmation(new DiscordSongEditConfirmation(Runnable::run,
+                (root, content) -> songEditReply = content));
+        assertThat(body(call(confirm)).get("type")).isEqualTo(5);
+        return songEditReply;
+    }
+
+    @Test
+    void acknowledgesSongEditBeforeSavingAndDoesNotRepeatSave() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "출시일", "2026-09-24");
+        Map<?, ?> preview = body(call(edit));
+        java.util.List<Runnable> queued = new java.util.ArrayList<>();
+        controller.setSongEditConfirmation(new DiscordSongEditConfirmation(queued::add,
+                (root, content) -> songEditReply = content));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(body(call(confirm)).get("type")).isEqualTo(5);
+        verifyNoInteractions(updateSong, admin);
+        assertThat(content(call(confirm))).contains("만료");
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        doThrow(new IllegalStateException("notification unavailable")).when(admin).send(any());
+        queued.getFirst().run();
+        assertThat(songEditReply).contains("곡 수정 완료");
+        verify(updateSong, times(1)).execute(argThat(value -> value.createdAt().equals(
+                Instant.parse("2026-09-24T00:00:00Z"))));
+        verify(jackets, never()).delete(any());
+    }
+
+    @Test
+    void retainsSongEditDraftWhenWorkerQueueIsFull() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "출시일", "2026-09-24");
+        Map<?, ?> preview = body(call(edit));
+        controller.setSongEditConfirmation(new DiscordSongEditConfirmation(task -> {
+            throw new java.util.concurrent.RejectedExecutionException();
+        }, (root, content) -> songEditReply = content));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("다시 눌러");
+        verifyNoInteractions(updateSong);
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
     }
 
     private void modalValue(ArrayNode rows, String id, String value) {

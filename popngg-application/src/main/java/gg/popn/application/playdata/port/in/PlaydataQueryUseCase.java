@@ -23,5 +23,8 @@ public interface PlaydataQueryUseCase {
     PlaydataQueryResults.ChartRankingsPage findChartRankings(
             String songHash, int difficulty, String axis, int page, int size);
 
+    java.util.List<PlaydataQueryResults.ChartRankingEntry> findAllChartRankings(
+            String songHash, int difficulty, String axis);
+
     PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit);
 }
