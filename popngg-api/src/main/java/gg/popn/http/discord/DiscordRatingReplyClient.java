@@ -38,6 +38,10 @@ final class DiscordRatingReplyClient {
         send(root, result.content(), result.filename(), result.png(), result.hasImage());
     }
 
+    void sendText(JsonNode root, String content) throws Exception {
+        send(root, content, null, null, false);
+    }
+
     private void send(JsonNode root, String resultContent, String resultFilename, byte[] resultPng,
                       boolean hasImage) throws Exception {
         String application = root.path("application_id").asText();

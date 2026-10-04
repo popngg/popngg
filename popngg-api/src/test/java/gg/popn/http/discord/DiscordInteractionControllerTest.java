@@ -46,6 +46,7 @@ class DiscordInteractionControllerTest {
     private final IncidentThreadTestClient incidentThreadTestClient = mock(IncidentThreadTestClient.class);
     private KeyPair keys;
     private DiscordInteractionController controller;
+    private String songEditReply;
 
     @Test
     void analysisAcknowledgesImmediatelyWithoutDeferredLoadingAndRequiresAdmin() throws Exception {
@@ -461,7 +462,7 @@ class DiscordInteractionControllerTest {
         when(jackets.uploadPng(anyString(), any())).thenReturn("https://static.popn.gg/new-hash.png");
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", confirmId);
-        assertThat(content(call(confirm))).contains("곡 수정 완료", "new-hash");
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료", "new-hash");
         verify(updateSong).execute(any());
         verify(admin).send(contains("곡 수정"));
     }
@@ -494,7 +495,7 @@ class DiscordInteractionControllerTest {
         when(updateSong.execute(any())).thenReturn(detail("changed", "new-hash"));
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", firstButtonId(finalPreview));
-        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
         verify(updateSong).execute(argThat(value -> value.createdAt().equals(
                 java.time.Instant.parse("2026-09-01T00:00:00Z")) && value.songName().equals("changed")));
     }
@@ -509,7 +510,7 @@ class DiscordInteractionControllerTest {
         when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", firstButtonId(preview));
-        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
         verify(updateSong).execute(argThat(value -> value.createdAt().equals(
                 java.time.Instant.parse("2026-09-01T00:00:00Z"))));
     }
@@ -575,7 +576,7 @@ class DiscordInteractionControllerTest {
         when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
         ObjectNode confirm = interaction(3);
         confirm.withObject("data").put("custom_id", confirmId);
-        assertThat(content(call(confirm))).contains("곡 수정 완료");
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
         verify(unknown).resolve(8);
     }
 
@@ -644,6 +645,55 @@ class DiscordInteractionControllerTest {
         }
         ObjectNode option = options.addObject().put("name", name);
         option.set("value", mapper.valueToTree(value));
+    }
+
+    private String confirmedEditContent(ObjectNode confirm) throws Exception {
+        controller.setSongEditConfirmation(new DiscordSongEditConfirmation(Runnable::run,
+                (root, content) -> songEditReply = content));
+        assertThat(body(call(confirm)).get("type")).isEqualTo(5);
+        return songEditReply;
+    }
+
+    @Test
+    void acknowledgesSongEditBeforeSavingAndDoesNotRepeatSave() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "출시일", "2026-09-24");
+        Map<?, ?> preview = body(call(edit));
+        java.util.List<Runnable> queued = new java.util.ArrayList<>();
+        controller.setSongEditConfirmation(new DiscordSongEditConfirmation(queued::add,
+                (root, content) -> songEditReply = content));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(body(call(confirm)).get("type")).isEqualTo(5);
+        verifyNoInteractions(updateSong, admin);
+        assertThat(content(call(confirm))).contains("만료");
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        doThrow(new IllegalStateException("notification unavailable")).when(admin).send(any());
+        queued.getFirst().run();
+        assertThat(songEditReply).contains("곡 수정 완료");
+        verify(updateSong, times(1)).execute(argThat(value -> value.createdAt().equals(
+                Instant.parse("2026-09-24T00:00:00Z"))));
+        verify(jackets, never()).delete(any());
+    }
+
+    @Test
+    void retainsSongEditDraftWhenWorkerQueueIsFull() throws Exception {
+        when(findDetail.findSong(12)).thenReturn(detail("old", "old-hash"));
+        ObjectNode edit = command("곡수정");
+        option(edit, "song_id", 12);
+        option(edit, "출시일", "2026-09-24");
+        Map<?, ?> preview = body(call(edit));
+        controller.setSongEditConfirmation(new DiscordSongEditConfirmation(task -> {
+            throw new java.util.concurrent.RejectedExecutionException();
+        }, (root, content) -> songEditReply = content));
+        ObjectNode confirm = interaction(3);
+        confirm.withObject("data").put("custom_id", firstButtonId(preview));
+        assertThat(content(call(confirm))).contains("다시 눌러");
+        verifyNoInteractions(updateSong);
+        when(updateSong.execute(any())).thenReturn(detail("old", "new-hash"));
+        assertThat(confirmedEditContent(confirm)).contains("곡 수정 완료");
     }
 
     private void modalValue(ArrayNode rows, String id, String value) {
