@@ -56,3 +56,19 @@ tasks.withType(JavaCompile) {
 sourceSets {
     main.java.srcDirs += ["$buildDir/generated"]
 }
+
+tasks.register('normalizeJackets', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'gg.popn.infra.storage.JacketNormalizeCli'
+    args providers.gradleProperty('jacketSourceDirectory').get(),
+            providers.gradleProperty('jacketOutputDirectory').get()
+}
+
+tasks.register('maintainJackets', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'gg.popn.infra.storage.JacketMaintenanceCli'
+    args providers.gradleProperty('jacketSourceDirectory').get(),
+            providers.gradleProperty('jacketReport').getOrElse('build/jacket-maintenance.json')
+    if (providers.gradleProperty('normalizeExistingJackets').getOrElse('false') == 'true') args '--normalize-existing'
+    if (providers.gradleProperty('applyJacketChanges').getOrElse('false') == 'true') args '--apply'
+}

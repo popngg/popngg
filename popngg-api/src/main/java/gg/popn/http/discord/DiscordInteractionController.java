@@ -37,9 +37,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -470,14 +467,12 @@ public class DiscordInteractionController {
                     : command.charts().getFirst().isUpper();
             String newHash = SongHashGenerator.generate(command.genreName(), command.songName(),
                     command.artistName(), command.version(), upper);
-            String backupKey = null;
             boolean newObject = false;
             if (edit.attachmentUrl() != null) {
                 byte[] png = jacketDownloader.download(edit.attachmentUrl());
                 String jacketUrl;
                 if (newHash.equals(oldHash)) {
-                    backupKey = jacketStorage.replacePng(oldHash, png);
-                    jacketUrl = edit.current().song().jacketUrl();
+                    jacketUrl = jacketStorage.uploadVersionedPng(oldHash, png);
                 } else {
                     jacketUrl = jacketStorage.uploadPng(newHash, png);
                     newObject = true;
@@ -498,7 +493,6 @@ public class DiscordInteractionController {
                         updated.song().songId(), updated.song().songName(), updated.song().songHash()));
             } catch (RuntimeException exception) {
                 if (newObject) jacketStorage.delete(newHash);
-                if (backupKey != null) jacketStorage.restore(oldHash, backupKey);
                 throw exception;
             }
         } catch (Exception exception) {
@@ -969,14 +963,7 @@ public class DiscordInteractionController {
     }
 
     static byte[] convertToPng(byte[] source) throws Exception {
-        var image = ImageIO.read(new ByteArrayInputStream(source));
-        if (image == null) throw new IllegalArgumentException("올바른 이미지가 아닙니다.");
-        if ((long) image.getWidth() * image.getHeight() > 16_777_216L) throw new IllegalArgumentException("이미지 해상도가 너무 큽니다.");
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        if (!ImageIO.write(image, "png", output)) throw new IllegalArgumentException("PNG 변환에 실패했습니다.");
-        byte[] png = output.toByteArray();
-        if (png.length > 5 * 1024 * 1024) throw new IllegalArgumentException("변환된 PNG가 5MB를 초과합니다.");
-        return png;
+        return gg.popn.infra.storage.JacketImageProcessor.normalize(source);
     }
 
     private record Prefill(String song, String genre, String artist, boolean upper) {}
