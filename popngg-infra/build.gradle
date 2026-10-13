@@ -8,6 +8,11 @@ bootJar {
     enabled = false
 }
 
+// Library module with multiple standalone maintenance entry points.
+springBoot {
+    mainClass = 'gg.popn.infra.storage.JacketMaintenanceCli'
+}
+
 jar {
     enabled = true
     archiveClassifier = ''
