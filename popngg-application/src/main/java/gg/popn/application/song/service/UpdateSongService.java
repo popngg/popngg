@@ -51,7 +51,9 @@ public class UpdateSongService implements UpdateSongUseCase {
         boolean copied = !hash.equals(oldHash) && current.song().jacketUrl() != null
                 && command.jacketUrl() == null;
         String jacketUrl = command.jacketUrl() != null ? command.jacketUrl()
-                : copied ? jacketStorage.copy(oldHash, hash) : current.song().jacketUrl();
+                : copied ? (current.song().jacketUrl().contains("-jacket-")
+                        ? jacketStorage.copyFromUrl(current.song().jacketUrl(), hash)
+                        : jacketStorage.copy(oldHash, hash)) : current.song().jacketUrl();
         var effective = new UpdateSongCommand(command.songId(), command.genreName(), command.songName(),
                 command.artistName(), command.version(), jacketUrl, command.createdAt(), command.charts());
         try {

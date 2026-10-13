@@ -1,0 +1,365 @@
+package gg.popn.application.analysis;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import gg.popn.application.analysis.AnalysisStatistics.Chart;
+import gg.popn.application.analysis.RatingSnapshot.CpiIndividualityMetrics;
+import gg.popn.application.analysis.RatingSnapshot.ChartRating;
+import gg.popn.application.analysis.RatingSnapshot.SpiIndividualityMetrics;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Function;
+
+/** Deterministic experimental model. Values are latent coefficients, not a public 0-100 scale. */
+public final class CpiSpiModel {
+    public static final String VERSION = "cpi-spi-experimental-v5";
+    public static final int MIN_PLAYERS = 50;
+    private static final int MIN_LEVEL = 48;
+    private static final int MIN_CPI_CLASS_COUNT = 5;
+    /** Experimental candidates are the least predictable decile, never a confirmed chart trait. */
+    private static final double INDIVIDUALITY_PERCENTILE = .9;
+    private final ObjectMapper mapper;
+
+    public CpiSpiModel(ObjectMapper mapper) { this.mapper = mapper; }
+
+    public Map<String,Object> fit(Path directory, List<Chart> catalog) throws IOException {
+        var chartById = new HashMap<Long,Chart>();
+        catalog.forEach(c -> chartById.put(c.chartId(), c));
+        var cpi = new ArrayList<ClearObs>();
+        var spi = new ArrayList<ScoreObs>();
+        var stats = new HashMap<Long,Stats>();
+        try (var in = Files.newBufferedReader(directory.resolve("records.jsonl"), StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                if (line.isBlank()) continue;
+                var r = mapper.readValue(line, AnalysisRecord.class);
+                var chart = chartById.get(r.chartId());
+                if (chart == null || chart.level() < MIN_LEVEL || chart.level() > 50) continue;
+                var s = stats.computeIfAbsent(r.chartId(), ignored -> new Stats());
+                if (r.cpiEligible()) {
+                    boolean clear = Boolean.TRUE.equals(r.cleared());
+                    cpi.add(new ClearObs(r.userId(), r.chartId(), clear));
+                    s.cpiUsers.add(r.userId()); s.cpiCount++; if (clear) s.clearCount++;
+                }
+                if (r.spiEligible()) {
+                    spi.add(new ScoreObs(r.userId(), r.chartId(), r.score()));
+                    s.spiUsers.add(r.userId()); s.scores.add(r.score()); s.scoreSum += r.score();
+                }
+            }
+        }
+        var eligibleCpiCharts = new HashSet<Long>();
+        var eligibleSpiCharts = new HashSet<Long>();
+        stats.forEach((chartId,s)->{
+            if(s.cpiUsers.size()>=MIN_PLAYERS && s.cpiCount>0 && s.clearCount>0 && s.clearCount<s.cpiCount)
+                eligibleCpiCharts.add(chartId);
+            if(s.spiUsers.size()>=MIN_PLAYERS && !s.scores.isEmpty() && new HashSet<>(s.scores).size()>1)
+                eligibleSpiCharts.add(chartId);
+        });
+        cpi.removeIf(o->!eligibleCpiCharts.contains(o.chartId()));
+        spi.removeIf(o->!eligibleSpiCharts.contains(o.chartId()));
+        var chartLevels = new HashMap<Long,Integer>();
+        catalog.forEach(c -> chartLevels.put(c.chartId(),c.level()));
+        var cpiFit = fitCpi(cpi,chartLevels);
+        var spiFit = fitSpi(spi,chartLevels);
+        var cpiIndividuality = cpiIndividuality(cpi,cpiFit);
+        var spiIndividuality = spiIndividuality(spi,spiFit);
+        var cpiCandidateThresholds = cpiCandidateThresholds(cpiIndividuality,chartLevels);
+        var spiCandidateThresholds = spiCandidateThresholds(spiIndividuality,chartLevels);
+        var ratings = new ArrayList<ChartRating>();
+        for (var chart : catalog) {
+            if (chart.level() < MIN_LEVEL || chart.level() > 50) continue;
+            var s = stats.getOrDefault(chart.chartId(), new Stats());
+            var cpiReasons=new ArrayList<String>();
+            if(s.cpiUsers.size()<MIN_PLAYERS)cpiReasons.add("INSUFFICIENT_PLAYERS");
+            if(s.cpiCount>0 && (s.clearCount==0 || s.clearCount==s.cpiCount))cpiReasons.add("ONE_SIDED_OUTCOMES");
+            var spiReasons=new ArrayList<String>();
+            if(s.spiUsers.size()<MIN_PLAYERS)spiReasons.add("INSUFFICIENT_PLAYERS");
+            if(!s.scores.isEmpty() && new HashSet<>(s.scores).size()==1)spiReasons.add("CONSTANT_SCORE");
+            boolean cpiReady=cpiReasons.isEmpty(),spiReady=spiReasons.isEmpty();
+            var sorted = s.scores.stream().mapToInt(Integer::intValue).sorted().toArray();
+            var cpiMetrics=cpiIndividuality.get(chart.chartId());
+            var spiMetrics=spiIndividuality.get(chart.chartId());
+            ratings.add(new ChartRating(chart.chartId(),chart.songId(),chart.songName(),chart.genreName(),chart.jacketUrl(),
+                    chart.level(),chart.difficulty(),chart.upper(),chart.extraType(),chart.strictJudgement(),chart.strictGauge(),
+                    individualityStatus(cpiMetrics,cpiCandidateThresholds.getOrDefault(chart.level(),Double.POSITIVE_INFINITY)),
+                    individualityStatus(spiMetrics,spiCandidateThresholds.getOrDefault(chart.level(),Double.POSITIVE_INFINITY)),
+                    cpiReady?"ELIGIBLE":"HOLD",List.copyOf(cpiReasons),
+                    cpiReady?round(cpiFit.chartDifficulty().get(chart.chartId())):null,s.cpiUsers.size(),s.clearCount,ratio(s.clearCount,s.cpiCount),
+                    spiReady?"ELIGIBLE":"HOLD",List.copyOf(spiReasons),spiReady?round(spiFit.chartDifficulty().get(chart.chartId())):null,s.spiUsers.size(),
+                    ratio(s.scoreSum,s.scores.size()),AnalysisStatistics.percentile(sorted,.5),cpiMetrics,spiMetrics));
+        }
+        ratings.sort(Comparator.comparingInt(ChartRating::level).thenComparing(ChartRating::chartId));
+        var snapshot = new RatingSnapshot(null,Instant.now().toString(),VERSION,"EXPERIMENTAL","NOT_VALIDATED",MIN_PLAYERS,ratings);
+        mapper.writerWithDefaultPrettyPrinter().writeValue(directory.resolve("ratings.json").toFile(),snapshot);
+        writeCsv(directory.resolve("ratings.csv"),ratings);
+        var summary = new LinkedHashMap<String,Object>();
+        summary.put("ratingModelVersion",VERSION); summary.put("ratingMinimumLevel",MIN_LEVEL);
+        summary.put("ratingChartCount",ratings.size());
+        summary.put("eligibleCpiChartCount",ratings.stream().filter(r->"ELIGIBLE".equals(r.cpiEligibilityStatus())).count());
+        summary.put("eligibleSpiChartCount",ratings.stream().filter(r->"ELIGIBLE".equals(r.spiEligibilityStatus())).count());
+        summary.put("cpiIndividualityCandidateCount",ratings.stream().filter(r->"CANDIDATE".equals(r.cpiIndividualityStatus())).count());
+        summary.put("spiIndividualityCandidateCount",ratings.stream().filter(r->"CANDIDATE".equals(r.spiIndividualityStatus())).count());
+        return summary;
+    }
+
+    private static CpiFit fitCpi(List<ClearObs> observations,Map<Long,Integer> chartLevels) {
+        var users=new HashMap<Long,Double>();var levels=new HashMap<Integer,Double>();var deviations=new HashMap<Long,Double>();
+        for(var o:observations){users.putIfAbsent(o.userId(),0d);levels.putIfAbsent(chartLevels.get(o.chartId()),0d);deviations.putIfAbsent(o.chartId(),0d);}
+        for(int iteration=0;iteration<60;iteration++) {
+            // Block-coordinate Newton updates are intentional. Updating all three blocks from
+            // the same residual is a Jacobi step on strongly coupled parameters and diverges on
+            // the real, sparse user/chart graph even though each diagonal step looks valid.
+            var ug=cpiSteps(observations,chartLevels,users,levels,deviations,ClearObs::userId,1d);
+            double change=updatePenalized(users,ug,2d);
+            var lg=cpiSteps(observations,chartLevels,users,levels,deviations,o->chartLevels.get(o.chartId()),-1d);
+            change=Math.max(change,updateUnpenalized(levels,lg));
+            var dg=cpiSteps(observations,chartLevels,users,levels,deviations,ClearObs::chartId,-1d);
+            change=Math.max(change,updatePenalized(deviations,dg,2d));
+            double mean=users.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            users.replaceAll((k,v)->v-mean);levels.replaceAll((k,v)->v-mean);
+            centerDeviations(levels,deviations,chartLevels);
+            if(change<1e-7)break;
+        }
+        var result=new HashMap<Long,Double>();
+        deviations.forEach((id,d)->result.put(id,levels.get(chartLevels.get(id))+d));
+        return new CpiFit(Map.copyOf(result),Map.copyOf(users));
+    }
+
+    private static SpiFit fitSpi(List<ScoreObs> observations,Map<Long,Integer> chartLevels) {
+        var users=new HashMap<Long,Double>();var levels=new HashMap<Integer,Double>();var deviations=new HashMap<Long,Double>();
+        double mean=observations.stream().mapToInt(ScoreObs::score).average().orElse(0);
+        for(var o:observations){users.putIfAbsent(o.userId(),0d);levels.putIfAbsent(chartLevels.get(o.chartId()),0d);deviations.putIfAbsent(o.chartId(),0d);}
+        for(int iteration=0;iteration<20;iteration++) {
+            var us=new HashMap<Long,double[]>();var ls=new HashMap<Integer,double[]>();var ds=new HashMap<Long,double[]>();
+            for(var o:observations) {
+                int level=chartLevels.get(o.chartId());var u=us.computeIfAbsent(o.userId(),k->new double[2]);
+                u[0]+=o.score()-mean+levels.get(level)+deviations.get(o.chartId());u[1]++;
+            }
+            us.forEach((id,a)->users.put(id,a[0]/(a[1]+5d)));
+            for(var o:observations) {
+                int level=chartLevels.get(o.chartId());var l=ls.computeIfAbsent(level,k->new double[2]);
+                l[0]+=mean+users.get(o.userId())-deviations.get(o.chartId())-o.score();l[1]++;
+            }
+            ls.forEach((level,a)->levels.put(level,a[0]/a[1]));
+            for(var o:observations){int level=chartLevels.get(o.chartId());var d=ds.computeIfAbsent(o.chartId(),k->new double[2]);d[0]+=mean+users.get(o.userId())-levels.get(level)-o.score();d[1]++;}
+            ds.forEach((id,a)->deviations.put(id,a[0]/(a[1]+5d)));
+            double userMean=users.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            users.replaceAll((k,v)->v-userMean);levels.replaceAll((k,v)->v-userMean);
+            centerDeviations(levels,deviations,chartLevels);
+        }
+        var result=new HashMap<Long,Double>();
+        deviations.forEach((id,d)->result.put(id,levels.get(chartLevels.get(id))+d));
+        return new SpiFit(Map.copyOf(result),Map.copyOf(users),mean);
+    }
+
+    private static Map<Long,CpiIndividualityMetrics> cpiIndividuality(
+            List<ClearObs> observations,CpiFit fit) {
+        var userWeights=new HashMap<Long,Double>();
+        for(var observation:observations) {
+            double probability=sigmoid(fit.userSkill().get(observation.userId())
+                    -fit.chartDifficulty().get(observation.chartId()));
+            userWeights.merge(observation.userId(),Math.max(1e-6,probability*(1-probability)),Double::sum);
+        }
+        var byChart=new HashMap<Long,List<ClearObs>>();
+        observations.forEach(observation->byChart.computeIfAbsent(observation.chartId(),ignored->new ArrayList<>()).add(observation));
+        var result=new HashMap<Long,CpiIndividualityMetrics>();
+        byChart.forEach((chartId,rows)->{
+            int clearCount=(int)rows.stream().filter(ClearObs::clear).count();
+            int failCount=rows.size()-clearCount;
+            if(clearCount<MIN_CPI_CLASS_COUNT||failCount<MIN_CPI_CLASS_COUNT)return;
+            var skills=new ArrayList<Double>();
+            var outcomes=new ArrayList<Boolean>();
+            double brier=0,logLoss=0,residualSum=0;
+            for(var row:rows) {
+                double fullSkill=fit.userSkill().get(row.userId());
+                double fullProbability=sigmoid(fullSkill-fit.chartDifficulty().get(chartId));
+                double weight=Math.max(1e-6,fullProbability*(1-fullProbability));
+                double residual=(row.clear()?1d:0d)-fullProbability;
+                double denominator=Math.max(1e-6,userWeights.get(row.userId())-weight+2d);
+                double skill=fullSkill-residual/denominator;
+                double probability=clampProbability(sigmoid(skill-fit.chartDifficulty().get(chartId)));
+                double target=row.clear()?1d:0d;
+                double error=target-probability;
+                skills.add(skill);outcomes.add(row.clear());
+                brier+=error*error;
+                logLoss-=target*Math.log(probability)+(1-target)*Math.log(1-probability);
+                residualSum+=error;
+            }
+            double skillRange=range(skills,.1,.9);
+            if(skillRange<=1e-9)return;
+            double auc=auc(skills,outcomes);
+            double meanBrier=brier/rows.size();
+            double clearRate=(double)clearCount/rows.size();
+            double normalizedBrier=meanBrier/Math.max(1e-9,clearRate*(1-clearRate));
+            double score=.65*(1-auc)+.35*Math.min(2d,normalizedBrier)/2d;
+            result.put(chartId,new CpiIndividualityMetrics(roundPrimitive(score),roundPrimitive(auc),
+                    roundPrimitive(meanBrier),roundPrimitive(logLoss/rows.size()),
+                    roundPrimitive(residualSum/rows.size()),roundPrimitive(skillRange),clearCount,failCount));
+        });
+        return result;
+    }
+
+    private static Map<Long,SpiIndividualityMetrics> spiIndividuality(
+            List<ScoreObs> observations,SpiFit fit) {
+        var userCounts=new HashMap<Long,Integer>();
+        observations.forEach(observation->userCounts.merge(observation.userId(),1,Integer::sum));
+        var byChart=new HashMap<Long,List<ScoreObs>>();
+        observations.forEach(observation->byChart.computeIfAbsent(observation.chartId(),ignored->new ArrayList<>()).add(observation));
+        var result=new HashMap<Long,SpiIndividualityMetrics>();
+        byChart.forEach((chartId,rows)->{
+            var skills=new ArrayList<Double>();var scores=new ArrayList<Double>();var residuals=new ArrayList<Double>();
+            double difficulty=fit.chartDifficulty().get(chartId),absoluteError=0;
+            for(var row:rows) {
+                int count=userCounts.get(row.userId());
+                double fullSkill=fit.userSkill().get(row.userId());
+                double term=row.score()-fit.mean()+difficulty;
+                double skill=(fullSkill*(count+5d)-term)/(count-1+5d);
+                double residual=row.score()-(fit.mean()+skill-difficulty);
+                skills.add(skill);scores.add((double)row.score());residuals.add(residual);
+                absoluteError+=Math.abs(residual);
+            }
+            double skillRange=range(skills,.1,.9),scoreDeviation=standardDeviation(scores);
+            if(skillRange<=1e-9||scoreDeviation<=1e-9)return;
+            double rho=spearman(skills,scores),residualVariance=variance(residuals);
+            double normalizedRmse=Math.sqrt(residualVariance)/scoreDeviation;
+            double individuality=.65*((1-rho)/2d)+.35*Math.min(2d,normalizedRmse)/2d;
+            result.put(chartId,new SpiIndividualityMetrics(roundPrimitive(individuality),roundPrimitive(rho),
+                    roundPrimitive(residualVariance),roundPrimitive(absoluteError/rows.size()),roundPrimitive(skillRange)));
+        });
+        return result;
+    }
+
+    private static double candidateThreshold(List<Double> scores) {
+        if(scores.size()<5)return Double.POSITIVE_INFINITY;
+        var sorted=scores.stream().sorted().toList();
+        return Math.max(quantile(sorted,INDIVIDUALITY_PERCENTILE),quantile(sorted,.5)+1e-9);
+    }
+
+    private static Map<Integer,Double> cpiCandidateThresholds(
+            Map<Long,CpiIndividualityMetrics> metrics,Map<Long,Integer> chartLevels) {
+        var byLevel=new HashMap<Integer,List<Double>>();
+        metrics.forEach((chartId,value)->byLevel.computeIfAbsent(chartLevels.get(chartId),ignored->new ArrayList<>()).add(value.score()));
+        var result=new HashMap<Integer,Double>();byLevel.forEach((level,scores)->result.put(level,candidateThreshold(scores)));
+        return result;
+    }
+
+    private static Map<Integer,Double> spiCandidateThresholds(
+            Map<Long,SpiIndividualityMetrics> metrics,Map<Long,Integer> chartLevels) {
+        var byLevel=new HashMap<Integer,List<Double>>();
+        metrics.forEach((chartId,value)->byLevel.computeIfAbsent(chartLevels.get(chartId),ignored->new ArrayList<>()).add(value.score()));
+        var result=new HashMap<Integer,Double>();byLevel.forEach((level,scores)->result.put(level,candidateThreshold(scores)));
+        return result;
+    }
+
+    private static String individualityStatus(CpiIndividualityMetrics metrics,double threshold) {
+        if(metrics==null)return "NOT_CALCULATED";
+        return metrics.score()>=threshold?"CANDIDATE":"ASSESSED";
+    }
+
+    private static String individualityStatus(SpiIndividualityMetrics metrics,double threshold) {
+        if(metrics==null)return "NOT_CALCULATED";
+        return metrics.score()>=threshold?"CANDIDATE":"ASSESSED";
+    }
+
+    private static double auc(List<Double> values,List<Boolean> outcomes) {
+        var indexes=new ArrayList<Integer>();for(int i=0;i<values.size();i++)indexes.add(i);
+        indexes.sort(Comparator.comparingDouble(values::get));double positiveRanks=0;int positives=0;
+        for(int start=0;start<indexes.size();) {
+            int end=start+1;while(end<indexes.size()&&Double.compare(values.get(indexes.get(start)),values.get(indexes.get(end)))==0)end++;
+            double averageRank=(start+1+end)/2d;
+            for(int i=start;i<end;i++)if(outcomes.get(indexes.get(i))){positiveRanks+=averageRank;positives++;}
+            start=end;
+        }
+        int negatives=values.size()-positives;
+        return (positiveRanks-positives*(positives+1)/2d)/(positives*negatives);
+    }
+
+    private static double spearman(List<Double> left,List<Double> right) {
+        return correlation(ranks(left),ranks(right));
+    }
+
+    private static List<Double> ranks(List<Double> values) {
+        var indexes=new ArrayList<Integer>();for(int i=0;i<values.size();i++)indexes.add(i);
+        indexes.sort(Comparator.comparingDouble(values::get));var result=new Double[values.size()];
+        for(int start=0;start<indexes.size();) {
+            int end=start+1;while(end<indexes.size()&&Double.compare(values.get(indexes.get(start)),values.get(indexes.get(end)))==0)end++;
+            double rank=(start+1+end)/2d;for(int i=start;i<end;i++)result[indexes.get(i)]=rank;start=end;
+        }
+        return Arrays.asList(result);
+    }
+
+    private static double correlation(List<Double> left,List<Double> right) {
+        double leftMean=left.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double rightMean=right.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double numerator=0,leftSquare=0,rightSquare=0;
+        for(int i=0;i<left.size();i++) {double a=left.get(i)-leftMean,b=right.get(i)-rightMean;numerator+=a*b;leftSquare+=a*a;rightSquare+=b*b;}
+        return numerator/Math.sqrt(leftSquare*rightSquare);
+    }
+
+    private static double range(List<Double> values,double low,double high) {
+        var sorted=values.stream().sorted().toList();return quantile(sorted,high)-quantile(sorted,low);
+    }
+
+    private static double variance(List<Double> values) {
+        double mean=values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        return values.stream().mapToDouble(value->{double difference=value-mean;return difference*difference;}).average().orElse(0);
+    }
+
+    private static double standardDeviation(List<Double> values) {return Math.sqrt(variance(values));}
+    private static double clampProbability(double value){return Math.max(1e-12,Math.min(1-1e-12,value));}
+    private static double roundPrimitive(double value){return Math.rint(value*1_000_000d)/1_000_000d;}
+    private static double quantile(List<Double> values,double q){double p=(values.size()-1)*q;int lo=(int)p,hi=(int)Math.ceil(p);return values.get(lo)+(values.get(hi)-values.get(lo))*(p-lo);}
+
+    private static <K> Map<K,double[]> cpiSteps(List<ClearObs> observations,Map<Long,Integer> chartLevels,
+            Map<Long,Double> users,Map<Integer,Double> levels,Map<Long,Double> deviations,
+            Function<ClearObs,K> key,double direction){
+        Map<K,double[]> result=new HashMap<>();
+        for(var o:observations){
+            int level=chartLevels.get(o.chartId());
+            double p=sigmoid(users.get(o.userId())-levels.get(level)-deviations.get(o.chartId()));
+            double residual=(o.clear()?1d:0d)-p,weight=Math.max(1e-6,p*(1-p));
+            add(result,key.apply(o),direction*residual,weight);
+        }
+        return result;
+    }
+    private static <K> void add(Map<K,double[]> map,K id,double gradient,double weight){var a=map.computeIfAbsent(id,k->new double[2]);a[0]+=gradient;a[1]+=weight;}
+    private static <K> double updatePenalized(Map<K,Double> values,Map<K,double[]> steps,double lambda){
+        double[] max={0};
+        steps.forEach((id,a)->values.compute(id,(k,v)->{double step=bounded((a[0]-lambda*v)/(a[1]+lambda));max[0]=Math.max(max[0],Math.abs(step));return v+step;}));return max[0];
+    }
+    private static <K> double updateUnpenalized(Map<K,Double> values,Map<K,double[]> steps){
+        double[] max={0};
+        steps.forEach((id,a)->values.compute(id,(k,v)->{double step=bounded(a[0]/a[1]);max[0]=Math.max(max[0],Math.abs(step));return v+step;}));return max[0];
+    }
+    private static double bounded(double step){return Math.max(-1d,Math.min(1d,step));}
+    private static void centerDeviations(Map<Integer,Double> levels,Map<Long,Double> deviations,Map<Long,Integer> chartLevels){
+        var sums=new HashMap<Integer,double[]>();deviations.forEach((id,d)->{var a=sums.computeIfAbsent(chartLevels.get(id),k->new double[2]);a[0]+=d;a[1]++;});
+        sums.forEach((level,a)->{double m=a[0]/a[1];deviations.replaceAll((id,d)->chartLevels.get(id).equals(level)?d-m:d);levels.compute(level,(k,v)->v+m);});
+    }
+    private static double sigmoid(double x){return x>=0?1/(1+Math.exp(-x)):Math.exp(x)/(1+Math.exp(x));}
+    private static Double ratio(long a,long b){return b==0?null:(double)a/b;}
+    private static Double round(Double v){return v==null?null:Math.rint(v*1_000_000d)/1_000_000d;}
+    private static void writeCsv(Path path,List<ChartRating> rows)throws IOException {
+        try(var out=Files.newBufferedWriter(path,StandardCharsets.UTF_8)){
+            out.write("chartId,songId,songName,genreName,jacketUrl,level,difficulty,upper,extraType,strictJudgement,strictGauge,cpiIndividualityStatus,spiIndividualityStatus,cpiEligibilityStatus,cpiHoldReasons,cpi,cpiSampleCount,clearCount,clearRate,spiEligibilityStatus,spiHoldReasons,spi,spiSampleCount,averageScore,medianScore,cpiIndividualityScore,cpiAuc,cpiBrier,cpiLogLoss,cpiMeanResidual,cpiSkillRange,cpiIndividualityClearCount,cpiIndividualityFailCount,spiIndividualityScore,spiSpearman,spiResidualVariance,spiMae,spiSkillRange\n");
+            for(var r:rows)out.write(csv(Arrays.asList(r.chartId(),r.songId(),r.songName(),r.genreName(),r.jacketUrl(),r.level(),r.difficulty(),r.upper(),
+                    r.extraType(),r.strictJudgement(),r.strictGauge(),r.cpiIndividualityStatus(),r.spiIndividualityStatus(),r.cpiEligibilityStatus(),String.join("|",r.cpiHoldReasons()),Objects.toString(r.cpi(),""),r.cpiSampleCount(),r.clearCount(),Objects.toString(r.clearRate(),""),r.spiEligibilityStatus(),
+                    String.join("|",r.spiHoldReasons()),Objects.toString(r.spi(),""),r.spiSampleCount(),Objects.toString(r.averageScore(),""),Objects.toString(r.medianScore(),""),
+                    cpiMetric(r,metric->metric.score()),cpiMetric(r,metric->metric.auc()),cpiMetric(r,metric->metric.brier()),
+                    cpiMetric(r,metric->metric.logLoss()),cpiMetric(r,metric->metric.meanResidual()),cpiMetric(r,metric->metric.skillRange()),
+                    cpiMetric(r,metric->metric.clearCount()),cpiMetric(r,metric->metric.failCount()),
+                    spiMetric(r,metric->metric.score()),spiMetric(r,metric->metric.spearman()),
+                    spiMetric(r,metric->metric.residualVariance()),spiMetric(r,metric->metric.mae()),spiMetric(r,metric->metric.skillRange()))));
+        }
+    }
+    private static Object cpiMetric(ChartRating rating,Function<CpiIndividualityMetrics,Object> getter){return rating.cpiIndividualityMetrics()==null?"":getter.apply(rating.cpiIndividualityMetrics());}
+    private static Object spiMetric(ChartRating rating,Function<SpiIndividualityMetrics,Object> getter){return rating.spiIndividualityMetrics()==null?"":getter.apply(rating.spiIndividualityMetrics());}
+    private static String csv(List<?> values){return values.stream().map(v->v==null?"":v.toString()).map(v->"\""+v.replace("\"","\"\"")+"\"").collect(java.util.stream.Collectors.joining(","))+"\n";}
+    private record ClearObs(long userId,long chartId,boolean clear){}
+    private record ScoreObs(long userId,long chartId,int score){}
+    private record CpiFit(Map<Long,Double> chartDifficulty,Map<Long,Double> userSkill){}
+    private record SpiFit(Map<Long,Double> chartDifficulty,Map<Long,Double> userSkill,double mean){}
+    private static final class Stats {final Set<Long> cpiUsers=new HashSet<>(),spiUsers=new HashSet<>();final List<Integer> scores=new ArrayList<>();int cpiCount,clearCount;long scoreSum;}
+}

@@ -137,6 +137,12 @@ public class CachedPlaydataQueryAdapter implements PlaydataQueryPort, PopclassCa
     }
 
     @Override
+    public List<PlaydataQueryResults.ChartRankingEntry> findAllChartRankings(
+            String songHash, int difficulty, String axis) {
+        return delegate.findAllChartRankings(songHash, difficulty, axis);
+    }
+
+    @Override
     public PlaydataQueryResults.ChartRankings findChartRankings(long chartId, int limit) {
         return delegate.findChartRankings(chartId, limit);
     }

@@ -1,0 +1,667 @@
+[
+  {
+    "genre": "ボンバーテクノ",
+    "title": "Amazing Bomberman",
+    "artist": "TESSEI TOJO",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "エモーショナルJ-ポップ",
+    "title": "ANEMONE",
+    "artist": "BEMANI Sound Team \"HuΣeR × Yvya\" feat.紫村 花澄",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "コスモボヤージュ",
+    "title": "astral_dismantle",
+    "artist": "ARForest feat.nayuta",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "エデン",
+    "title": "AVEL",
+    "artist": "BEMANI Sound Team \"Power Of Nature\"",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ラウドロック",
+    "title": "BLAKE",
+    "artist": "A.T.park",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "エヴォリューションディスコ",
+    "title": "Bomb be love",
+    "artist": "sei☆shin feat.ken",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ビッグバンドミュージカル",
+    "title": "BROADWAY QUEENS",
+    "artist": "T-HEY & TANEKO",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ハイパンク(UPPER)",
+    "title": "cobalt(UPPER)",
+    "artist": "Des-ROW・組スペシアル",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "ブレイクコア",
+    "title": "Cookie Bouquets",
+    "artist": "L.E.D. vs TOMOSUKE fw.crimm",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ボンバーラップ",
+    "title": "CRAZY ARTS",
+    "artist": "FAKE TYPE.",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ケルティックトランスステップ",
+    "title": "Dawn Saga",
+    "artist": "Nhato",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "彗星ブギ",
+    "title": "DOKIDOKI☆シューティングスター",
+    "artist": "豚乙女",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ＮＵスタイルロカビリー(UPPER)",
+    "title": "Electronic or Treat!(UPPER)",
+    "artist": "PON",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "トランスコア BAND",
+    "title": "Flower-Band ver.-",
+    "artist": "B.E.L",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "J-ダンスポップ BAND",
+    "title": "Follow Tomorrow -fleufleu Edition-",
+    "artist": "fleufleu",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "シャイニーゴスペル",
+    "title": "Heavenly Good Morning!",
+    "artist": "アマギセーラ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "アラビアンハードダンス",
+    "title": "High & Low",
+    "artist": "Shouya Namai",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ジャックポット",
+    "title": "Hold the Pickles!!",
+    "artist": "山本真央樹",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ハピネスモータウン",
+    "title": "How Many Eyes On You?",
+    "artist": "青野りえ+mizuno",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "コスモテクノ",
+    "title": "Hypernova",
+    "artist": "Serph",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ミラクルダンスポップ",
+    "title": "It's my Miracle",
+    "artist": "Another Infinity feat. Mayumi Morinaga",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "フローティングフュージョン",
+    "title": "Levitation Minneapolis",
+    "artist": "北川翔也",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "リトルロック(UPPER)",
+    "title": "Little Rock Overture(UPPER)",
+    "artist": "惑星計画",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "激辛コア",
+    "title": "MAX KARAI",
+    "artist": "Hommarju",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ラブリーブチアゲポップ BAND",
+    "title": "MAX LOVE - 鐘の音が止む前に -",
+    "artist": "Mar.na",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "サイケデリックトランス",
+    "title": "Moving on",
+    "artist": "AJURIKA feat.矢吹真央",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "カドルコア",
+    "title": "murmur twins (hotchpotch pop ver.)",
+    "artist": "covered by 音乃瀬奏(ReGLOSS)",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "トランス",
+    "title": "No Border",
+    "artist": "BEMANI Sound Team \"dj TAKA\" feat.Sana",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "デジタルサイバーロック",
+    "title": "ONYX",
+    "artist": "SOUND HOLIC Vs. ZYTOKINE feat. Nana Takahashi",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "トランス BAND",
+    "title": "pandora-追憶の彼方へ-",
+    "artist": "ピンクターボ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ポルカ2020",
+    "title": "POLꞰAMAИIA",
+    "artist": "かめりあ feat. ななひら",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ベジグレッシブ",
+    "title": "Primitive Whimsical Chopped Salad",
+    "artist": "red glasses feat.池尻家",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "モダンカントリー",
+    "title": "Que Sera Sera",
+    "artist": "大谷舞 feat.つむぎしゃち（from キミのね）",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "チッピンステップ",
+    "title": "Rushiest Rush",
+    "artist": "かめりあ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ホリデーラウンジ",
+    "title": "Saturday's Reward",
+    "artist": "BEMANI Sound Team \"劇団レコード\" feat.秋成",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ダンスポップ",
+    "title": "Shooting Star",
+    "artist": "ReGLOSS",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "バトルプログレッシブ",
+    "title": "Step forward",
+    "artist": "桜庭　統",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "エテリアル",
+    "title": "storia",
+    "artist": "BEMANI Sound Team \"HuΣeR\" × Cororo feat. 大瀬良あい",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "エレクトロサーフロック",
+    "title": "Surfing Area51",
+    "artist": "情次２号＆ジン",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ガールズスピードコア",
+    "title": "The Die is cast.",
+    "artist": "T4K feat.ういにゃす",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ノア",
+    "title": "THX 4",
+    "artist": "BEMANI Sound Team \"Power Of Nature\"",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ファンキーブレイクス",
+    "title": "Tripping Jumping",
+    "artist": "Aikapin Prod. by uno & NiActivity",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "トゥインクルポップ BAND",
+    "title": "Twinkle Wonderland -Sparkle Wonderland-",
+    "artist": "good-cool",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "リリカルベース",
+    "title": "Viden",
+    "artist": "onoken",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "カーホップベース",
+    "title": "Yum Yum OYACHU",
+    "artist": "BEMANI Sound Team \"PON\" feat.NU-KO",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ミッドナイトスウィング",
+    "title": "Yuni's Nocturnal Days",
+    "artist": "かめりあ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "アイスクリームマジック",
+    "title": "アイスクリームマジック",
+    "artist": "雪乃イト",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "あおばの足音",
+    "title": "あおばの足音",
+    "artist": "駄菓子O型",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "アニマソング",
+    "title": "朱と碧のランページ",
+    "artist": "covered by 儒烏風亭らでん(ReGLOSS)",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "フォレストファンク",
+    "title": "嵐の唄",
+    "artist": "削除",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ピコピコ電波ソング",
+    "title": "あるビー！ feat.ころねぽち",
+    "artist": "ヒゲドライバー",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ブレスドワルツ",
+    "title": "アルファ・スカイ",
+    "artist": "みーに feat. しろさきあや",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "いーあるふぁんくらぶ(UPPER)",
+    "title": "いーあるふぁんくらぶ(UPPER)",
+    "artist": "みきとP",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "一触即発☆禅ガール(UPPER)",
+    "title": "一触即発☆禅ガール(UPPER)",
+    "artist": "れるりり",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "ウォン・テッド",
+    "title": "ウォン・テッド",
+    "artist": "キミのね",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "エクスプロウル",
+    "title": "エクスプロウル",
+    "artist": "晴いちばん",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "キャラバン",
+    "title": "エトランジェ",
+    "artist": "藤野マナミ & うさおりーぬ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ミュージカルファンタジー",
+    "title": "円環のヴァルキュリア -lopulla tragedia-",
+    "artist": "ARM×狐夢想 feat. anporin",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "おくすり飲んで寝よう",
+    "title": "おくすり飲んで寝よう",
+    "artist": "もちうつね",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "覚悟せよ！エンタンメ～ン ～より身の切り売り自暴自棄版～",
+    "title": "覚悟せよ！エンタンメ～ン ～より身の切り売り自暴自棄版～",
+    "artist": "マキシウキョウ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "電波",
+    "title": "カジノファイヤーことみちゃん",
+    "artist": "covered by 一条莉々華(ReGLOSS)",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "胸キュン☆マレット(UPPER)",
+    "title": "キセキはじまり☆(UPPER)",
+    "artist": "達見 恵 featured by 佐野宏晃",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "ギャ・ギャ・ギャ・ギャラクシー！",
+    "title": "ギャ・ギャ・ギャ・ギャラクシー！",
+    "artist": "つきみぐー、",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ファンタジア",
+    "title": "昏き甲鉄のヴェルガ",
+    "artist": "arcane feat.rionos",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "昭和レトロ",
+    "title": "黒紅掬い",
+    "artist": "猫叉Master feat.霜月はるか",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "シャンティ",
+    "title": "シャンティ",
+    "artist": "wotaku",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "カートゥーンクッキング",
+    "title": "すすめ！キッチンカー",
+    "artist": "OSTER project feat. Hinatanso",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "バイナリーpf(UPPER)",
+    "title": "零と弌の鍵の唄(UPPER)",
+    "artist": "red glasses feat.秋成",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "千本桜(UPPER)",
+    "title": "千本桜(UPPER)",
+    "artist": "♪♪♪♪♪",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "バスターメタル",
+    "title": "装填昇天エクソシスト",
+    "artist": "My Complex of Academy",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ヨフカシプロジェクト2",
+    "title": "そして惨劇は灰色に踊る",
+    "artist": "ヨフカシプロジェクト",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "J-ハウス",
+    "title": "時が戻れば...",
+    "artist": "阿部靖広 feat.ゆめめ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ベースボールヒロインREMIX",
+    "title": "轟け！恋のビーンボール！！ (STARDOM Remix)",
+    "artist": "RoughSketch Vs. BEMANI Sound Team \"L.E.D.-G\"",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "アンティークワルツ",
+    "title": "囚われの魔女人形",
+    "artist": "m@sumi feat. q'yul",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "曇天(UPPER)",
+    "title": "曇天(UPPER)",
+    "artist": "♪♪♪♪♪",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "おしゃまスウィング(UPPER)",
+    "title": "なまいきプリンセス(UPPER)",
+    "artist": "Dormir",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "アゲモノハードバップ",
+    "title": "ハートのフリット",
+    "artist": "red glasses feat.ゆきまめ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "白龍 （Struggle）",
+    "title": "白龍 （Struggle）",
+    "artist": "Somari",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "フォーエバーフレンズ(UPPER)",
+    "title": "走れメロンパン(UPPER)",
+    "artist": "日向美ビタースイーツ♪",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "ハルカナアルカナ",
+    "title": "ハルカナアルカナ",
+    "artist": "キミのね",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ビノミ",
+    "title": "ビノミ",
+    "artist": "MARETU",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "悲報！ワイ！ニート！",
+    "title": "悲報！ワイ！ニート！",
+    "artist": "Shu",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "カレッジポップ(UPPER)",
+    "title": "ペパーミントは私の敵(UPPER)",
+    "artist": "常盤ゆう",
+    "upper": true,
+    "levels": {}
+  },
+  {
+    "genre": "フードファイト",
+    "title": "ホットドッグドカぐいレース!!!!",
+    "artist": "cosMo＠暴走P",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ヨフカシプロジェクト1",
+    "title": "まっぷたツートンソウル",
+    "artist": "ヨフカシプロジェクト",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ヨーロピアンブレイクコア2",
+    "title": "真夜中のun thé noir",
+    "artist": "m@sumi",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ポップコーンパーティー2",
+    "title": "ミラクル☆喫茶",
+    "artist": "Tomoyuki Uchida",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "メズマライザー",
+    "title": "メズマライザー",
+    "artist": "サツキ feat.初音ミク・重音テト",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "らいふいずびゅーてぃふぉー",
+    "title": "らいふいずびゅーてぃふぉー",
+    "artist": "そりっどびーつ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ラグトレイン",
+    "title": "ラグトレイン",
+    "artist": "稲葉曇",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "バルカニックロック",
+    "title": "乱膳の舞姫",
+    "artist": "BEMANI Sound Team \"Akhuta Works\" feat. mami",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "レイニーワルツ",
+    "title": "リメンバーリメンバー",
+    "artist": "covered by 轟はじめ(ReGLOSS)",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "クリティカルケルト",
+    "title": "竜を狩る者",
+    "artist": "夜影ネコチ",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "シンセウェーブポップ",
+    "title": "ロマンシングエスケープ",
+    "artist": "ここなつ2.0",
+    "upper": false,
+    "levels": {}
+  },
+  {
+    "genre": "ワカンナイト☆フィーバー！？",
+    "title": "ワカンナイト☆フィーバー！？",
+    "artist": "キノシタ feat.音街ウナ・鏡音リン",
+    "upper": false,
+    "levels": {}
+  }
+]

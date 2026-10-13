@@ -24,7 +24,7 @@ class FrontendChartControllerTest {
         var songs = mock(FindSongsUseCase.class);
         var chart = new SongChartView(2, 48, 4, "EX", 29, true, false, true);
         var song = new GroupedSongView(1, "hash", "genre", "title", "artist", 29,
-                "/jacket", List.of(chart));
+                "/jacket", null, List.of(chart));
         when(songs.execute(argThat(query -> query.page() == 0
                 && query.levelMin() == 48 && query.levelMax() == 50
                 && query.difficulties().equals(List.of(4))

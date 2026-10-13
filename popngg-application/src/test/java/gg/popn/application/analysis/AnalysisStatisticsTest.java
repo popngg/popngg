@@ -10,6 +10,19 @@ import static org.assertj.core.api.Assertions.*;
 class AnalysisStatisticsTest {
     @TempDir Path dir;
     final ObjectMapper mapper=new ObjectMapper();
+    @Test void preservesSourceRankAndReadsSnapshotsWithoutRank() throws Exception {
+        var oldRow=record(1,1,8,95000);
+        var tree=mapper.valueToTree(oldRow);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)tree).remove("allTimeRankCode");
+        assertThat(mapper.treeToValue(tree,AnalysisRecord.class).allTimeRankCode()).isNull();
+        ((com.fasterxml.jackson.databind.node.ObjectNode)tree).put("allTimeRankCode",4);
+        var ranked=mapper.treeToValue(tree,AnalysisRecord.class);
+        write(List.of(ranked));
+        new AnalysisStatistics(mapper).analyze(dir,List.of(new AnalysisStatistics.Chart(1,1,49)),List.of(1L));
+        var lines=Files.readAllLines(dir.resolve("records.csv"));
+        assertThat(lines.getFirst()).endsWith(",allTimeRankCode");
+        assertThat(lines.get(1)).endsWith(",4");
+    }
     static AnalysisRecord record(long user,long chart,int medal,Integer score) {
         return new AnalysisRecord(user,chart,chart,49,medal,score,true,true,false,false,true,true,false,false,
                 29,28,0,false,null,"2026-09-23 00:00:00",null);
