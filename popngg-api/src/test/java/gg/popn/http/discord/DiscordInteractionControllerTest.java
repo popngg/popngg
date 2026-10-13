@@ -413,8 +413,8 @@ class DiscordInteractionControllerTest {
         byte[] converted = DiscordInteractionController.convertToPng(source.toByteArray());
 
         BufferedImage result = ImageIO.read(new java.io.ByteArrayInputStream(converted));
-        assertThat(result.getWidth()).isEqualTo(2);
-        assertThat(result.getHeight()).isEqualTo(1);
+        assertThat(result.getWidth()).isEqualTo(244);
+        assertThat(result.getHeight()).isEqualTo(58);
     }
 
     @Test

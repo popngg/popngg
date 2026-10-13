@@ -46,6 +46,20 @@ class UpdateSongServiceTest {
     }
 
     @Test
+    void copiesCurrentRevisionRatherThanOriginalHashObject() {
+        var old = detail("old", "old-hash", false);
+        var song = old.song();
+        String url = "https://static.popn.gg/old-hash-jacket-digest.png";
+        var before = new SongDetailView(new SongMetadataView(song.songId(), song.songHash(), song.genreName(),
+                song.songName(), song.artistName(), song.version(), url), old.charts());
+        when(catalog.findSongDetail(1)).thenReturn(Optional.of(before));
+        when(jackets.copyFromUrl(eq(url), anyString())).thenReturn("https://static.popn.gg/new.png");
+        service.execute(command("new", false));
+        verify(jackets).copyFromUrl(eq(url), anyString());
+        verify(jackets, never()).copy(anyString(), anyString());
+    }
+
+    @Test
     void rejectsMixedUpperAndInvalidLevels() {
         when(catalog.findSongDetail(1)).thenReturn(Optional.of(detail("old", "old-hash", false)));
         var mixed = new UpdateSongCommand(1, "genre", "old", "artist", 29, null, null,
