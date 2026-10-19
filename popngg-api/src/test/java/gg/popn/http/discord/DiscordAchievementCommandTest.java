@@ -54,9 +54,31 @@ class DiscordAchievementCommandTest {
         try {
             assertThat(command.execute(request(39, 1)).get("type")).isEqualTo(4);
             assertThat(command.execute(request(50, 0)).get("type")).isEqualTo(4);
+            var invalid = (com.fasterxml.jackson.databind.node.ObjectNode) request(40,1);
+            invalid.put("token", "bad/token");
+            assertThat(command.execute(invalid).get("type")).isEqualTo(4);
+            ((com.fasterxml.jackson.databind.node.ObjectNode)invalid.path("data").path("options").get(1)).put("value","UNKNOWN");
+            assertThat(command.execute(invalid).get("type")).isEqualTo(4);
             verifyNoInteractions(service);
             assertThat(DiscordCommandRegistrar.achievementOptions()).hasSize(3);
         } finally { command.close(); }
+    }
+
+    @Test void reportsGenerationFailureAndRejectsClosedWorker() throws Exception {
+        var service = mock(AchievementBoardService.class);
+        var renderer = mock(AchievementBoardImagePort.class);
+        var client = mock(HttpClient.class);
+        var response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(200);
+        when(client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+        when(service.load(40, AchievementBoard.Metric.S)).thenThrow(new IllegalStateException("fixture"));
+        var command = new DiscordAchievementCommand(service, renderer, mapper, client);
+        try {
+            assertThat(command.execute(request(40, 1)).get("type")).isEqualTo(5);
+            verify(client, timeout(3000)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+            verifyNoInteractions(renderer);
+        } finally { command.close(); }
+        assertThat(command.execute(request(40,1)).get("type")).isEqualTo(4);
     }
 
     @Test void reportsOutOfRangePageWithoutRendering() throws Exception {
