@@ -6,6 +6,18 @@ may use the commands.
 
 ## Commands
 
+- `/달성서열표 레벨:40 기준:S 페이지:1` generates a PNG for a selected level (40–50),
+  sorted by S or 퍼펙트 user counts descending. Page defaults to 1 (80 charts per PNG).
+  S counts all-time scores from 98,000 through 100,000 (including perfect); PERFECT
+  counts GOLD_STAR, independently of score. Counts include public non-BOT users, once
+  per chart, across game versions. No minimum CPI/SPI sample threshold applies.
+  Zero-achievement charts remain visible; deleted/future charts are excluded.
+  Ties share rank, with chart ID as display order. Both counts appear on each card.
+  The image follows the production white, five-column CPI/SPI tier-map design.
+  Replies defer immediately and attach the PNG when ready. Existing guild/admin-role
+  access applies. Commands register automatically when the API starts after deployment.
+
+
 - `/곡추가` accepts jacket, date, song/genre/artist/version, optional L/N/H/EX levels,
   and an `o`/`x` UPPER option in one slash command. Submission shows a JSON preview.
 - `/곡수정` accepts `song_id` plus optional jacket, date, metadata, L/N/H/EX levels,
