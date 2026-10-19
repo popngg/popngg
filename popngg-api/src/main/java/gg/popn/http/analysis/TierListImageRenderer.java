@@ -399,7 +399,17 @@ public class TierListImageRenderer {
         return switch(code){case 1->"L";case 2->"N";case 3->"H";case 4->"EX";default->"?";};
     }
 
-    private BufferedImage jacket(String url){return remoteImage(url);}
+    BufferedImage jacket(String url){return remoteImage(url);}
+
+    Map<String, BufferedImage> loadAchievementJackets(List<String> urls) {
+        var images = new ConcurrentHashMap<String, BufferedImage>();
+        var tasks = urls.stream().filter(Objects::nonNull).distinct().map(url -> CompletableFuture.runAsync(() -> {
+            var image = jacket(url);
+            if (image != null) images.put(url, image);
+        }, jacketExecutor)).toList();
+        tasks.forEach(CompletableFuture::join);
+        return images;
+    }
     private BufferedImage remoteImage(String url){
         if(url==null||url.isBlank())return null;var cached=cache.get(url);if(cached!=null)return cached;
         try{var uri=URI.create(url);if(!"https".equals(uri.getScheme())||!"static.popn.gg".equalsIgnoreCase(uri.getHost()))return null;

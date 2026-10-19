@@ -49,6 +49,20 @@ class DiscordInteractionControllerTest {
     private String songEditReply;
 
     @Test
+    void achievementBoardUsesSignedAdminCommandRoute() throws Exception {
+        var handler = mock(DiscordAchievementCommand.class);
+        controller.setAchievementCommand(handler);
+        when(handler.execute(any())).thenReturn(Map.of("type", 5));
+        var request = command("달성서열표");
+        assertThat(body(call(request)).get("type")).isEqualTo(5);
+        verify(handler).execute(any());
+        clearInvocations(handler);
+        request.withObject("member").withArray("roles").removeAll();
+        assertThat(content(call(request))).contains("관리자 역할");
+        verifyNoInteractions(handler);
+    }
+
+    @Test
     void analysisAcknowledgesImmediatelyWithoutDeferredLoadingAndRequiresAdmin() throws Exception {
         var jobs = mock(gg.popn.application.analysis.AnalysisJobs.class);
         controller.setAnalysisJobs(jobs);

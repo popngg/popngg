@@ -76,7 +76,9 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                     Map.of("name", "상수표", "description", "관리자용 목표별 달성 난이도 상수표 이미지 생성", "type", 1,
                             "options", achievementConstantOptions()),
                     Map.of("name", "상수최신화", "description", "Lv48~50 메달·랭크 상수 재계산; 완료 시 admin bot이 JSON 알림", "type", 1),
-                    Map.of("name", "실력분석최신화", "description", "CPI/SPI 기초 분석 접수; 완료 시 admin bot이 JSON 알림", "type", 1)));
+                    Map.of("name", "실력분석최신화", "description", "CPI/SPI 기초 분석 접수; 완료 시 admin bot이 JSON 알림", "type", 1),
+                    Map.of("name", "달성서열표", "description", "40~50레벨 곡을 S·퍼펙트 달성자가 많은 순으로 PNG 생성", "type", 1,
+                            "options", achievementOptions())));
             HttpRequest request = HttpRequest.newBuilder(URI.create(
                         (apiBase + "/applications/%s/guilds/%s/commands")
                                 .formatted(applicationId, guildId)))
@@ -106,6 +108,16 @@ public class DiscordCommandRegistrar implements ApplicationRunner {
                 option(4, "n", "N 레벨 (없으면 생략)", false),
                 option(4, "h", "H 레벨 (없으면 생략)", false),
                 option(4, "ex", "EX 레벨 (없으면 생략)", false));
+    }
+
+    static List<Map<String, Object>> achievementOptions() {
+        return List.of(
+                Map.of("type", 4, "name", "레벨", "description", "채보 레벨 (40~50)", "required", true,
+                        "min_value", 40, "max_value", 50),
+                Map.of("type", 3, "name", "기준", "description", "달성자 수 정렬 기준", "required", true,
+                        "choices", List.of(Map.of("name", "S", "value", "S"), Map.of("name", "퍼펙트", "value", "PERFECT"))),
+                Map.of("type", 4, "name", "페이지", "description", "80채보 단위 이미지 페이지 (기본 1)", "required", false,
+                        "min_value", 1));
     }
 
     private static List<Map<String, Object>> updateOptions() {
