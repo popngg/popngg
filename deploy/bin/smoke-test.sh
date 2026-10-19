@@ -31,8 +31,10 @@ if [[ -n "${SMOKE_POPTOMO_ID:-}" ]]; then
 fi
 
 if [[ -n "${SMOKE_LOGIN_PASSWORD:-}" && -n "${SMOKE_POPTOMO_ID:-}" ]]; then
+  smoke_origin=${CORS_ALLOWED_ORIGINS:-https://popn.gg}
   echo "authenticated login and playdata import must use a dedicated smoke account" >&2
   check login /api/v1/auth/login -H 'Content-Type: application/json' \
+    -H "Origin: ${smoke_origin%%,*}" \
     --data "{\"poptomoId\":\"$SMOKE_POPTOMO_ID\",\"password\":\"$SMOKE_LOGIN_PASSWORD\"}"
 fi
 
