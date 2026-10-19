@@ -68,15 +68,18 @@ class CsrfSecurityTest {
         var response = mvc.perform(get("/api/v1/auth/csrf")).andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control","no-store")).andReturn().getResponse();
         var json = new ObjectMapper().readTree(response.getContentAsString());
-        var cookie = response.getCookie("XSRF-TOKEN");
+        var cookie = response.getCookie("__Host-popngg-csrf");
         assertThat(cookie).isNotNull();
         assertThat(cookie.isHttpOnly()).isTrue();
         assertThat(cookie.getSecure()).isTrue();
         assertThat(cookie.getDomain()).isNull();
+        assertThat(cookie.getPath()).isEqualTo("/");
         mvc.perform(post("/api/v1/write").cookie(cookie,new Cookie("access_token","valid"))
                 .header(json.path("headerName").asText(),json.path("token").asText())).andExpect(status().isOk());
         mvc.perform(post("/api/v1/write").cookie(cookie,new Cookie("access_token","valid"))
                 .header(json.path("headerName").asText(),"wrong")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/write").cookie(new Cookie("XSRF-TOKEN","attacker"),new Cookie("access_token","valid"))
+                .param("_csrf","attacker")).andExpect(status().isForbidden());
     }
     @Test void originAllowlistRejectsAmbiguousOrWildcardOrigins() {
         for (String origin : new String[]{"*","null","https://popn.gg/","https://user@popn.gg","https://popn.gg?x=1","https://popn.gg#fragment"})

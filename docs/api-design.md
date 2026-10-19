@@ -17,6 +17,7 @@
 - Origin을 보내지 않는 쿠키 클라이언트는 먼저 `GET /api/v1/auth/csrf`를 호출하고 응답 쿠키를
   유지합니다. 응답의 `headerName` 이름으로 `token` 값을 POST/PATCH/PUT/DELETE 헤더에 넣습니다.
   응답은 `no-store`이며 CSRF 쿠키는 HttpOnly, host-only, SameSite=Lax입니다.
+  Secure 환경은 `__Host-popngg-csrf` 이름과 루트 경로를 사용해 하위 도메인의 쿠키 주입도 방지합니다.
   Secure 설정은 인증 쿠키와 같은 `popngg.auth.cookie-secure`를 따릅니다.
 - 명시적 Bearer 요청은 쿠키 대신 헤더로 인증하며, 유효하지 않은 Bearer를 쿠키로 대체하지 않습니다.
   정확한 `POST /api/v1/discord/interactions`만 Ed25519 서명 검증을 통해 인증합니다.

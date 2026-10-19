@@ -82,6 +82,9 @@ public class SecurityConfig {
     @Order(3)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         var csrfTokens = new CookieCsrfTokenRepository();
+        // Secure browsers reject Domain/path variants of __Host- cookies from sibling subdomains.
+        csrfTokens.setCookieName(cookieSecure ? "__Host-popngg-csrf" : "popngg-csrf");
+        csrfTokens.setCookiePath("/");
         csrfTokens.setCookieCustomizer(cookie -> cookie.httpOnly(true).secure(cookieSecure).sameSite("Lax"));
         http
                 .cors(cors -> {})
