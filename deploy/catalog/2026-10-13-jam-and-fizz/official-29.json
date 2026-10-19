@@ -1,0 +1,1582 @@
+[
+  {
+    "genre": "バンギャー",
+    "title": "A Certified Banger Moment",
+    "artist": "めめめ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "29",
+      "HYPER": "40",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "DTMスピードラン",
+    "title": "Any%",
+    "artist": "めめめ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "28",
+      "HYPER": "41",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "セクレタムマジカ(UPPER)",
+    "title": "Arcanum Arcanorum(UPPER)",
+    "artist": "アマギセーラ",
+    "upper": true,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "29",
+      "HYPER": "40",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "ハートオブアジア",
+    "title": "Asian Trinity",
+    "artist": "Sota Fujimori",
+    "upper": false,
+    "levels": {
+      "LIGHT": "15",
+      "NORMAL": "31",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "パニックポップ",
+    "title": "BABY P",
+    "artist": "Plus-tech Squeeze Box",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "25",
+      "HYPER": "35",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "FMジャジーテック",
+    "title": "BitRacer",
+    "artist": "red glasses vs Ujico*",
+    "upper": false,
+    "levels": {
+      "LIGHT": "16",
+      "NORMAL": "34",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "ガルタナネオ",
+    "title": "BITTER-ENDER",
+    "artist": "タケベエイスケ feat.終ワ子",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "27",
+      "HYPER": "38",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "Bling-Bang-Bang-Born",
+    "title": "Bling-Bang-Bang-Born",
+    "artist": "Covered by uno(IOSYS) feat. Fra",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "21",
+      "HYPER": "35",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "マグナムユーロ",
+    "title": "BOMBER!BOMBER!BABY!",
+    "artist": "STEVIE(44MAGNUM) Prod. by L.E.D.",
+    "upper": false,
+    "levels": {
+      "LIGHT": "15",
+      "NORMAL": "30",
+      "HYPER": "43",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "BOW AND ARROW",
+    "title": "BOW AND ARROW",
+    "artist": "米津玄師",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "18",
+      "HYPER": "34",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "BRAND NEW STARS!!",
+    "title": "BRAND NEW STARS!!",
+    "artist": "Switch",
+    "upper": false,
+    "levels": {
+      "LIGHT": "3",
+      "NORMAL": "17",
+      "HYPER": "31",
+      "EX": "39"
+    }
+  },
+  {
+    "genre": "BRIGHTEST STARS!!",
+    "title": "BRIGHTEST STARS!!",
+    "artist": "Knights",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "20",
+      "HYPER": "34",
+      "EX": "40"
+    }
+  },
+  {
+    "genre": "バスマティ",
+    "title": "Candy love",
+    "artist": "阿部靖広 feat.Shiori",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "23",
+      "HYPER": "38",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "ヴィジュアル6",
+    "title": "Crimson Eyes",
+    "artist": "good-cool ft.芥(From Chanty)",
+    "upper": false,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "27",
+      "HYPER": "38",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "ユーロビート",
+    "title": "Daisuke",
+    "artist": "Y&Co.",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "29",
+      "HYPER": "41",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "丼ベース",
+    "title": "Deep tenDon Reflex",
+    "artist": "BEMANI Sound Team \"Coyaan\"",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "31",
+      "HYPER": "41",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "レヴェラチューン(UPPER)",
+    "title": "Fate No.23(UPPER)",
+    "artist": "PON feat.秋成",
+    "upper": true,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "32",
+      "HYPER": "45",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "トランス",
+    "title": "Foundation of our love",
+    "artist": "dj TAKA feat. ASAKO",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "22",
+      "HYPER": "36",
+      "EX": "-"
+    }
+  },
+  {
+    "genre": "トランスREMIX",
+    "title": "Foundation of our love -Tokyo Bay Mix-",
+    "artist": "dj TAKA",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "27",
+      "HYPER": "42",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "アンサラー",
+    "title": "Fragarach",
+    "artist": "ARForest vs. Zekk",
+    "upper": false,
+    "levels": {
+      "LIGHT": "16",
+      "NORMAL": "31",
+      "HYPER": "43",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "ウィザウチュナイ-シエテ-",
+    "title": "FUJIMORI -祭- FESTIVAL 2026",
+    "artist": "VENUS",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "26",
+      "HYPER": "41",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "FUSIONIC STARS!!",
+    "title": "FUSIONIC STARS!!",
+    "artist": "Valkyrie",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "18",
+      "HYPER": "30",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "ハイパーデジメタル",
+    "title": "FUZIN RIZIN",
+    "artist": "SOUND HOLIC feat. Nana Takahashi & 709sec.",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "31",
+      "HYPER": "41",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "メロコアR",
+    "title": "H@ppy Choice",
+    "artist": "good-cool feat. すわひでお",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "27",
+      "HYPER": "37",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "リムピッド(UPPER)",
+    "title": "Hibiki(UPPER)",
+    "artist": "ARForest feat.nayuta",
+    "upper": true,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "32",
+      "HYPER": "43",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "ソフトロックＬＯＮＧ",
+    "title": "Homesick Pt.2&3",
+    "artist": "covered by 不知火フレア",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "21",
+      "HYPER": "33",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "オービタリック K-スタイル",
+    "title": "HYPER LUV",
+    "artist": "Rev Girls and Boy feat. U1-ASAMi",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "28",
+      "HYPER": "37",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "ゴシックナイトメア2",
+    "title": "JADAMGA",
+    "artist": "onoken",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "33",
+      "HYPER": "43",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "KAWAII FESTIVAL",
+    "title": "KAWAII FESTIVAL",
+    "artist": "ハローキティ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "13",
+      "HYPER": "25",
+      "EX": "33"
+    }
+  },
+  {
+    "genre": "KING",
+    "title": "KING",
+    "artist": "Remixed by SOUND HOLIC feat. はるの",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "20",
+      "HYPER": "35",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "オルタナティブアビス",
+    "title": "Klopfgeist",
+    "artist": "Akino × 零 -zero-",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "28",
+      "HYPER": "39",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "レサジー",
+    "title": "meme",
+    "artist": "袖野あらわ feat.終末うにこ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "22",
+      "HYPER": "37",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "アマノガワレイヴ",
+    "title": "MILKY HIGHWAY",
+    "artist": "PON feat.NU-KO",
+    "upper": false,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "31",
+      "HYPER": "40",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "フレンチポップ",
+    "title": "MOBO☆MOGA",
+    "artist": "Orange Lounge",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "22",
+      "HYPER": "33",
+      "EX": "-"
+    }
+  },
+  {
+    "genre": "ハードダンス",
+    "title": "Monkey Business",
+    "artist": "kors k",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "27",
+      "HYPER": "40",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "グリッチダブステップ",
+    "title": "Necroxis Girl",
+    "artist": "BEMANI Sound Team \"HuΣeR\"",
+    "upper": false,
+    "levels": {
+      "LIGHT": "15",
+      "NORMAL": "32",
+      "HYPER": "40",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "ハッピーフューチャーベース",
+    "title": "Neverland",
+    "artist": "ARM (IOSYS) feat. Nicole Curry",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "24",
+      "HYPER": "37",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "One with One",
+    "title": "One with One",
+    "artist": "Ra*bits",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "21",
+      "HYPER": "32",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "セレスタル",
+    "title": "Oort",
+    "artist": "Yvya",
+    "upper": false,
+    "levels": {
+      "LIGHT": "18",
+      "NORMAL": "35",
+      "HYPER": "43",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "ガチャメタル",
+    "title": "OVERDUE DEADEND",
+    "artist": "T4K",
+    "upper": false,
+    "levels": {
+      "LIGHT": "16",
+      "NORMAL": "31",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "サイン(UPPER)",
+    "title": "place of the sky(UPPER)",
+    "artist": "CROSSED FINGERS",
+    "upper": true,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "25",
+      "HYPER": "36",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "トリップポップ",
+    "title": "poppin' journey",
+    "artist": "オトノマート（小池理子×chocck）",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "24",
+      "HYPER": "36",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "カウボーイ2",
+    "title": "Red Mountain",
+    "artist": "T-Bone",
+    "upper": false,
+    "levels": {
+      "LIGHT": "18",
+      "NORMAL": "34",
+      "HYPER": "44",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "ハードサイスピードコア",
+    "title": "RUINA",
+    "artist": "Dustup VS MAX MAXIMIZER",
+    "upper": false,
+    "levels": {
+      "LIGHT": "17",
+      "NORMAL": "33",
+      "HYPER": "44",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "プログレッシブトライバル",
+    "title": "Saturn",
+    "artist": "Mr.Saturn",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "34",
+      "HYPER": "42",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "デジタル J-ポップ",
+    "title": "Secret Rouge",
+    "artist": "ハレトキドキ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "26",
+      "HYPER": "38",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "リプルトーン",
+    "title": "SeLaS",
+    "artist": "m@sumi",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "25",
+      "HYPER": "37",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "プロジェクトジルコン",
+    "title": "Signs and Wonders",
+    "artist": "ネオン(CV:藤川茜)、芽兎めう(CV:五十嵐裕美)",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "23",
+      "HYPER": "34",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "Silent Flame,Never Fade",
+    "title": "Silent Flame,Never Fade",
+    "artist": "不知火フレア",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "19",
+      "HYPER": "35",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "ハムパラドックス",
+    "title": "Smintheus",
+    "artist": "TAN1CHU",
+    "upper": false,
+    "levels": {
+      "LIGHT": "15",
+      "NORMAL": "32",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "ドリーミードラムン(UPPER)",
+    "title": "Sprite Digital(UPPER)",
+    "artist": "Serph",
+    "upper": true,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "28",
+      "HYPER": "39",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "スイートウィスパー",
+    "title": "Sugar Holic Candy Magic",
+    "artist": "かゆき+うぐ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "25",
+      "HYPER": "36",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "ときめきハウス",
+    "title": "Take It! Make It!",
+    "artist": "dj TAKA feat.ゆめめ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "25",
+      "HYPER": "39",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "デステクノ",
+    "title": "TEKNO KEISER",
+    "artist": "STEVIE(Trymatic)/Nana Takahashi Prod. by L.E.D.",
+    "upper": false,
+    "levels": {
+      "LIGHT": "15",
+      "NORMAL": "32",
+      "HYPER": "41",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "エンパシー",
+    "title": "This love",
+    "artist": "sei☆shin ft.江崎友梨 from アイドルは下剋上",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "25",
+      "HYPER": "38",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "MPB",
+    "title": "Tizona d'El Cid",
+    "artist": "TOMOSUKE",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "30",
+      "HYPER": "39",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "ハーツ",
+    "title": "TOGETOGE feat.パンダの流儀",
+    "artist": "namae.",
+    "upper": false,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "28",
+      "HYPER": "38",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "トゥインクルデュオ(UPPER)",
+    "title": "TWINKLING(UPPER)",
+    "artist": "猫叉Master feat.ミミニャミ",
+    "upper": true,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "27",
+      "HYPER": "33",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "ウインドシャッフル",
+    "title": "ÜBER BLANKENESE",
+    "artist": "SOUND HOLIC",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "28",
+      "HYPER": "41",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "エピックノヴァ",
+    "title": "Vi∀",
+    "artist": "不知火フレア Prod.by PON",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "26",
+      "HYPER": "41",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "Wanderlust",
+    "title": "Wanderlust",
+    "artist": "キミのね",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "14",
+      "HYPER": "31",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "ウィザウチュナイ-クアトロ-R",
+    "title": "Wow Wow VENUS 2026",
+    "artist": "VENUS",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "27",
+      "HYPER": "39",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "ピアニシモ",
+    "title": "靉靆の小景",
+    "artist": "red glasses",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "21",
+      "HYPER": "35",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "アイドル",
+    "title": "アイドル",
+    "artist": "Covered by BEMANI Sound Team \"HuΣeR × wac × Yvya\" feat. 佐伯伊織",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "20",
+      "HYPER": "37",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "イガク",
+    "title": "イガク",
+    "artist": "原口沙輔 feat.重音テト",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "17",
+      "HYPER": "32",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "いますぐ輪廻",
+    "title": "いますぐ輪廻",
+    "artist": "なきそ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "22",
+      "HYPER": "36",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "インフェルノ",
+    "title": "インフェルノ",
+    "artist": "♪♪♪♪♪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "20",
+      "HYPER": "33",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "ニコニコサンフラワーキッス",
+    "title": "魚氷に上り　耀よひて",
+    "artist": "あさき",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "27",
+      "HYPER": "36",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "うっせぇわ",
+    "title": "うっせぇわ",
+    "artist": "Ado",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "15",
+      "HYPER": "33",
+      "EX": "40"
+    }
+  },
+  {
+    "genre": "ウミユリ海底譚",
+    "title": "ウミユリ海底譚",
+    "artist": "n-buna",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "24",
+      "HYPER": "36",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "スカーレット3",
+    "title": "焔迅-令式-",
+    "artist": "PON",
+    "upper": false,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "30",
+      "HYPER": "41",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "オーバーライド",
+    "title": "オーバーライド",
+    "artist": "吉田夜世 feat.重音テトSV",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "20",
+      "HYPER": "39",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "踊",
+    "title": "踊",
+    "artist": "Ado",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "10",
+      "HYPER": "28",
+      "EX": "40"
+    }
+  },
+  {
+    "genre": "怪獣",
+    "title": "怪獣",
+    "artist": "♪♪♪♪♪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "21",
+      "HYPER": "37",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "怪獣の花唄",
+    "title": "怪獣の花唄",
+    "artist": "♪♪♪♪♪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "19",
+      "HYPER": "33",
+      "EX": "40"
+    }
+  },
+  {
+    "genre": "モダンジャパネスク",
+    "title": "幽世幻夜",
+    "artist": "TAN1CHU feat.妃那子",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "27",
+      "HYPER": "37",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "オトギタンテイ",
+    "title": "華麗なる！音戯探偵ひなビタ♫",
+    "artist": "音戯探偵ひなビタ♫",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "27",
+      "HYPER": "38",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "かわいいだけじゃだめですか？",
+    "title": "かわいいだけじゃだめですか？",
+    "artist": "CUTIE STREET",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "16",
+      "HYPER": "33",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "可愛くてごめん",
+    "title": "可愛くてごめん",
+    "artist": "Covered by ちょぴん",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "15",
+      "HYPER": "33",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "ギミギミエンターテイメント",
+    "title": "ギミギミエンターテイメント",
+    "artist": "hololive IDOL PROJECT",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "18",
+      "HYPER": "36",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "キミのこと、だいだいすきだもん☆",
+    "title": "キミのこと、だいだいすきだもん☆",
+    "artist": "シナモロール",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "11",
+      "HYPER": "19",
+      "EX": "31"
+    }
+  },
+  {
+    "genre": "ラブリーモータウン２",
+    "title": "キミのそばに",
+    "artist": "KE!JU feat. ねんね",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "25",
+      "HYPER": "34",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "コロコロック",
+    "title": "心転々",
+    "artist": "PHQUASE feat.紫崎 雪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "27",
+      "HYPER": "40",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "ケルティックヴァース",
+    "title": "朔望",
+    "artist": "DJ TOTTO vs Cororo",
+    "upper": false,
+    "levels": {
+      "LIGHT": "17",
+      "NORMAL": "30",
+      "HYPER": "44",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "トワ",
+    "title": "さらさ",
+    "artist": "BEMANI Sound Team \"PON\"",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "28",
+      "HYPER": "39",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "ダークネス4(UPPER)",
+    "title": "終末の序曲～オワリノハジマリ～(UPPER)",
+    "artist": "フレディ波多江とエレハモニカ",
+    "upper": true,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "26",
+      "HYPER": "35",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "少女レイ",
+    "title": "少女レイ",
+    "artist": "みきとP",
+    "upper": false,
+    "levels": {
+      "LIGHT": "5",
+      "NORMAL": "18",
+      "HYPER": "33",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "人妖絵巻1(UPPER)",
+    "title": "人妖絵巻其の一「狐」～ 紅楼ノ夢 ～(UPPER)",
+    "artist": "群青キネマ feat.YAMATO",
+    "upper": true,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "26",
+      "HYPER": "38",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "怪談スウィング",
+    "title": "スペクター・チェイサー",
+    "artist": "音戯探偵ひなビタ♫",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "27",
+      "HYPER": "35",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "Ａ．Ｉ．デイトポップ(UPPER)",
+    "title": "隅田川夏恋歌(UPPER)",
+    "artist": "seiya-murai feat.ALT",
+    "upper": true,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "26",
+      "HYPER": "41",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "レジェンダリ",
+    "title": "精霊都市リトラ・ミュネ",
+    "artist": "アマギセーラ＆夜影ネコチ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "17",
+      "NORMAL": "32",
+      "HYPER": "44",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "ダークナイト",
+    "title": "その闇を薙いで",
+    "artist": "ELFENSJóN",
+    "upper": false,
+    "levels": {
+      "LIGHT": "16",
+      "NORMAL": "31",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "トラウマパンク",
+    "title": "大釈迦",
+    "artist": "筋肉少女帯",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "26",
+      "HYPER": "34",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "ダイダイダイダイダイキライ",
+    "title": "ダイダイダイダイダイキライ",
+    "artist": "雨良 Amala",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "18",
+      "HYPER": "36",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "太陽系デスコ",
+    "title": "太陽系デスコ",
+    "artist": "ナユタン星人",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "18",
+      "HYPER": "36",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "ジャッジメントシンフォニックスピードコア",
+    "title": "断罪のミメシス",
+    "artist": "KE!JU",
+    "upper": false,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "36",
+      "HYPER": "43",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "ウチュウラブコメディ",
+    "title": "地球防衛乙女パンナコッター",
+    "artist": "Vocal by はるの",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "26",
+      "HYPER": "38",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "デンパズルビート",
+    "title": "ちくたく²ちく²ぱ",
+    "artist": "音戯探偵ひなビタ♫",
+    "upper": false,
+    "levels": {
+      "LIGHT": "16",
+      "NORMAL": "31",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "演説２",
+    "title": "告げてみことや かのもとに",
+    "artist": "あさき",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "31",
+      "HYPER": "40",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "テトリス",
+    "title": "テトリス",
+    "artist": "柊マグネタイト feat.重音テト",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "12",
+      "HYPER": "34",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "TGIFフィーバー",
+    "title": "トーキョーサマーナイト（華金Remix）",
+    "artist": "あまみ×ひなみ",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "26",
+      "HYPER": "39",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "あさきのコラボロック(UPPER)",
+    "title": "透明はまだらに世界を告げて(UPPER)",
+    "artist": "あさき×剣",
+    "upper": true,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "31",
+      "HYPER": "42",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "ニューギャルディスコ",
+    "title": "謎解き☆クイーン！",
+    "artist": "音戯探偵ひなビタ♫",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "24",
+      "HYPER": "34",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "オモイデチップチューン(UPPER)",
+    "title": "夏色のセーブデータ(UPPER)",
+    "artist": "BEMANI Sound Team \"KE!JU\"",
+    "upper": true,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "30",
+      "HYPER": "40",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "スウィートリドルポップ",
+    "title": "なんてシュペール",
+    "artist": "音戯探偵ひなビタ♫",
+    "upper": false,
+    "levels": {
+      "LIGHT": "11",
+      "NORMAL": "24",
+      "HYPER": "37",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "空想ファンタジーシリーズ",
+    "title": "眠りの国のステラ",
+    "artist": "BEMANI Sound Team \"DJ TOTTO\"",
+    "upper": false,
+    "levels": {
+      "LIGHT": "14",
+      "NORMAL": "31",
+      "HYPER": "40",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "倍倍FIGHT!",
+    "title": "倍倍FIGHT!",
+    "artist": "CANDY TUNE",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "17",
+      "HYPER": "35",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "はいよろこんで",
+    "title": "はいよろこんで",
+    "artist": "こっちのけんと",
+    "upper": false,
+    "levels": {
+      "LIGHT": "2",
+      "NORMAL": "14",
+      "HYPER": "27",
+      "EX": "38"
+    }
+  },
+  {
+    "genre": "ラストアーツ",
+    "title": "刃図羅",
+    "artist": "猫叉Master vs HuΣeR",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "30",
+      "HYPER": "41",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "初音ミクの消失",
+    "title": "初音ミクの消失",
+    "artist": "cosMo@暴走P",
+    "upper": false,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "30",
+      "HYPER": "43",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "ハッピーラッキーチャッピー",
+    "title": "ハッピーラッキーチャッピー",
+    "artist": "ano",
+    "upper": false,
+    "levels": {
+      "LIGHT": "3",
+      "NORMAL": "11",
+      "HYPER": "32",
+      "EX": "39"
+    }
+  },
+  {
+    "genre": "解明ヒロイン(UPPER)",
+    "title": "ハニートリック！！(UPPER)",
+    "artist": "sei☆shin feat.森本菜月",
+    "upper": true,
+    "levels": {
+      "LIGHT": "13",
+      "NORMAL": "30",
+      "HYPER": "43",
+      "EX": "47"
+    }
+  },
+  {
+    "genre": "パプリカ",
+    "title": "パプリカ",
+    "artist": "♪♪♪♪♪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "1",
+      "NORMAL": "10",
+      "HYPER": "27",
+      "EX": "37"
+    }
+  },
+  {
+    "genre": "ひとりごつ～バンドVer.～",
+    "title": "ひとりごつ～バンドVer.～",
+    "artist": "ハチワレ（CV:田中誠人）",
+    "upper": false,
+    "levels": {
+      "LIGHT": "2",
+      "NORMAL": "10",
+      "HYPER": "25",
+      "EX": "39"
+    }
+  },
+  {
+    "genre": "ハピコア",
+    "title": "ビビッド ☆+*。キラキライム",
+    "artist": "Machico",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "27",
+      "HYPER": "40",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "ビビデバ",
+    "title": "ビビデバ",
+    "artist": "星街すいせい",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "16",
+      "HYPER": "32",
+      "EX": "41"
+    }
+  },
+  {
+    "genre": "フォニイ",
+    "title": "フォニイ",
+    "artist": "mami",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "19",
+      "HYPER": "33",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "コモーション",
+    "title": "フラフラ",
+    "artist": "indoor cats.",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "23",
+      "HYPER": "36",
+      "EX": "42"
+    }
+  },
+  {
+    "genre": "プリンとマフィンのポムポムビート☆",
+    "title": "プリンとマフィンのポムポムビート☆",
+    "artist": "ポムポムプリン",
+    "upper": false,
+    "levels": {
+      "LIGHT": "6",
+      "NORMAL": "14",
+      "HYPER": "20",
+      "EX": "32"
+    }
+  },
+  {
+    "genre": "SNSミクスチャー",
+    "title": "ブロックしよ♡",
+    "artist": "My Complex of Academy",
+    "upper": false,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "26",
+      "HYPER": "37",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "ニューミュージック",
+    "title": "僕の飛行機",
+    "artist": "covered by 不知火フレア",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "25",
+      "HYPER": "36",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "マツケンサンバII",
+    "title": "マツケンサンバII",
+    "artist": "♪♪♪♪♪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "3",
+      "NORMAL": "16",
+      "HYPER": "31",
+      "EX": "38"
+    }
+  },
+  {
+    "genre": "名探偵コナン",
+    "title": "「名探偵コナン」 メイン・テーマ",
+    "artist": "♪♪♪♪♪",
+    "upper": false,
+    "levels": {
+      "LIGHT": "7",
+      "NORMAL": "19",
+      "HYPER": "33",
+      "EX": "38"
+    }
+  },
+  {
+    "genre": "モノノケプログレッシヴ",
+    "title": "魍魎乱舞",
+    "artist": "山本真央樹",
+    "upper": false,
+    "levels": {
+      "LIGHT": "17",
+      "NORMAL": "33",
+      "HYPER": "42",
+      "EX": "49"
+    }
+  },
+  {
+    "genre": "モニタリング",
+    "title": "モニタリング",
+    "artist": "DECO*27",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "21",
+      "HYPER": "35",
+      "EX": "43"
+    }
+  },
+  {
+    "genre": "ステッチ(UPPER)",
+    "title": "モヘア(UPPER)",
+    "artist": "seiya-murai feat.藤野マナミ",
+    "upper": true,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "25",
+      "HYPER": "35",
+      "EX": "44"
+    }
+  },
+  {
+    "genre": "ロシアンシンフォニー",
+    "title": "雪のラヴニーナ",
+    "artist": "劇団レコード",
+    "upper": false,
+    "levels": {
+      "LIGHT": "10",
+      "NORMAL": "27",
+      "HYPER": "39",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "夢色ワンダー",
+    "title": "夢色ワンダー",
+    "artist": "hololive IDOL PROJECT",
+    "upper": false,
+    "levels": {
+      "LIGHT": "8",
+      "NORMAL": "24",
+      "HYPER": "37",
+      "EX": "45"
+    }
+  },
+  {
+    "genre": "ドラムンコアダスト2(UPPER)",
+    "title": "ラピストリアの約束(UPPER)",
+    "artist": "positive MAD-crew",
+    "upper": true,
+    "levels": {
+      "LIGHT": "12",
+      "NORMAL": "31",
+      "HYPER": "42",
+      "EX": "48"
+    }
+  },
+  {
+    "genre": "ガールズティーパーティー",
+    "title": "レシピのリドル",
+    "artist": "音戯探偵ひなビタ♫",
+    "upper": false,
+    "levels": {
+      "LIGHT": "9",
+      "NORMAL": "25",
+      "HYPER": "36",
+      "EX": "46"
+    }
+  },
+  {
+    "genre": "わたしの一番かわいいところ",
+    "title": "わたしの一番かわいいところ",
+    "artist": "FRUITS ZIPPER",
+    "upper": false,
+    "levels": {
+      "LIGHT": "4",
+      "NORMAL": "14",
+      "HYPER": "27",
+      "EX": "38"
+    }
+  },
+  {
+    "genre": "キューティーシャッフル",
+    "title": "charm♡you",
+    "artist": "U-ske feat.花柚",
+    "upper": false,
+    "levels": {},
+    "user_confirmed": true
+  }
+]
