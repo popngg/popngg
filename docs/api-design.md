@@ -12,6 +12,9 @@
 - CSRF 보호는 기본 활성화합니다. 브라우저의 상태 변경 요청은 `app.cors.allowed-origins`
   에 등록한 Origin과 정확하게 일치해야 합니다. `null`, 미등록 하위 도메인, 접미사 위장,
   Origin 누락은 신뢰하지 않습니다. 로그인·로그아웃에도 동일하게 적용합니다.
+- Swagger 등 API 자체 Origin은 `app.csrf.additional-origins`에 명시합니다(기본 `https://api.popn.gg`).
+  local 프로필은 현재 API 포트의 localhost/127.0.0.1만 추가합니다. Host/Forwarded 헤더로
+  신뢰 Origin을 자동 확장하지 않습니다.
 - 기존 프런트엔드의 fetch 요청은 브라우저가 Origin을 보내므로 클라이언트 변경 없이 동작합니다.
   Origin 검증은 [OWASP의 표준 헤더 검증 방식](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin)을 따릅니다.
 - Origin을 보내지 않는 쿠키 클라이언트는 먼저 `GET /api/v1/auth/csrf`를 호출하고 응답 쿠키를

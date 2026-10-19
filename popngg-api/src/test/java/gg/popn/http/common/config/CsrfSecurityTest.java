@@ -53,6 +53,9 @@ class CsrfSecurityTest {
         mvc.perform(post("/api/v1/write").cookie(new Cookie("access_token","valid")).header("Origin","https://popn.gg"))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/v1/write").header("Authorization","Bearer valid")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/write").secure(true).with(request -> {
+            request.setScheme("https"); request.setServerName("api.popn.gg"); request.setServerPort(443); return request;
+        }).cookie(new Cookie("access_token","valid")).header("Origin","https://api.popn.gg")).andExpect(status().isOk());
         mvc.perform(post("/api/v1/write").cookie(new Cookie("access_token","valid")).header("Authorization","Bearer invalid"))
                 .andExpect(status().isUnauthorized());
     }

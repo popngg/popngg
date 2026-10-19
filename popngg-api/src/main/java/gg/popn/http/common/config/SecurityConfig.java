@@ -41,6 +41,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:https://popn.gg,https://www.popn.gg}")
     private String allowedOrigins;
 
+    @Value("${app.csrf.additional-origins:https://api.popn.gg}")
+    private String additionalCsrfOrigins;
+
     @Value("${popngg.auth.cookie-secure:true}")
     private boolean cookieSecure;
 
@@ -89,7 +92,8 @@ public class SecurityConfig {
         http
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfTokens)
-                        .ignoringRequestMatchers(new ApiCsrfExemptions(allowedOrigins)))
+                        .ignoringRequestMatchers(new ApiCsrfExemptions(allowedOrigins
+                                + (additionalCsrfOrigins.isBlank() ? "" : "," + additionalCsrfOrigins))))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
