@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import jakarta.servlet.DispatcherType;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -37,12 +38,17 @@ public class SecurityConfig {
     @Value("${popngg.swagger.password:change-me}")
     private String swaggerPassword;
 
+    @Value("${app.cors.allowed-origins:https://popn.gg,https://www.popn.gg}")
+    private String allowedOrigins;
+
+    @Value("${popngg.auth.cookie-secure:true}")
+    private boolean cookieSecure;
+
     @Bean
     @Order(1)
     public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher(EndpointRequest.toAnyEndpoint())
-                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(EndpointRequest.to("health", "prometheus")).permitAll()
                         .anyRequest().denyAll());
@@ -54,7 +60,6 @@ public class SecurityConfig {
     public SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/swagger-ui/**", "/v3/api-docs/**")
-                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("SWAGGER"))
                 .httpBasic(Customizer.withDefaults());
         return http.build();
@@ -76,9 +81,12 @@ public class SecurityConfig {
     @Bean
     @Order(3)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        var csrfTokens = new CookieCsrfTokenRepository();
+        csrfTokens.setCookieCustomizer(cookie -> cookie.httpOnly(true).secure(cookieSecure).sameSite("Lax"));
         http
                 .cors(cors -> {})
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.csrfTokenRepository(csrfTokens)
+                        .ignoringRequestMatchers(new ApiCsrfExemptions(allowedOrigins)))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
@@ -86,6 +94,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/session",
+                                "/api/v1/auth/csrf",
                                 "/api/v1/auth/logout",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/registrations/**",

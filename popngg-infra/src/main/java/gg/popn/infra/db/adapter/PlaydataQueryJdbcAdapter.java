@@ -116,12 +116,18 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
             case "POPCLASS" -> "p.potential_popclass";
             default -> throw new IllegalArgumentException("Unsupported record sort.");
         };
+        // The adapter is a trust boundary too: never append caller-controlled SQL direction.
+        String sortDirection = switch (query.order()) {
+            case "ASC" -> "ASC";
+            case "DESC" -> "DESC";
+            default -> throw new IllegalArgumentException("Unsupported record order.");
+        };
         String sql = """
                 SELECT s.song_hash, s.song_name, s.genre_name, s.jacket_url, s.version,
                        c.difficulty_code, c.level, p.all_time_score, p.medal_code,
                        COALESCE(p.all_time_rank_code, 13) AS rank_code,
                        p.potential_popclass AS popclass
-                """ + where + " ORDER BY " + sortColumn + " " + query.order()
+                """ + where + " ORDER BY " + sortColumn + " " + sortDirection
                 + ", p.chart_id ASC LIMIT ? OFFSET ?";
         List<Object> pageArgs = new ArrayList<>(args);
         pageArgs.add(query.size());
