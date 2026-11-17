@@ -34,6 +34,8 @@ class UpdateSongJdbcAdapterTest {
         assertThat(jdbc.queryForObject("SELECT clear_level FROM user_clear_levels WHERE user_id=1 AND current_version=29", Integer.class)).isEqualTo(42);
 
         assertThat(jdbc.queryForObject("SELECT song_hash FROM songs WHERE song_id=1", String.class)).isEqualTo("new-hash");
+        assertThat(jdbc.queryForObject("SELECT created_at FROM songs WHERE song_id=1", java.sql.Timestamp.class)
+                .toInstant()).isEqualTo(command.createdAt());
         assertThat(jdbc.queryForObject("SELECT level FROM charts WHERE chart_id=10", Integer.class)).isEqualTo(42);
         assertThat(jdbc.queryForMap("SELECT difficulty_label,level FROM charts WHERE difficulty_code=4"))
                 .containsEntry("DIFFICULTY_LABEL", "EX").containsEntry("LEVEL", 49);

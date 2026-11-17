@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gg.popn.application.playdata.dto.command.ImportPlaydataCommand;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.util.List;
 import com.sun.net.httpserver.HttpServer;
@@ -62,14 +61,18 @@ class NotificationAdaptersTest {
     }
 
     @Test
-    void s3AdapterUsesConfiguredKeysAndPublicUrl() {
+    void s3AdapterUsesConfiguredKeysAndPublicUrl() throws Exception {
         S3Client s3 = mock(S3Client.class);
         var storage = new S3JacketStorageAdapter(s3, "bucket", "static", "https://static.popn.gg/");
-        assertThat(storage.uploadPng("hash", new byte[]{1})).isEqualTo("https://static.popn.gg/hash.png");
-        doThrow(NoSuchKeyException.builder().message("missing").build())
-                .when(s3).headObject(any(java.util.function.Consumer.class));
+        var image = new java.awt.image.BufferedImage(244, 58, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        var output = new java.io.ByteArrayOutputStream(); javax.imageio.ImageIO.write(image, "png", output);
+        byte[] png = output.toByteArray();
+        when(s3.getObjectAsBytes(any(java.util.function.Consumer.class))).thenReturn(
+                software.amazon.awssdk.core.ResponseBytes.fromByteArray(
+                        software.amazon.awssdk.services.s3.model.GetObjectResponse.builder().build(), png));
+        assertThat(storage.uploadPng("hash", png)).isEqualTo("https://static.popn.gg/hash.png");
         assertThat(storage.copy("old", "new")).isEqualTo("https://static.popn.gg/new.png");
-        String backup = storage.replacePng("hash", new byte[]{2});
+        String backup = storage.replacePng("hash", png);
         assertThat(backup).startsWith("backup/hash/");
         storage.restore("hash", backup);
         storage.delete("hash");

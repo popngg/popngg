@@ -50,6 +50,40 @@ class ChartRankingControllerTest {
         verify(port).findChartRankings("hash", 1, axis.toUpperCase(), 2, size);
     }
 
+    @Test
+    void returnsAllChartRankingsAsAnArray() throws Exception {
+        var entry = new PlaydataQueryResults.ChartRankingEntry(1, "1234-5678-9012", "ABC", null,
+                19_000, 17_000, 100_000, 1, 1);
+        when(port.findAllChartRankings("hash", 4, "SCORE")).thenReturn(List.of(entry));
+
+        mvc.perform(get("/api/v1/charts/hash/4/rankings/all"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("""
+                        {"code":"SUCCESS","message":"The request is successful.","data":[
+                          {"position":1,"id":"1234-5678-9012","name":"ABC","avatarUrl":null,
+                           "userPopnClass":19000,"popnClass":17000,"score":100000,"rank":1,"medal":1}
+                        ]}
+                        """, true));
+        verify(port).findAllChartRankings("hash", 4, "SCORE");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"medal,MEDAL", "score,SCORE"})
+    void forwardsAllRankingsAxis(String axis, String normalizedAxis) throws Exception {
+        when(port.findAllChartRankings("hash", 1, normalizedAxis)).thenReturn(List.of());
+
+        mvc.perform(get("/api/v1/charts/hash/1/rankings/all").param("axis", axis))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray());
+        verify(port).findAllChartRankings("hash", 1, normalizedAxis);
+    }
+
+    @Test
+    void rejectsInvalidAllRankingsAxis() throws Exception {
+        mvc.perform(get("/api/v1/charts/hash/4/rankings/all").param("axis", "invalid"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(port);
+    }
+
     @ParameterizedTest
     @CsvSource({"0,score,1,20", "5,score,1,20", "4,invalid,1,20", "4,score,0,20",
             "4,score,1,0", "4,score,1,101", "ex,score,1,20"})

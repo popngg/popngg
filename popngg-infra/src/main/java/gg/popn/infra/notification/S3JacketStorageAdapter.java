@@ -6,6 +6,10 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import gg.popn.infra.storage.JacketImageProcessor;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.Arrays;
 
 @Component
 public class S3JacketStorageAdapter implements JacketStoragePort {
@@ -28,8 +32,46 @@ public class S3JacketStorageAdapter implements JacketStoragePort {
         s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key(songHash))
                         .contentType("image/png")
                         .cacheControl("public,max-age=31536000,immutable")
-                        .ifNoneMatch("*").build(), RequestBody.fromBytes(png));
+                        .ifNoneMatch("*").build(), RequestBody.fromBytes(JacketImageProcessor.normalize(png)));
         return publicUrl + "/" + songHash + ".png";
+    }
+
+    @Override
+    public String uploadVersionedPng(String songHash, byte[] source) {
+        if (bucket.isBlank()) throw new IllegalStateException("AWS_S3_BUCKET is not configured.");
+        byte[] png = JacketImageProcessor.normalize(source);
+        String name = songHash + "-jacket-" + digest(png);
+        try {
+            s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key(name))
+                    .contentType("image/png").cacheControl("public,max-age=31536000,immutable")
+                    .ifNoneMatch("*").build(), RequestBody.fromBytes(png));
+        } catch (software.amazon.awssdk.services.s3.model.S3Exception exception) {
+            if (exception.statusCode() != 412) throw exception;
+            byte[] existing = s3.getObjectAsBytes(request -> request.bucket(bucket).key(key(name))).asByteArray();
+            if (!Arrays.equals(existing, png)) throw new IllegalStateException("Existing jacket content does not match its digest.", exception);
+        }
+        return publicUrl + "/" + name + ".png";
+    }
+
+    public byte[] readPng(String jacketUrl) {
+        String beginning = publicUrl + "/";
+        if (jacketUrl == null || !jacketUrl.startsWith(beginning))
+            throw new IllegalArgumentException("자켓 URL이 설정된 저장소에 속하지 않습니다.");
+        String name = jacketUrl.substring(beginning.length());
+        if (!name.matches("[A-Za-z0-9_-]+\\.png"))
+            throw new IllegalArgumentException("올바른 자켓 경로가 아닙니다.");
+        return s3.getObjectAsBytes(request -> request.bucket(bucket)
+                .key((prefix.isBlank() ? "" : prefix + "/") + name)).asByteArray();
+    }
+
+    @Override
+    public String copyFromUrl(String sourceJacketUrl, String targetSongHash) {
+        return uploadPng(targetSongHash, readPng(sourceJacketUrl));
+    }
+
+    public static String digest(byte[] png) {
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(png)); }
+        catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
     }
 
     @Override
@@ -39,29 +81,18 @@ public class S3JacketStorageAdapter implements JacketStoragePort {
 
     @Override
     public String copy(String sourceSongHash, String targetSongHash) {
-        if (bucket.isBlank()) throw new IllegalStateException("AWS_S3_BUCKET is not configured.");
-        try {
-            s3.headObject(request -> request.bucket(bucket).key(key(targetSongHash)));
-            throw new IllegalStateException("Target jacket already exists: " + targetSongHash);
-        } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException ignored) {
-            // Expected for a new song hash.
-        } catch (software.amazon.awssdk.services.s3.model.S3Exception exception) {
-            if (exception.statusCode() != 404) throw exception;
-        }
-        s3.copyObject(request -> request.bucket(bucket).key(key(targetSongHash))
-                .copySource(bucket + "/" + key(sourceSongHash))
-                .metadataDirective("COPY"));
-        return publicUrl + "/" + targetSongHash + ".png";
+        return copyFromUrl(publicUrl + "/" + sourceSongHash + ".png", targetSongHash);
     }
 
     @Override
     public String replacePng(String songHash, byte[] png) {
+        byte[] normalized = JacketImageProcessor.normalize(png);
         String backupKey = "backup/" + songHash + "/" + System.currentTimeMillis() + ".png";
         s3.copyObject(request -> request.bucket(bucket).key(backupKey)
                 .copySource(bucket + "/" + key(songHash)).metadataDirective("COPY"));
         s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key(songHash))
                         .contentType("image/png").cacheControl("public,max-age=31536000,immutable").build(),
-                RequestBody.fromBytes(png));
+                RequestBody.fromBytes(normalized));
         return backupKey;
     }
 

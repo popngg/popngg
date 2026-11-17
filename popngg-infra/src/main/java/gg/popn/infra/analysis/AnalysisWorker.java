@@ -2,6 +2,7 @@ package gg.popn.infra.analysis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gg.popn.application.analysis.AnalysisStatistics;
+import gg.popn.application.analysis.CpiSpiModel;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,26 +11,35 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.FileSystemUtils;
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.nio.file.*;
 import java.sql.Connection;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 @Component
 @EnableScheduling
 @ConditionalOnProperty(name="popngg.analysis.enabled",havingValue="true")
 public class AnalysisWorker {
     private static final Logger log=LoggerFactory.getLogger(AnalysisWorker.class);
+    private static final Pattern JOB_DIRECTORY =
+            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private final DataSource dataSource; private final AnalysisJobStore jobs; private final AnalysisExtractor extractor;
     private final AnalysisArtifacts artifacts; private final AnalysisCompletionNotifier notifier; private final ObjectMapper mapper;
+    private final AchievementRefreshPipeline achievement;
+    private final AchievementConstantActivation activation;
     private final Path root; private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private final AtomicBoolean busy=new AtomicBoolean();
     public AnalysisWorker(DataSource dataSource,AnalysisJobStore jobs,AnalysisExtractor extractor,AnalysisArtifacts artifacts,
-            AnalysisCompletionNotifier notifier,ObjectMapper mapper,@Value("${popngg.analysis.output:build/analysis/cpi-spi}") String output) {
+            AnalysisCompletionNotifier notifier,ObjectMapper mapper, AchievementRefreshPipeline achievement,
+            AchievementConstantActivation activation,@Value("${popngg.analysis.output:build/analysis/cpi-spi}") String output) {
         this.dataSource=dataSource;this.jobs=jobs;this.extractor=extractor;this.artifacts=artifacts;this.notifier=notifier;this.mapper=mapper;
+        this.achievement=achievement;this.activation=activation;
         this.root=Path.of(output).toAbsolutePath().normalize();
     }
     @Scheduled(cron="${popngg.analysis.cron:0 0 6 * * *}",zone="Asia/Seoul")
@@ -68,10 +78,24 @@ public class AnalysisWorker {
         if(!directory.startsWith(root))throw new IllegalStateException("INVALID_OUTPUT_PATH");
         var result=new LinkedHashMap<String,Object>();
         result.put("jobId",id);result.put("trigger",job.get("trigger_type"));result.put("snapshotId",snapshotId);
+        String jobType = (String)job.getOrDefault("job_type", "CPI_SPI");
+        result.put("jobType", jobType);
         try {
             artifacts.checkPrivateBucket();
             var extracted=extractor.extract(directory);
+            if ("ACHIEVEMENT_CONSTANTS".equals(jobType)) {
+                var prepared = achievement.prepare(directory, snapshotId, extracted);
+                assertLock(connection, lock);
+                result.put("stored", activation.activate(prepared.medal(), prepared.rank()));
+                result.put("status", "SUCCEEDED");
+                result.put("artifacts", prepared.artifacts());
+                result.put("summary", prepared.summary());
+                result.put("modelStatus", "EXPERIMENTAL");
+                result.put("nextCommand", "/상수표");
+            } else {
             var summary=new AnalysisStatistics(mapper).analyze(directory,extracted.catalog(),extracted.users());
+            summary.putAll(new CpiSpiModel(mapper).fit(directory,extracted.catalog()));
+            mapper.writerWithDefaultPrettyPrinter().writeValue(directory.resolve("summary.json").toFile(),summary);
             if(!Objects.equals(((Number)summary.get("rawRecordCount")).longValue(),((Number)extracted.metadata().get("extractedRecordCount")).longValue()))
                 throw new IllegalStateException("ANALYSIS_COUNT_MISMATCH");
             String manifest=artifacts.upload(snapshotId,directory,extracted.metadata(),summary);
@@ -79,6 +103,7 @@ public class AnalysisWorker {
             artifacts.publishLatest(snapshotId,manifest);
             result.put("status","SUCCEEDED");result.put("artifacts",Map.of("manifest",manifest,"report",manifest.replace("manifest.json","report.md")));
             result.put("summary",summary);
+            }
         }catch(Exception e) {
             result.put("status","FAILED");result.put("errorCode",e instanceof IllegalStateException && e.getMessage()!=null && e.getMessage().matches("[A-Z_]+")?e.getMessage():"ANALYSIS_FAILED");
             // Never include DB URLs, record values, or HTTP credentials in Discord errors.
@@ -87,6 +112,39 @@ public class AnalysisWorker {
         assertLock(connection,lock);
         result.put("finishedAt",Instant.now().toString());
         jobs.finished(id,(String)result.get("status"),mapper.writeValueAsString(result));
+        if ("SUCCEEDED".equals(result.get("status"))) {
+            pruneSnapshots(root, directory.getParent());
+            pruneSnapshots(directory.getParent(), directory);
+        } else {
+            deleteSnapshot(directory);
+            try {
+                Files.deleteIfExists(directory.getParent());
+            } catch (DirectoryNotEmptyException ignored) {
+                // An earlier attempt still exists under this job.
+            } catch (IOException e) {
+                log.warn("Could not remove empty local analysis job directory {}", directory.getParent(), e);
+            }
+        }
+    }
+
+    private void pruneSnapshots(Path parent, Path keep) {
+        try (var entries = Files.newDirectoryStream(parent, entry ->
+                !entry.equals(keep) && JOB_DIRECTORY.matcher(entry.getFileName().toString()).matches()
+                        && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS))) {
+            for (Path entry : entries) {
+                deleteSnapshot(entry);
+            }
+        } catch (IOException | DirectoryIteratorException e) {
+            log.warn("Could not list local analysis directories in {}", parent, e);
+        }
+    }
+
+    private void deleteSnapshot(Path snapshot) {
+        try {
+            FileSystemUtils.deleteRecursively(snapshot);
+        } catch (IOException | DirectoryIteratorException e) {
+            log.warn("Could not remove local analysis directory {}", snapshot, e);
+        }
     }
     private void assertLock(Connection connection,String lock)throws Exception {
         try(var p=connection.prepareStatement("SELECT IS_USED_LOCK(?) = CONNECTION_ID()")) {
@@ -100,5 +158,5 @@ public class AnalysisWorker {
             catch(Exception e){jobs.retryNotification(id);log.warn("Analysis completion notification queued for retry: {}",id);}
         }
     }
-    @PreDestroy public void shutdown(){executor.shutdown();}
+    @PreDestroy public void shutdown(){executor.shutdownNow();}
 }

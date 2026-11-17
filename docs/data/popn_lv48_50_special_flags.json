@@ -1,0 +1,842 @@
+{
+  "asOf": "2026-09-25",
+  "game": "pop'n music High☆Cheers!!",
+  "scope": "Lv48–Lv50; entries with at least one true flag or non-null extraType; chart-level records",
+  "criteria": {
+    "isStrictGauge": "noteCount >= 1537",
+    "isStrictJudgment": "Explicit 辛判定 attribute on the individual chart page; includes 辛GOOD判定",
+    "extraType": "Current High☆Cheers!! EXTRA MUSIC or 超EXTRA MUSIC selection category; null otherwise",
+    "upperNotation": "Ⓤ in songTitle and genre denotes UPPER chart variant"
+  },
+  "sources": {
+    "difficultyTables": [
+      "https://popn.wiki/難易度表/lv48",
+      "https://popn.wiki/難易度表/lv49",
+      "https://popn.wiki/難易度表/lv50"
+    ],
+    "attributeDefinition": "https://popn.wiki/その他/譜面属性",
+    "extraMusic": "https://popn.wiki/high_cheers"
+  },
+  "songs": [
+    {
+      "level": 48,
+      "songTitle": "POP-STEP-UP",
+      "genre": "レッスン",
+      "chart": "EX",
+      "noteCount": 1008,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "DDR MEGAMIX",
+      "genre": "DDR",
+      "chart": "EX",
+      "noteCount": 1229,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "進め！爺ちゃん！",
+      "genre": "敬老パンク",
+      "chart": "EX",
+      "noteCount": 1252,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "雪上断火",
+      "genre": "ヒップロック3",
+      "chart": "EX",
+      "noteCount": 1550,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "路男Ⓤ",
+      "genre": "ヒップロック4Ⓤ",
+      "chart": "EX",
+      "noteCount": 1604,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "革命パッショネイトⓊ",
+      "genre": "ギャラクティックシンフォニーⓊ",
+      "chart": "EX",
+      "noteCount": 1540,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "左脳スパークⓊ",
+      "genre": "ラボテクノⓊ",
+      "chart": "EX",
+      "noteCount": 1597,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "恋はどう？モロ◎波動OK☆方程式！！Ⓤ",
+      "genre": "理系ポップⓊ",
+      "chart": "EX",
+      "noteCount": 1543,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 48,
+      "songTitle": "OVERDUE DEADEND",
+      "genre": "ガチャメタル",
+      "chart": "EX",
+      "noteCount": 1386,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 48,
+      "songTitle": "朔望",
+      "genre": "ケルティックヴァース",
+      "chart": "EX",
+      "noteCount": 1495,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 48,
+      "songTitle": "JADAMGA",
+      "genre": "ゴシックナイトメア2",
+      "chart": "EX",
+      "noteCount": 1386,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 48,
+      "songTitle": "その闇を薙いで",
+      "genre": "ダークナイト",
+      "chart": "EX",
+      "noteCount": 1484,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 48,
+      "songTitle": "Asian Trinity",
+      "genre": "ハートオブアジア",
+      "chart": "EX",
+      "noteCount": 1406,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 48,
+      "songTitle": "BOMBER!BOMBER!BABY!",
+      "genre": "マグナムユーロ",
+      "chart": "EX",
+      "noteCount": 1500,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 48,
+      "songTitle": "Concertare",
+      "genre": "クラシック4",
+      "chart": "H",
+      "noteCount": 848,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "I'm on Fire",
+      "genre": "ヘビーメタル",
+      "chart": "EX",
+      "noteCount": 1190,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "ブタパンチのテーマ",
+      "genre": "オイパンク0",
+      "chart": "EX",
+      "noteCount": 1316,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "neu",
+      "genre": "ニエンテ",
+      "chart": "EX",
+      "noteCount": 1899,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "BabeL 〜Next Story〜",
+      "genre": "スケールアウト",
+      "chart": "EX",
+      "noteCount": 1756,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "生命の焔纏いて",
+      "genre": "インボルク",
+      "chart": "EX",
+      "noteCount": 1560,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Zirkfied",
+      "genre": "スペースレクイエム",
+      "chart": "EX",
+      "noteCount": 1539,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Elemental Creation",
+      "genre": "ハードルネッサンス",
+      "chart": "EX",
+      "noteCount": 1584,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "恋歌疾風！かるたクイーンいろは",
+      "genre": "ハイスピードラブ一首",
+      "chart": "EX",
+      "noteCount": 1589,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "激走！！ヤング☆ダンプ！",
+      "genre": "パワーダンプ",
+      "chart": "EX",
+      "noteCount": 1704,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Triple Counter",
+      "genre": "リスク+バキューム",
+      "chart": "EX",
+      "noteCount": 1540,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "24/7 Popperz",
+      "genre": "アディクティヴショータイム",
+      "chart": "EX",
+      "noteCount": 1642,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "K∀MUY",
+      "genre": "シンフォニックセイバー2",
+      "chart": "EX",
+      "noteCount": 1667,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "限界食堂",
+      "genre": "オイパンク∞",
+      "chart": "EX",
+      "noteCount": 1690,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "MADSPEED狂信道Ⓤ",
+      "genre": "ギャラクティックマーチⓊ",
+      "chart": "EX",
+      "noteCount": 1646,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "西馬込交通曲",
+      "genre": "パーカッシヴ3",
+      "chart": "EX",
+      "noteCount": 1583,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "ΩVERSOUL",
+      "genre": "ハイテックレイヴ",
+      "chart": "EX",
+      "noteCount": 1555,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "雫Ⓤ",
+      "genre": "ラメントⓊ",
+      "chart": "EX",
+      "noteCount": 1545,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "ピアノ独奏無言歌 \"灰燼\"",
+      "genre": "スレノディ",
+      "chart": "EX",
+      "noteCount": 1647,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "彼岸花",
+      "genre": "デカダンブレイクス",
+      "chart": "EX",
+      "noteCount": 1597,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "世界の果てに約束の凱歌を -Advent-",
+      "genre": "ブレイヴセイバー",
+      "chart": "EX",
+      "noteCount": 1641,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Triple Cross",
+      "genre": "ミュージックゲームトラディショナル",
+      "chart": "EX",
+      "noteCount": 1546,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "ma plume",
+      "genre": "アンジェリーク",
+      "chart": "EX",
+      "noteCount": 1782,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "葬送のエウロパ",
+      "genre": "重奏戦記",
+      "chart": "EX",
+      "noteCount": 1647,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "ちくわパフェだよ☆CKPⓊ",
+      "genre": "スイーツプログレッシヴⓊ",
+      "chart": "EX",
+      "noteCount": 1788,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "天泣",
+      "genre": "プログレッシブ",
+      "chart": "EX",
+      "noteCount": 1644,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "pump up dA CORE",
+      "genre": "マッスルガバ",
+      "chart": "EX",
+      "noteCount": 1543,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "めうめうぺったんたん！！Ⓤ",
+      "genre": "萌えおこし電波ソングⓊ",
+      "chart": "EX",
+      "noteCount": 1888,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "粋 -IKI-",
+      "genre": "ヤマトスピリット",
+      "chart": "EX",
+      "noteCount": 1539,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "真夜中のun thé noir",
+      "genre": "真夜中のun thé noir",
+      "chart": "EX",
+      "noteCount": 1535,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "EXTRA"
+    },
+    {
+      "level": 49,
+      "songTitle": "AVEL",
+      "genre": "AVEL",
+      "chart": "EX",
+      "noteCount": 1570,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "MAX KARAI",
+      "genre": "MAX KARAI",
+      "chart": "EX",
+      "noteCount": 1542,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "No Border",
+      "genre": "No Border",
+      "chart": "EX",
+      "noteCount": 1633,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Red Mountain",
+      "genre": "カウボーイ2",
+      "chart": "EX",
+      "noteCount": 1599,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": "超EXTRA"
+    },
+    {
+      "level": 49,
+      "songTitle": "断罪のミメシス",
+      "genre": "ジャッジメントシンフォニックスピードコア",
+      "chart": "EX",
+      "noteCount": 1619,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Oort",
+      "genre": "セレスタル",
+      "chart": "EX",
+      "noteCount": 1603,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": "超EXTRA"
+    },
+    {
+      "level": 49,
+      "songTitle": "魍魎乱舞",
+      "genre": "モノノケプログレッシヴ",
+      "chart": "EX",
+      "noteCount": 1536,
+      "isStrictJudgment": false,
+      "isStrictGauge": false,
+      "extraType": "超EXTRA"
+    },
+    {
+      "level": 49,
+      "songTitle": "Fate No.23Ⓤ",
+      "genre": "レヴェラチューンⓊ",
+      "chart": "EX",
+      "noteCount": 1553,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "精霊都市リトラ・ミュネ",
+      "genre": "レジェンダリ",
+      "chart": "EX",
+      "noteCount": 1573,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": "超EXTRA"
+    },
+    {
+      "level": 49,
+      "songTitle": "悲しいね",
+      "genre": "オイパンク",
+      "chart": "EX",
+      "noteCount": 820,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Line Times",
+      "genre": "クラシック8",
+      "chart": "EX",
+      "noteCount": 941,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "Blue River",
+      "genre": "カウボーイ",
+      "chart": "EX",
+      "noteCount": 1607,
+      "isStrictJudgment": true,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "想い出をありがとう",
+      "genre": "クラシック11",
+      "chart": "EX",
+      "noteCount": 955,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 49,
+      "songTitle": "GALAXY FOREST 11.6&12",
+      "genre": "スクリーン",
+      "chart": "EX",
+      "noteCount": 633,
+      "isStrictJudgment": true,
+      "isStrictGauge": false,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "シュレーディンガーの猫",
+      "genre": "トイコンテンポラリー",
+      "chart": "EX",
+      "noteCount": 1748,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "少年は空を辿る",
+      "genre": "ムラクモ",
+      "chart": "EX",
+      "noteCount": 1780,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "生命の環を紡いで",
+      "genre": "エンジェリオン",
+      "chart": "EX",
+      "noteCount": 1769,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "L-an!ma",
+      "genre": "イデア",
+      "chart": "EX",
+      "noteCount": 1827,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "o†o",
+      "genre": "音",
+      "chart": "EX",
+      "noteCount": 1947,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "НУМЛ",
+      "genre": "オルガヌム",
+      "chart": "EX",
+      "noteCount": 1745,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "Chaos:Q",
+      "genre": "ヌル",
+      "chart": "EX",
+      "noteCount": 1741,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "辿る君を超えて",
+      "genre": "ムラクモ2",
+      "chart": "EX",
+      "noteCount": 1828,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "perditus†paradisusⓊ",
+      "genre": "アンセムコアⓊ",
+      "chart": "EX",
+      "noteCount": 1762,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "Blue RiverⓊ",
+      "genre": "カウボーイⓊ",
+      "chart": "EX",
+      "noteCount": 1680,
+      "isStrictJudgment": true,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "真超深TIONⓊ",
+      "genre": "コアダストビートⓊ",
+      "chart": "EX",
+      "noteCount": 1800,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "BabeL 〜MODEL DD101～",
+      "genre": "スケールアウト -Rebuild-",
+      "chart": "EX",
+      "noteCount": 1705,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "序Ⓤ",
+      "genre": "ふることⓊ",
+      "chart": "EX",
+      "noteCount": 1836,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "Popperz Chronicle",
+      "genre": "マスターピース",
+      "chart": "EX",
+      "noteCount": 1630,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "Popperz ChronicleⓊ",
+      "genre": "マスターピースⓊ",
+      "chart": "EX",
+      "noteCount": 1735,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "25 o’clock the WORLD",
+      "genre": "ユグドラ",
+      "chart": "EX",
+      "noteCount": 1789,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "生命の焔纏いてⓊ",
+      "genre": "インボルクⓊ",
+      "chart": "EX",
+      "noteCount": 1769,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "virkatoの主題によるperson09風超絶技巧変奏曲Ⓤ",
+      "genre": "トランセンデンタルバリエーションⓊ",
+      "chart": "EX",
+      "noteCount": 1900,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "ΔΟΓΜΑ",
+      "genre": "リドル",
+      "chart": "EX",
+      "noteCount": 1882,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "ma plumeⓊ",
+      "genre": "アンジェリークⓊ",
+      "chart": "EX",
+      "noteCount": 1943,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "F/S",
+      "genre": "エウレカ",
+      "chart": "EX",
+      "noteCount": 1939,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "Mecha Kawa Breaker!!",
+      "genre": "カワイイブレイクコア",
+      "chart": "EX",
+      "noteCount": 1682,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "Megalara GarudaⓊ",
+      "genre": "ドラムステップⓊ",
+      "chart": "EX",
+      "noteCount": 1721,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    },
+    {
+      "level": 50,
+      "songTitle": "THX 4",
+      "genre": "THX 4",
+      "chart": "EX",
+      "noteCount": 1912,
+      "isStrictJudgment": false,
+      "isStrictGauge": true,
+      "extraType": null
+    }
+  ]
+}
