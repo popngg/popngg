@@ -16,6 +16,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PlaydataQueryJdbcAdapterTest {
+    @Test void rejectsUntrustedSqlOrderAtAdapterBoundary() {
+        for (String order : new String[]{"DESC; DROP TABLE playdata", "DESC --", "desc", "invalid"}) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                    null,null,null,null,null,null,null,null,null,"SCORE",order,0,20)))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        var rows = adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                null,null,null,null,null,null,null,null,null,"SCORE","ASC",0,20));
+        assertThat(rows.items()).extracting(row -> row.score()).containsExactly(90000,97000);
+    }
     private JdbcTemplate jdbc;
     private PlaydataQueryJdbcAdapter adapter;
 

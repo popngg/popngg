@@ -63,6 +63,8 @@ jwt:
 
 # Application properties
 app:
+  csrf:
+    additional-origins: "http://localhost:${server.port:8080},http://127.0.0.1:${server.port:8080}"
   cors:
     allowed-origins: "http://localhost:3000,http://127.0.0.1:3000"
 

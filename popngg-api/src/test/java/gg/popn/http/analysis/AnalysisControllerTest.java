@@ -29,7 +29,8 @@ class AnalysisControllerTest {
     @Autowired MockMvc mvc; @Autowired AnalysisJobs jobs; @Autowired TokenPort tokens;
     @BeforeEach void init(){reset(jobs,tokens);for(String role:List.of("USER","ADMIN"))when(tokens.parse(role)).thenReturn(Optional.of(AuthPrincipal.of(PoptomoId.of("0000-0000-0000"),UserRole.from(role))));}
     @Test void requiresAdminAndReturns202WithoutRunningAnalysis()throws Exception {
-        mvc.perform(post("/api/v1/admin/analysis/cpi-spi")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/admin/analysis/cpi-spi")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/analysis/cpi-spi").header("Authorization","Bearer unknown")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/admin/analysis/cpi-spi").header("Authorization","Bearer USER")).andExpect(status().isForbidden());
         verifyNoInteractions(jobs);
         when(jobs.submit("ADMIN","admin:req1")).thenReturn(new AnalysisJobs.Submission("job","QUEUED",false));
