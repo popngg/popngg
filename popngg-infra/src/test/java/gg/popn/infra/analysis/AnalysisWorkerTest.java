@@ -20,6 +20,8 @@ class AnalysisWorkerTest {
         var jobs=mock(AnalysisJobStore.class);var extractor=mock(AnalysisExtractor.class);var artifacts=mock(AnalysisArtifacts.class);
         var notifier=mock(AnalysisCompletionNotifier.class);var ds=lockedDataSource(true);
         String id=UUID.randomUUID().toString();
+        Path previous = Files.createDirectories(dir.resolve(UUID.randomUUID().toString()));
+        Files.writeString(previous.resolve("records.jsonl"), "previous snapshot");
         when(jobs.active()).thenReturn(Map.of("job_id",id,"trigger_type","DISCORD"));
         when(extractor.extract(any())).thenAnswer(inv->{Path p=inv.getArgument(0);Files.createDirectories(p);Files.writeString(p.resolve("records.jsonl"),"");return new AnalysisExtractor.Extracted(List.of(),List.of(),Map.of("extractedRecordCount",0L));});
         when(artifacts.upload(anyString(),any(),anyMap(),anyMap())).thenThrow(new IllegalStateException("UPLOAD_FAILED"));
@@ -31,22 +33,41 @@ class AnalysisWorkerTest {
         verify(jobs).finished(eq(id),eq("FAILED"),contains("UPLOAD_FAILED"));
         verify(artifacts,never()).publishLatest(anyString(),anyString());
         verify(jobs).retryNotification(id);verify(jobs,never()).notified(id);
+        assertThat(previous.resolve("records.jsonl")).hasContent("previous snapshot");
+        assertThat(dir.resolve(id)).doesNotExist();
     }
     @Test void successfulBuildPublishesBeforePersistingResultAndNotifiesSeparately()throws Exception {
         var jobs=mock(AnalysisJobStore.class);var extractor=mock(AnalysisExtractor.class);var artifacts=mock(AnalysisArtifacts.class);var notifier=mock(AnalysisCompletionNotifier.class);
         String id=UUID.randomUUID().toString();
+        Path previous = Files.createDirectories(dir.resolve(UUID.randomUUID().toString())
+                .resolve(UUID.randomUUID().toString()));
+        Path staleAttempt = Files.createDirectories(dir.resolve(id).resolve(UUID.randomUUID().toString()));
+        Files.writeString(previous.resolve("records.jsonl"), "previous snapshot");
+        Files.writeString(staleAttempt.resolve("records.jsonl"), "interrupted attempt");
+        Path unrelated = Files.createDirectory(dir.resolve("manual-export"));
         when(jobs.active()).thenReturn(Map.of("job_id",id,"trigger_type","SCHEDULED"));
         when(extractor.extract(any())).thenAnswer(inv->{Path p=inv.getArgument(0);Files.createDirectories(p);
             var record=new AnalysisRecord(1,1,1L,49,8,95000,true,true,false,false,true,true,false,false,29,29,95000,true,null,null,1L);
             Files.writeString(p.resolve("records.jsonl"),mapper.writeValueAsString(record)+"\n");
             return new AnalysisExtractor.Extracted(List.of(new Chart(1,1,49)),List.of(1L),Map.of("extractedRecordCount",1L));});
         when(artifacts.upload(anyString(),any(),anyMap(),anyMap())).thenReturn("s3://private/manifest.json");
+        doAnswer(invocation -> {
+            assertThat(previous.resolve("records.jsonl")).exists();
+            return null;
+        }).when(jobs).finished(eq(id), eq("SUCCEEDED"), anyString());
         var worker=new AnalysisWorker(lockedDataSource(true),jobs,extractor,artifacts,notifier,mapper,
                 mock(AchievementRefreshPipeline.class),mock(AchievementConstantActivation.class),dir.toString());
         worker.runOnce();worker.shutdown();
         var order=inOrder(artifacts,jobs);
         order.verify(artifacts).publishLatest(anyString(),eq("s3://private/manifest.json"));
         order.verify(jobs).finished(eq(id),eq("SUCCEEDED"),contains("\"spiRecordCount\":1"));
+        assertThat(previous.getParent()).doesNotExist();
+        assertThat(staleAttempt).doesNotExist();
+        assertThat(unrelated).isDirectory();
+        try (var attempts = Files.list(dir.resolve(id))) {
+            assertThat(attempts.map(path -> path.resolve("records.jsonl")).toList())
+                    .singleElement().satisfies(records -> assertThat(records).isRegularFile());
+        }
     }
     @Test void competingReplicaDoesNotBuild()throws Exception {
         var jobs=mock(AnalysisJobStore.class);var extractor=mock(AnalysisExtractor.class);
