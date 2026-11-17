@@ -11,19 +11,24 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.FileSystemUtils;
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.nio.file.*;
 import java.sql.Connection;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 @Component
 @EnableScheduling
 @ConditionalOnProperty(name="popngg.analysis.enabled",havingValue="true")
 public class AnalysisWorker {
     private static final Logger log=LoggerFactory.getLogger(AnalysisWorker.class);
+    private static final Pattern JOB_DIRECTORY =
+            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private final DataSource dataSource; private final AnalysisJobStore jobs; private final AnalysisExtractor extractor;
     private final AnalysisArtifacts artifacts; private final AnalysisCompletionNotifier notifier; private final ObjectMapper mapper;
     private final AchievementRefreshPipeline achievement;
@@ -107,6 +112,39 @@ public class AnalysisWorker {
         assertLock(connection,lock);
         result.put("finishedAt",Instant.now().toString());
         jobs.finished(id,(String)result.get("status"),mapper.writeValueAsString(result));
+        if ("SUCCEEDED".equals(result.get("status"))) {
+            pruneSnapshots(root, directory.getParent());
+            pruneSnapshots(directory.getParent(), directory);
+        } else {
+            deleteSnapshot(directory);
+            try {
+                Files.deleteIfExists(directory.getParent());
+            } catch (DirectoryNotEmptyException ignored) {
+                // An earlier attempt still exists under this job.
+            } catch (IOException e) {
+                log.warn("Could not remove empty local analysis job directory {}", directory.getParent(), e);
+            }
+        }
+    }
+
+    private void pruneSnapshots(Path parent, Path keep) {
+        try (var entries = Files.newDirectoryStream(parent, entry ->
+                !entry.equals(keep) && JOB_DIRECTORY.matcher(entry.getFileName().toString()).matches()
+                        && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS))) {
+            for (Path entry : entries) {
+                deleteSnapshot(entry);
+            }
+        } catch (IOException | DirectoryIteratorException e) {
+            log.warn("Could not list local analysis directories in {}", parent, e);
+        }
+    }
+
+    private void deleteSnapshot(Path snapshot) {
+        try {
+            FileSystemUtils.deleteRecursively(snapshot);
+        } catch (IOException | DirectoryIteratorException e) {
+            log.warn("Could not remove local analysis directory {}", snapshot, e);
+        }
     }
     private void assertLock(Connection connection,String lock)throws Exception {
         try(var p=connection.prepareStatement("SELECT IS_USED_LOCK(?) = CONNECTION_ID()")) {
