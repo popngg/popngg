@@ -39,6 +39,8 @@ class AchievementConstantControllerTest {
     @Test void importsOnlyForAdmin()throws Exception{
         String body=body();
         mvc.perform(post("/api/v1/admin/analysis/achievement-constants/snapshots").contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/analysis/achievement-constants/snapshots").header("Authorization","Bearer unknown").contentType("application/json").content(body))
                 .andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/admin/analysis/achievement-constants/snapshots").header("Authorization","Bearer USER")
                 .contentType("application/json").content(body)).andExpect(status().isForbidden());
