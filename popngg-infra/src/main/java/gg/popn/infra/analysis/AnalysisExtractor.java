@@ -34,13 +34,13 @@ public class AnalysisExtractor {
         metadata.put("snapshotAt",jdbc.queryForObject("SELECT UTC_TIMESTAMP(6)",String.class));
         metadata.put("databaseVersion",jdbc.queryForObject("SELECT VERSION()",String.class));
         metadata.put("sessionTimeZone",jdbc.queryForObject("SELECT @@session.time_zone",String.class));
-        for(String table:List.of("users","user_profiles","songs","charts","playdata","playdata_history"))
+        for(String table:List.of("users","user_profiles","songs","charts","chart_special_flags","playdata","playdata_history"))
             metadata.put(table+"Count",jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Long.class));
         metadata.put("flyway",jdbc.queryForList("SELECT version, script, checksum, success FROM flyway_schema_history ORDER BY installed_rank"));
         metadata.put("columns",jdbc.queryForList("""
                 SELECT table_name, column_name, column_type, is_nullable
                 FROM information_schema.columns WHERE table_schema=DATABASE()
-                AND table_name IN ('users','user_profiles','songs','charts','playdata','playdata_history')
+                AND table_name IN ('users','user_profiles','songs','charts','chart_special_flags','playdata','playdata_history')
                 ORDER BY table_name, ordinal_position
                 """));
         metadata.put("duplicateUserChartKeys",jdbc.queryForObject("""
@@ -51,9 +51,16 @@ public class AnalysisExtractor {
         metadata.put("scoreMeaning","stored all_time_score, not a single attempt; version reset may replace it");
         metadata.put("timestampMeaning","recordUpdatedAt is DB update time, not proven play time");
         var catalog=jdbc.query("""
-                SELECT c.chart_id,c.song_id,c.level FROM charts c JOIN songs s ON s.song_id=c.song_id
+                SELECT c.chart_id,c.song_id,c.level,s.song_name,s.genre_name,s.jacket_url,
+                       c.difficulty_code,c.is_upper,COALESCE(csf.extra_type,'NONE'),
+                       COALESCE(csf.has_strict_judgement,FALSE),
+                       COALESCE(csf.has_strict_gauge,FALSE)
+                FROM charts c JOIN songs s ON s.song_id=c.song_id
+                LEFT JOIN chart_special_flags csf ON csf.chart_id=c.chart_id
                 WHERE c.is_deleted=FALSE AND c.level BETWEEN 1 AND 50 ORDER BY c.chart_id
-                """,(r,n)->new Chart(r.getLong(1),r.getLong(2),r.getInt(3)));
+                """,(r,n)->new Chart(r.getLong(1),r.getLong(2),r.getInt(3),r.getString(4),
+                        r.getString(5),r.getString(6),r.getInt(7),r.getBoolean(8),r.getString(9),
+                        r.getBoolean(10),r.getBoolean(11)));
         var users=jdbc.queryForList("""
                 SELECT u.user_id FROM users u JOIN user_profiles p ON p.user_id=u.user_id
                 WHERE u.role <> 'BOT' AND p.is_hidden=FALSE ORDER BY u.user_id
@@ -74,7 +81,8 @@ public class AnalysisExtractor {
                         r.getBoolean("user_exists"),r.getBoolean("profile_exists"),r.getBoolean("is_bot"),r.getBoolean("is_hidden"),
                         r.getBoolean("chart_exists"),r.getBoolean("song_exists"),r.getBoolean("is_deleted"),r.getBoolean("is_duplicate"),
                         nullableInt(r,"current_version"),nullableInt(r,"all_time_score_version"),nullableInt(r,"version_score"),
-                        r.getBoolean("version_score_known"),r.getString("last_played_at"),r.getString("updated_at"),nullableLong(r,"last_renew_log_id"));
+                        r.getBoolean("version_score_known"),r.getString("last_played_at"),r.getString("updated_at"),nullableLong(r,"last_renew_log_id"),
+                        nullableInt(r,"all_time_rank_code"));
                 try {out.write(mapper.writeValueAsString(row));out.newLine();written[0]++;}
                 catch(IOException e) {throw new UncheckedIOException(e);}
             });

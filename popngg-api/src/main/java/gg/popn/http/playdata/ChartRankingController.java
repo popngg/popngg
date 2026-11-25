@@ -33,6 +33,21 @@ public class ChartRankingController {
                 .data(PageResponse.of(result.items(), result.totalItems(), page - 1, size)).build();
     }
 
+    @GetMapping("/api/v1/charts/{songHash}/{difficulty}/rankings/all")
+    public SuccessResponse<java.util.List<PlaydataQueryResults.ChartRankingEntry>> findAllChartRankings(
+            @PathVariable String songHash,
+            @PathVariable int difficulty,
+            @RequestParam(defaultValue = "score") String axis
+    ) {
+        try {
+            return SuccessResponse.<java.util.List<PlaydataQueryResults.ChartRankingEntry>>builder()
+                    .code(ResponseCode.SUCCESS).message(ResponseMessage.SUCCESS)
+                    .data(queryUseCase.findAllChartRankings(songHash, difficulty, axis)).build();
+        } catch (IllegalArgumentException exception) {
+            throw new gg.popn.domain.common.exception.InvalidArgumentException("rankings", exception.getMessage());
+        }
+    }
+
     @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
     public org.springframework.http.ResponseEntity<java.util.Map<String, String>> invalidParameterType() {
         return org.springframework.http.ResponseEntity.badRequest().body(

@@ -116,12 +116,18 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
             case "POPCLASS" -> "p.potential_popclass";
             default -> throw new IllegalArgumentException("Unsupported record sort.");
         };
+        // The adapter is a trust boundary too: never append caller-controlled SQL direction.
+        String sortDirection = switch (query.order()) {
+            case "ASC" -> "ASC";
+            case "DESC" -> "DESC";
+            default -> throw new IllegalArgumentException("Unsupported record order.");
+        };
         String sql = """
                 SELECT s.song_hash, s.song_name, s.genre_name, s.jacket_url, s.version,
                        c.difficulty_code, c.level, p.all_time_score, p.medal_code,
                        COALESCE(p.all_time_rank_code, 13) AS rank_code,
                        p.potential_popclass AS popclass
-                """ + where + " ORDER BY " + sortColumn + " " + query.order()
+                """ + where + " ORDER BY " + sortColumn + " " + sortDirection
                 + ", p.chart_id ASC LIMIT ? OFFSET ?";
         List<Object> pageArgs = new ArrayList<>(args);
         pageArgs.add(query.size());
@@ -384,6 +390,45 @@ public class PlaydataQueryJdbcAdapter implements PlaydataQueryPort {
                         rs.getInt("all_time_score"), rs.getInt("rank_code"), rs.getInt("medal_code")),
                 chartId, size, (long) (page - 1) * size);
         return new PlaydataQueryResults.ChartRankingsPage(items, total);
+    }
+
+    @Override
+    public List<PlaydataQueryResults.ChartRankingEntry> findAllChartRankings(
+            String songHash, int difficulty, String axis) {
+        var charts = jdbc.query("""
+                SELECT c.chart_id FROM charts c JOIN songs s ON s.song_id = c.song_id
+                 WHERE s.song_hash = ? AND c.difficulty_code = ? AND c.is_deleted = FALSE
+                """, (rs, rowNum) -> rs.getLong("chart_id"), songHash, difficulty);
+        if (charts.isEmpty()) {
+            throw new gg.popn.application.playdata.exception.ChartNotFoundException();
+        }
+        long chartId = charts.getFirst();
+        String order = switch (axis) {
+            case "SCORE" -> "p.all_time_score DESC";
+            case "MEDAL" -> "COALESCE(p.medal_code, 13) ASC";
+            default -> throw new IllegalArgumentException("Unsupported ranking axis.");
+        };
+        String from = """
+                 FROM playdata p
+                 JOIN users u ON u.user_id = p.user_id
+                 JOIN user_profiles up ON up.user_id = p.user_id
+                 JOIN charts c ON c.chart_id = p.chart_id
+                WHERE p.chart_id = ? AND up.is_hidden = FALSE
+                """;
+        return jdbc.query("""
+                SELECT RANK() OVER (ORDER BY %s) AS position,
+                       u.poptomo_id, up.user_name, up.profile_image_url, up.display_popclass,
+                       c.level, p.all_time_score, COALESCE(p.all_time_rank_code, 13) AS rank_code,
+                       COALESCE(p.medal_code, 13) AS medal_code
+                """.formatted(order) + from
+                + " ORDER BY " + order + ", p.all_time_score DESC, u.poptomo_id ASC",
+                (rs, rowNum) -> new PlaydataQueryResults.ChartRankingEntry(
+                        rs.getLong("position"), rs.getString("poptomo_id"), rs.getString("user_name"),
+                        rs.getString("profile_image_url"), rs.getInt("display_popclass") / 10,
+                        Math.toIntExact(popclassPolicy.newChartPointHundredths(
+                                rs.getInt("level"), rs.getInt("all_time_score"), rs.getInt("medal_code"))),
+                        rs.getInt("all_time_score"), rs.getInt("rank_code"), rs.getInt("medal_code")),
+                chartId);
     }
 
     @Override

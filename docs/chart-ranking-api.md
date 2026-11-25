@@ -2,6 +2,12 @@
 
 `GET /api/v1/charts/{songHash}/{difficulty}/rankings?axis=score&page=1&size=20`
 
+To fetch every ranking entry for one chart, use
+`GET /api/v1/charts/{songHash}/{difficulty}/rankings/all?axis=score`. This endpoint
+returns the same ranking entry fields in a JSON array and does not paginate. It supports
+the same `score` (default) and `medal` axes and applies the same visibility and ranking
+rules. Use the paginated endpoint for large responses or incremental loading.
+
 Public endpoint, no authentication. Difficulty: 1=LIGHT, 2=NORMAL, 3=HYPER, 4=EX.
 Axis: score (default) or medal. Page: starts at 1 (default). Size: 1-100, default 20;
 frontend uses 20, 50, 100.

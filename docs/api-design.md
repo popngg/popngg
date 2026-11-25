@@ -7,6 +7,25 @@
 - rank, medal, difficulty 같은 코드는 label과 sort order를 함께 제공합니다.
 - 기존 `/api/v2`와 신규 API의 호환/전환 정책을 문서화합니다.
 
+## 브라우저 요청과 CSRF
+
+- CSRF 보호는 기본 활성화합니다. 브라우저의 상태 변경 요청은 `app.cors.allowed-origins`
+  에 등록한 Origin과 정확하게 일치해야 합니다. `null`, 미등록 하위 도메인, 접미사 위장,
+  Origin 누락은 신뢰하지 않습니다. 로그인·로그아웃에도 동일하게 적용합니다.
+- Swagger 등 API 자체 Origin은 `app.csrf.additional-origins`에 명시합니다(기본 `https://api.popn.gg`).
+  local 프로필은 현재 API 포트의 localhost/127.0.0.1만 추가합니다. Host/Forwarded 헤더로
+  신뢰 Origin을 자동 확장하지 않습니다.
+- 기존 프런트엔드의 fetch 요청은 브라우저가 Origin을 보내므로 클라이언트 변경 없이 동작합니다.
+  Origin 검증은 [OWASP의 표준 헤더 검증 방식](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin)을 따릅니다.
+- Origin을 보내지 않는 쿠키 클라이언트는 먼저 `GET /api/v1/auth/csrf`를 호출하고 응답 쿠키를
+  유지합니다. 응답의 `headerName` 이름으로 `token` 값을 POST/PATCH/PUT/DELETE 헤더에 넣습니다.
+  응답은 `no-store`이며 CSRF 쿠키는 HttpOnly, host-only, SameSite=Lax입니다.
+  Secure 환경은 `__Host-popngg-csrf` 이름과 루트 경로를 사용해 하위 도메인의 쿠키 주입도 방지합니다.
+  Secure 설정은 인증 쿠키와 같은 `popngg.auth.cookie-secure`를 따릅니다.
+- 명시적 Bearer 요청은 쿠키 대신 헤더로 인증하며, 유효하지 않은 Bearer를 쿠키로 대체하지 않습니다.
+  정확한 `POST /api/v1/discord/interactions`만 Ed25519 서명 검증을 통해 인증합니다.
+- Actuator와 Swagger 체인에서도 CSRF를 끄지 않습니다. 공개 GET 조회는 그대로 사용할 수 있습니다.
+
 ## 후보 API
 
 사용자 메모:
@@ -140,3 +159,18 @@ Response:
   ]
 }
 ```
+
+## 최근 추가된 곡
+
+`GET /api/v1/charts/recent`는 생성일(`songs.created_at`) 내림차순으로 곡을 반환합니다.
+생성일이 같으면 `song_id` 내림차순으로 정렬합니다. 삭제되지 않은 채보가 있는 곡만
+조회하며, 각 곡에는 삭제되지 않은 채보 전체가 포함됩니다.
+
+- `limit`: 생략하면 10, 허용 범위는 1~10. 예: `/api/v1/charts/recent?limit=5`.
+- 범위를 벗어나면 HTTP 400 (`INVALID_SONG_QUERY`), 숫자가 아니어도 HTTP 400입니다.
+- 응답은 기존 `GET /api/v1/songs`와 같은 `data.items`, `totalItems`, `totalPages`,
+  `hasPrev`, `hasNext` 형식을 사용합니다. 메타데이터는 전체 조회 가능한 곡 수 기준입니다.
+- 기존 곡 목록과 최근 곡 목록의 각 항목에 `createdAt`을 추가했습니다.
+  값은 UTC ISO 8601 시각입니다(예: `2026-10-01T00:00:00Z`).
+  최근 곡 API의 이미지 필드명은 `bannerUrl`이며, 기존 `/songs`는 `jacketUrl`을 유지합니다.
+  게임 출시일이 아니라 DB에 저장된 생성일이며, 별도 생성일로 등록한 곡은 해당 값을 사용합니다.

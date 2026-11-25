@@ -16,6 +16,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PlaydataQueryJdbcAdapterTest {
+    @Test void rejectsUntrustedSqlOrderAtAdapterBoundary() {
+        for (String order : new String[]{"DESC; DROP TABLE playdata", "DESC --", "desc", "invalid"}) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                    null,null,null,null,null,null,null,null,null,"SCORE",order,0,20)))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        var rows = adapter.findUserRecords("0000", new FindUserRecordsQuery(
+                null,null,null,null,null,null,null,null,null,"SCORE","ASC",0,20));
+        assertThat(rows.items()).extracting(row -> row.score()).containsExactly(90000,97000);
+    }
     private JdbcTemplate jdbc;
     private PlaydataQueryJdbcAdapter adapter;
 
@@ -252,6 +262,39 @@ class PlaydataQueryJdbcAdapterTest {
         assertThat(first.items().getFirst().userPopnClass()).isEqualTo(19000);
         assertThat(first.items().getFirst().popnClass()).isEqualTo(new gg.popn.application.playdata.service.PopclassPolicy()
                 .newChartPointHundredths(48, 99000, 2));
+    }
+
+    @Test
+    void returnsAllVisibleChartRankingsForScoreAndMedalAxes() {
+        var scores = adapter.findAllChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE");
+        assertThat(scores).extracting(row -> row.id()).containsExactly("1111", "0000");
+        assertThat(scores).extracting(row -> row.position()).containsExactly(1L, 2L);
+        assertThat(scores).extracting(row -> row.score()).containsExactly(99_000, 97_000);
+
+        var medals = adapter.findAllChartRankings("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "MEDAL");
+        assertThat(medals).extracting(row -> row.id()).containsExactly("0000", "1111");
+        assertThat(medals).extracting(row -> row.medal()).containsExactly(2, 3);
+
+        jdbc.update("UPDATE user_profiles SET is_hidden = TRUE WHERE user_id = 2");
+        assertThat(adapter.findAllChartRankings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE")).extracting(row -> row.id())
+                .containsExactly("0000");
+    }
+
+    @Test
+    void allChartRankingsRejectMissingChartsAndUnsupportedAxes() {
+        assertThatThrownBy(() -> adapter.findAllChartRankings("missing", 3, "SCORE"))
+                .isInstanceOf(gg.popn.application.playdata.exception.ChartNotFoundException.class);
+        assertThatThrownBy(() -> adapter.findAllChartRankings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 4, "SCORE"))
+                .isInstanceOf(gg.popn.application.playdata.exception.ChartNotFoundException.class);
+        assertThatThrownBy(() -> adapter.findAllChartRankings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "INVALID"))
+                .isInstanceOf(IllegalArgumentException.class);
+        jdbc.update("UPDATE charts SET is_deleted = TRUE");
+        assertThatThrownBy(() -> adapter.findAllChartRankings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 3, "SCORE"))
+                .isInstanceOf(gg.popn.application.playdata.exception.ChartNotFoundException.class);
     }
 
     @Test

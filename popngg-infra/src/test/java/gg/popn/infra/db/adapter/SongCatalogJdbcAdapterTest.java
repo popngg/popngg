@@ -27,7 +27,7 @@ class SongCatalogJdbcAdapterTest {
         jdbcTemplate.execute("""
                 CREATE TABLE songs (
                     song_id BIGINT PRIMARY KEY, song_hash VARCHAR(32), genre_name VARCHAR(255),
-                    song_name VARCHAR(255), artist_name VARCHAR(255), version INT, jacket_url VARCHAR(512)
+                    song_name VARCHAR(255), artist_name VARCHAR(255), version INT, jacket_url VARCHAR(512), created_at TIMESTAMP
                 )
                 """);
         jdbcTemplate.execute("""
@@ -46,9 +46,9 @@ class SongCatalogJdbcAdapterTest {
                 """);
         jdbcTemplate.update("""
                 INSERT INTO songs VALUES
-                (1, 'hash-1', 'High☆Cheers', 'Moon Child', 'Artist', 20, '/jacket/1'),
-                (2, 'hash-2', 'Other', 'Another Song', NULL, 28, NULL),
-                (3, 'hash-3', 'Other', 'Misc Song', NULL, 99, NULL)
+                (1, 'hash-1', 'High☆Cheers', 'Moon Child', 'Artist', 20, '/jacket/1', TIMESTAMP '2026-09-01 00:00:00'),
+                (2, 'hash-2', 'Other', 'Another Song', NULL, 28, NULL, TIMESTAMP '2026-10-01 00:00:00'),
+                (3, 'hash-3', 'Other', 'Misc Song', NULL, 99, NULL, TIMESTAMP '2026-10-01 00:00:00')
                 """);
         jdbcTemplate.update("""
                 INSERT INTO charts VALUES
@@ -65,6 +65,18 @@ class SongCatalogJdbcAdapterTest {
     }
 
     @Test
+    void recentSongsUseCreationDateThenDescendingIdAndLimit() {
+        var query = new FindSongsQuery(null, null, null, null, null, null,
+                null, null, null, FindSongsQuery.Sort.CREATED_AT,
+                FindSongsQuery.Order.DESC, true, 0, 2);
+        var result = adapter.findPage(query);
+        assertThat(result).extracting(song -> song.songId()).containsExactly(3L, 2L);
+        assertThat(result.getFirst().createdAt()).isNotNull();
+        jdbcTemplate.update("UPDATE charts SET is_deleted = TRUE WHERE song_id = 3");
+        assertThat(adapter.findPage(query)).extracting(song -> song.songId()).containsExactly(2L, 1L);
+    }
+
+    @Test
     void searchesActiveAliasAndUsesLightLabel() {
         FindSongsQuery query = query("문차일드", null, null);
 
@@ -74,6 +86,18 @@ class SongCatalogJdbcAdapterTest {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().genreName()).isEqualTo("High☆Cheers");
         assertThat(result.getFirst().charts().getFirst().difficultyLabel()).isEqualTo("LIGHT");
+    }
+
+    @Test
+    void ignoresWhitespaceInSearchTagsWithoutChangingTitleSearch() {
+        var spacedAlias = query("문 차 일 드", null, null);
+        assertThat(adapter.count(spacedAlias)).isEqualTo(1);
+        assertThat(adapter.findPage(spacedAlias)).extracting(song -> song.songId())
+                .containsExactly(1L);
+
+        var title = query("Moon Child", null, null);
+        assertThat(adapter.findPage(title)).extracting(song -> song.songId())
+                .containsExactly(1L);
     }
 
     @Test

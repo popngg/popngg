@@ -1,0 +1,60 @@
+{
+  "sources": [
+    {
+      "version": 28,
+      "source": "https://p.eagate.573.jp/game/popn/popn29/music/list.html?version=28&sort=music&sort_type=up",
+      "pages": 4,
+      "authenticated": true,
+      "official_rows": 95,
+      "user_confirmed_rows": 0,
+      "catalog_rows": 95,
+      "matched": 95,
+      "compared_charts": 0
+    },
+    {
+      "version": 29,
+      "source": "https://p.eagate.573.jp/game/popn/popn29/music/list.html?version=29&sort=music&sort_type=up",
+      "pages": 6,
+      "authenticated": true,
+      "official_rows": 131,
+      "user_confirmed_rows": 1,
+      "catalog_rows": 134,
+      "matched": 132,
+      "compared_charts": 522
+    }
+  ],
+  "genre_changes": 67,
+  "artist_changes": 14,
+  "level_changes": [
+    {
+      "song_id": 2131,
+      "song_name": "TEKNO KEISER",
+      "artist_name": "STEVIE(Trymatic)/Nana Takahashi Prod. by L.E.D.",
+      "chart_id": 7548,
+      "difficulty": "EX",
+      "old_level": 47,
+      "new_level": 46,
+      "is_upper": false
+    }
+  ],
+  "review": [
+    {
+      "version": 29,
+      "song_id": 2116,
+      "title": "Zt!ri△",
+      "reason": "missing or ambiguous official title/artist/UPPER identity"
+    },
+    {
+      "version": 29,
+      "song_id": 2122,
+      "title": "charm♡you",
+      "reason": "User-confirmed genre; levels not available in authenticated official list"
+    },
+    {
+      "version": 29,
+      "song_id": 2124,
+      "title": "祭囃子",
+      "reason": "missing or ambiguous official title/artist/UPPER identity"
+    }
+  ]
+}
